@@ -51,6 +51,11 @@ func newInitCmd() *cobra.Command {
 }
 
 func ensureDataFile(dataPath string, force bool) (bool, error) {
+	lock, err := store.LockFile(dataPath)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = lock.Unlock() }()
 	if _, err := os.Stat(dataPath); err == nil && !force {
 		return false, nil
 	}

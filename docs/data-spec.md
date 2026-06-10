@@ -33,23 +33,6 @@ MVP store shape:
 }
 ```
 
-Top-level fields:
-
-```text
-version  required integer
-secrets  required object mapping secret path to secret object
-```
-
-Default MVP data path:
-
-```text
-~/.local/share/shelf/secrets.json
-```
-
-The store is JSON because it is a managed data file, not a hand-edited user configuration file. Users should inspect and modify secrets through `shelf secret info`, `shelf secret set`, and `shelf secret edit`, not by editing the store file directly.
-
-JSON also keeps the future encryption boundary simple: the plaintext data model is one deterministic JSON document, and a later encrypted backend can wrap the load/save layer without changing command semantics.
-
 ## Storage and encryption policy
 
 MVP uses a managed JSON file, not a database.
@@ -74,6 +57,8 @@ Recommended filesystem behavior:
 - Create the data file with user-only permissions where the platform supports it.
 - Warn when the data file is tracked by ordinary Git without an encryption workflow.
 - Keep atomic writes and backups in the storage layer.
+- Mutating commands must take an exclusive lock at `<data-path>.lock` before loading the store for modification.
+- Write flow is: lock, load latest data, mutate in memory, save via temp file + rename, unlock.
 
 ## Why flat secrets
 
@@ -114,27 +99,28 @@ github/accounts/personal:token
 Definitions:
 
 ```text
-namespace  the part before the single colon
-key        the part after the single colon
-path       namespace + ':' + key
+group_path  the part before the single colon
+key         the part after the single colon
+path        group_path + ':' + key
 ```
 
 Rules:
 
 - A path must contain exactly one `:` separator.
-- Namespace must not be empty.
+- Group path must not be empty.
 - Key must not be empty.
-- Namespace segments are separated by `/`.
-- Namespace segments must not be empty.
-- Namespace segments must not contain `:`.
+- Group path segments are separated by `/`.
+- Group path segments must not be empty.
+- Group path segments must not contain `:`.
 - Key must not contain `/` or `:`.
+- Code may model `group_path` and `key` separately, but the store file uses the full path string as the map key.
 - The full path is the secret's unique ID.
 
 Recommended allowed characters for MVP:
 
 ```text
-namespace segment: A-Z a-z 0-9 _ - .
-key:               A-Z a-z 0-9 _ - .
+group path segment: A-Z a-z 0-9 _ - .
+key:                A-Z a-z 0-9 _ - .
 ```
 
 Implementations may reject other characters to keep shell, JSON, and path-like usage predictable.
@@ -375,6 +361,8 @@ Example:
 ```json
 {
   "path": "providers/openrouter/accounts/personal:api_key",
+  "group_path": "providers/openrouter/accounts/personal",
+  "key": "api_key",
   "value_set": true,
   "env": "OPENROUTER_API_KEY",
   "description": "Personal OpenRouter key",
@@ -394,6 +382,8 @@ When optional fields are absent:
 ```json
 {
   "path": "providers/openrouter/accounts/personal:api_key",
+  "group_path": "providers/openrouter/accounts/personal",
+  "key": "api_key",
   "value_set": true,
   "tags": []
 }
@@ -472,6 +462,8 @@ Example buffer:
 
 ```json
 {
+  "group_path": "providers/openrouter/accounts/personal",
+  "key": "api_key",
   "value": "sk-xxx",
   "env": "OPENROUTER_API_KEY",
   "description": "Personal OpenRouter key",
@@ -482,11 +474,12 @@ Example buffer:
 Validation after edit:
 
 - JSON must parse.
+- `group_path` and `key` must form a valid secret path.
 - `value` must exist.
 - `env`, when present, must match env-name validation.
 - `description`, when present, must be a string.
 - `tags`, when present, must be a list of strings.
-- Secret path is not edited inside the object; rename/move is out of MVP scope.
+- If `group_path` or `key` changes, the edit is a rename and must fail when the destination path already exists.
 
 ## Unsupported in MVP data model
 

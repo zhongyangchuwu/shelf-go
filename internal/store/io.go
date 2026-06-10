@@ -119,6 +119,30 @@ func (s *Store) Set(path string, secret Secret, force bool) error {
 	return nil
 }
 
+func (s *Store) Update(oldPath string, id SecretID, secret Secret) error {
+	if err := ValidatePath(oldPath); err != nil {
+		return err
+	}
+	if err := ValidateSecretID(id); err != nil {
+		return err
+	}
+	if err := ValidateSecret(secret); err != nil {
+		return err
+	}
+	newPath := id.Path()
+	if _, exists := s.Data.Secrets[oldPath]; !exists {
+		return fmt.Errorf("secret not found: %s", oldPath)
+	}
+	if oldPath != newPath {
+		if _, exists := s.Data.Secrets[newPath]; exists {
+			return fmt.Errorf("secret already exists: %s", newPath)
+		}
+		delete(s.Data.Secrets, oldPath)
+	}
+	s.Data.Secrets[newPath] = secret
+	return nil
+}
+
 func (s *Store) Get(path string) (Secret, bool) {
 	secret, ok := s.Data.Secrets[path]
 	return secret, ok
@@ -146,11 +170,15 @@ func (s *Store) Info(path string) (Info, bool) {
 	if !ok {
 		return Info{}, false
 	}
+	id, err := ParseSecretID(path)
+	if err != nil {
+		return Info{}, false
+	}
 	tags := secret.Tags
 	if tags == nil {
 		tags = []string{}
 	}
-	return Info{Path: path, ValueSet: len(secret.Value) > 0, Env: secret.Env, Description: secret.Description, Tags: tags}, true
+	return Info{Path: path, GroupPath: id.GroupPath, Key: id.Key, ValueSet: len(secret.Value) > 0, Env: secret.Env, Description: secret.Description, Tags: tags}, true
 }
 
 func copyFile(src, dst string) error {

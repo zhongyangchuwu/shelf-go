@@ -18,6 +18,8 @@ type Secret struct {
 
 type Info struct {
 	Path        string   `json:"path"`
+	GroupPath   string   `json:"group_path"`
+	Key         string   `json:"key"`
 	ValueSet    bool     `json:"value_set"`
 	Env         string   `json:"env,omitempty"`
 	Description string   `json:"description,omitempty"`

@@ -5,31 +5,55 @@ import (
 	"strings"
 )
 
-func ValidatePath(path string) error {
+type SecretID struct {
+	GroupPath string
+	Key       string
+}
+
+func ParseSecretID(path string) (SecretID, error) {
 	if strings.Count(path, ":") != 1 {
-		return fmt.Errorf("secret path must contain exactly one colon: %s", path)
+		return SecretID{}, fmt.Errorf("secret path must contain exactly one colon: %s", path)
 	}
 	parts := strings.SplitN(path, ":", 2)
-	namespace, key := parts[0], parts[1]
-	if namespace == "" {
-		return fmt.Errorf("secret namespace is empty")
+	id := SecretID{GroupPath: parts[0], Key: parts[1]}
+	if err := ValidateSecretID(id); err != nil {
+		return SecretID{}, err
 	}
-	if key == "" {
+	return id, nil
+}
+
+func (id SecretID) Path() string {
+	return id.GroupPath + ":" + id.Key
+}
+
+func ValidatePath(path string) error {
+	_, err := ParseSecretID(path)
+	return err
+}
+
+func ValidateSecretID(id SecretID) error {
+	if id.GroupPath == "" {
+		return fmt.Errorf("secret group path is empty")
+	}
+	if id.Key == "" {
 		return fmt.Errorf("secret key is empty")
 	}
-	if strings.Contains(key, "/") {
-		return fmt.Errorf("secret key must not contain '/': %s", key)
+	if strings.Contains(id.Key, "/") {
+		return fmt.Errorf("secret key must not contain '/': %s", id.Key)
 	}
-	for _, segment := range strings.Split(namespace, "/") {
+	if strings.Contains(id.GroupPath, ":") || strings.Contains(id.Key, ":") {
+		return fmt.Errorf("secret id parts must not contain ':'")
+	}
+	for _, segment := range strings.Split(id.GroupPath, "/") {
 		if segment == "" {
-			return fmt.Errorf("secret namespace contains an empty segment: %s", path)
+			return fmt.Errorf("secret group path contains an empty segment: %s", id.GroupPath)
 		}
 		if !isPathToken(segment) {
-			return fmt.Errorf("secret namespace segment contains unsupported characters: %s", segment)
+			return fmt.Errorf("secret group path segment contains unsupported characters: %s", segment)
 		}
 	}
-	if !isPathToken(key) {
-		return fmt.Errorf("secret key contains unsupported characters: %s", key)
+	if !isPathToken(id.Key) {
+		return fmt.Errorf("secret key contains unsupported characters: %s", id.Key)
 	}
 	return nil
 }

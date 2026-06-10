@@ -2,10 +2,12 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -50,7 +52,7 @@ func TestSecretSetGetListInfoExport(t *testing.T) {
 	if strings.Contains(out, "sk-xxx") {
 		t.Fatalf("info leaked value: %s", out)
 	}
-	for _, want := range []string{"\"path\"", "\"value_set\": true", "\"env\": \"OPENROUTER_API_KEY\"", "\"tags\""} {
+	for _, want := range []string{"\"path\"", "\"group_path\": \"providers/openrouter/accounts/personal\"", "\"key\": \"api_key\"", "\"value_set\": true", "\"env\": \"OPENROUTER_API_KEY\"", "\"tags\""} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("info output missing %q: %s", want, out)
 		}
@@ -157,7 +159,7 @@ func TestSecretEditUsesEditorAndValidatesJSON(t *testing.T) {
 		t.Fatalf("initial set: %v", err)
 	}
 	editor := filepath.Join(t.TempDir(), "editor.sh")
-	if err := os.WriteFile(editor, []byte("#!/bin/sh\ncat > \"$1\" <<'JSON'\n{\"value\":\"edited\",\"env\":\"APP_TOKEN\",\"tags\":[\"app\"]}\nJSON\n"), 0o700); err != nil {
+	if err := os.WriteFile(editor, []byte("#!/bin/sh\ncat > \"$1\" <<'JSON'\n{\"group_path\":\"app\",\"key\":\"token\",\"value\":\"edited\",\"env\":\"APP_TOKEN\",\"tags\":[\"app\"]}\nJSON\n"), 0o700); err != nil {
 		t.Fatalf("write editor: %v", err)
 	}
 	t.Setenv("EDITOR", editor)
@@ -173,6 +175,86 @@ func TestSecretEditUsesEditorAndValidatesJSON(t *testing.T) {
 	}
 }
 
+func TestSecretEditCanRenamePath(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "one"); err != nil {
+		t.Fatalf("initial set: %v", err)
+	}
+	editor := filepath.Join(t.TempDir(), "editor.sh")
+	if err := os.WriteFile(editor, []byte("#!/bin/sh\ncat > \"$1\" <<'JSON'\n{\"group_path\":\"services/app\",\"key\":\"api_key\",\"value\":\"one\",\"env\":\"APP_API_KEY\"}\nJSON\n"), 0o700); err != nil {
+		t.Fatalf("write editor: %v", err)
+	}
+	t.Setenv("EDITOR", editor)
+	if _, err := runShelf(t, "--data", data, "secret", "edit", "app:token"); err != nil {
+		t.Fatalf("edit rename: %v", err)
+	}
+	if _, err := runShelf(t, "--data", data, "secret", "get", "app:token"); err == nil {
+		t.Fatalf("old path still exists")
+	}
+	out, err := runShelf(t, "--data", data, "secret", "get", "services/app:api_key")
+	if err != nil {
+		t.Fatalf("get renamed path: %v", err)
+	}
+	if out != "one\n" {
+		t.Fatalf("unexpected renamed value: %q", out)
+	}
+}
+
+func TestSecretEditRefusesRenameCollision(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "one"); err != nil {
+		t.Fatalf("set token: %v", err)
+	}
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:other", "two"); err != nil {
+		t.Fatalf("set other: %v", err)
+	}
+	editor := filepath.Join(t.TempDir(), "editor.sh")
+	if err := os.WriteFile(editor, []byte("#!/bin/sh\ncat > \"$1\" <<'JSON'\n{\"group_path\":\"app\",\"key\":\"other\",\"value\":\"one\"}\nJSON\n"), 0o700); err != nil {
+		t.Fatalf("write editor: %v", err)
+	}
+	t.Setenv("EDITOR", editor)
+	if _, err := runShelf(t, "--data", data, "secret", "edit", "app:token"); err == nil {
+		t.Fatalf("expected edit rename collision to fail")
+	}
+	out, err := runShelf(t, "--data", data, "secret", "get", "app:token")
+	if err != nil {
+		t.Fatalf("old path missing after failed rename: %v", err)
+	}
+	if out != "one\n" {
+		t.Fatalf("unexpected old value after failed rename: %q", out)
+	}
+}
+
+func TestConcurrentSecretSetKeepsAllWrites(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	const count = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, count)
+	for i := 0; i < count; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := runShelf(t, "--data", data, "secret", "set", fmt.Sprintf("app:key_%02d", i), fmt.Sprintf("value-%02d", i))
+			errs <- err
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent set: %v", err)
+		}
+	}
+	out, err := runShelf(t, "--data", data, "secret", "list", "app")
+	if err != nil {
+		t.Fatalf("list after concurrent set: %v", err)
+	}
+	lines := strings.Fields(out)
+	if len(lines) != count {
+		t.Fatalf("lost writes: got %d paths, want %d\n%s", len(lines), count, out)
+	}
+}
 func TestCompletionCommandGeneratesZsh(t *testing.T) {
 	out, err := runShelf(t, "completion", "zsh")
 	if err != nil {
@@ -209,6 +291,65 @@ func runGit(t *testing.T, args ...string) (string, error) {
 	cmd.Stderr = &out
 	err := cmd.Run()
 	return out.String(), err
+}
+
+func TestDoctorReportsHealthyStore(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--config", configPath, "--data", data, "secret", "set", "app:token", "one"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	out, err := runShelf(t, "--config", configPath, "--data", data, "doctor")
+	if err != nil {
+		t.Fatalf("doctor: %v\n%s", err, out)
+	}
+	for _, want := range []string{"ok   config resolves", "ok   version", "ok   data file exists", "ok   store loads", "ok   data file mode"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("doctor output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestDoctorFailsInvalidStore(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	data := filepath.Join(dir, "secrets.json")
+	if err := os.WriteFile(data, []byte("not-json"), 0o600); err != nil {
+		t.Fatalf("write invalid data: %v", err)
+	}
+	out, err := runShelf(t, "--config", configPath, "--data", data, "doctor")
+	if err == nil {
+		t.Fatalf("expected doctor to fail invalid store")
+	}
+	if !strings.Contains(out, "fail store loads") {
+		t.Fatalf("doctor output missing store failure:\n%s", out)
+	}
+}
+
+func TestDoctorChecksCompletionFromFpath(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	data := filepath.Join(dir, "secrets.json")
+	completionDir := filepath.Join(dir, "zfunc")
+	if err := os.MkdirAll(completionDir, 0o700); err != nil {
+		t.Fatalf("mkdir completion dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(completionDir, "_shelf"), []byte("#compdef shelf\n"), 0o600); err != nil {
+		t.Fatalf("write completion: %v", err)
+	}
+	t.Setenv("FPATH", filepath.Join(dir, "missing")+":"+completionDir)
+	if _, err := runShelf(t, "--config", configPath, "--data", data, "secret", "set", "app:token", "one"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	out, err := runShelf(t, "--config", configPath, "--data", data, "doctor")
+	if err != nil {
+		t.Fatalf("doctor: %v\n%s", err, out)
+	}
+	want := "ok   completion installed (" + filepath.Join(completionDir, "_shelf") + ")"
+	if !strings.Contains(out, want) {
+		t.Fatalf("doctor did not use FPATH completion path %q:\n%s", want, out)
+	}
 }
 
 func TestSecretRmRemovesPathAndFailsOnMissing(t *testing.T) {

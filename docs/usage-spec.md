@@ -35,6 +35,8 @@ shelf secret edit <path>
 
 shelf export <path-or-prefix> --format shell|env|json
 
+shelf doctor
+
 shelf project id
 ```
 
@@ -49,23 +51,15 @@ shelf project explain
 
 Those commands are possible future extensions, but not MVP requirements. They should not appear in the binary until their full behavior is specified and implemented.
 
+
 ## Secret paths
 
-A secret path uses the existing `group:key` shape:
+Secret paths have the form `group_path:key`.
 
-```text
-providers/openrouter/accounts/personal:api_key
-providers/openai/accounts/work:api_key
-github/accounts/personal:token
-```
+`group_path` is the namespace part before the single colon; `key` is the leaf name after it.
 
-The part before `:` is the path namespace. The part after `:` is the value key.
+`group_path` may contain `/` separators. `key` must stay a single leaf token.
 
-The path is the secret's canonical ID.
-
-## `shelf secret set`
-
-Create a new secret object.
 
 ```bash
 shelf secret set providers/openrouter/accounts/personal:api_key sk-xxx \
@@ -165,6 +159,8 @@ Output:
 ```json
 {
   "path": "providers/openrouter/accounts/personal:api_key",
+  "group_path": "providers/openrouter/accounts/personal",
+  "key": "api_key",
   "value_set": true,
   "env": "OPENROUTER_API_KEY",
   "description": "Personal OpenRouter key",
@@ -188,10 +184,13 @@ Edit a complete secret object in `$EDITOR`.
 shelf secret edit providers/openrouter/accounts/personal:api_key
 ```
 
+
 Editor buffer:
 
 ```json
 {
+  "group_path": "providers/openrouter/accounts/personal",
+  "key": "api_key",
   "value": "sk-xxx",
   "env": "OPENROUTER_API_KEY",
   "description": "Personal OpenRouter key",
@@ -202,11 +201,14 @@ Editor buffer:
 Rules:
 
 - Opens the user's editor.
-- Edits the full secret object.
+- Edits the full secret record.
 - The edit buffer is JSON.
+- `group_path` and `key` are the editable identity fields; together they form the canonical path `group_path:key`.
+- Changing `group_path` or `key` renames the secret.
+- Rename fails if the destination path already exists.
 - The edited object is validated before writing.
 - Invalid edits are not written.
-- `edit` is the unified metadata modification path.
+- `edit` is the unified metadata and identity modification path.
 - MVP does not include field-specific commands like `secret tag add`, `secret tag rm`, or `secret env set`.
 
 ## Group/path and tags
@@ -312,6 +314,34 @@ Rules:
 - Normalizes common Git remote URL forms to `host/owner/repo`.
 - Fails if the current directory is not inside a Git worktree.
 - Fails if no usable remote URL exists.
+
+## `shelf doctor`
+
+Check local Shelf configuration and data health.
+
+```bash
+shelf doctor
+```
+
+Output example:
+
+```text
+ok   config resolves (/home/han/.config/shelf/config.yaml)
+ok   version (v0.1.0 go1.26 linux/amd64)
+ok   data file exists (/home/han/.local/share/shelf/secrets.json)
+ok   data file mode (-rw-------)
+ok   store loads (/home/han/.local/share/shelf/secrets.json)
+ok   git tracking (data file is not inside a Git worktree)
+ok   completion installed (/home/han/.zfunc/_shelf)
+```
+
+Rules:
+
+- `ok` means the check passed.
+- `warn` means usable but needs attention.
+- `fail` means doctor exits non-zero.
+- Initial checks are local only: config resolution, version, data file existence and mode, store validation, ordinary Git tracking, and zsh completion paths discovered from `FPATH` / `fpath`.
+- It does not check chezmoi, age, or external secret-manager integrations.
 
 ## Deferred project workflow
 

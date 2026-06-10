@@ -12,6 +12,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type editableSecret struct {
+	GroupPath   string          `json:"group_path"`
+	Key         string          `json:"key"`
+	Value       json.RawMessage `json:"value"`
+	Env         string          `json:"env,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Tags        []string        `json:"tags,omitempty"`
+}
+
+func newEditableSecret(path string, secret store.Secret) (editableSecret, error) {
+	id, err := store.ParseSecretID(path)
+	if err != nil {
+		return editableSecret{}, err
+	}
+	return editableSecret{GroupPath: id.GroupPath, Key: id.Key, Value: secret.Value, Env: secret.Env, Description: secret.Description, Tags: secret.Tags}, nil
+}
+
+func (e editableSecret) secret() (store.SecretID, store.Secret) {
+	return store.SecretID{GroupPath: e.GroupPath, Key: e.Key}, store.Secret{Value: e.Value, Env: e.Env, Description: e.Description, Tags: e.Tags}
+}
+
 func newSecretCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "secret", Short: "Manage secrets"}
 	cmd.AddCommand(newSecretSetCmd())
@@ -32,10 +53,11 @@ func newSecretSetCmd() *cobra.Command {
 		Short: "Create a secret",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, st, err := loadRuntime(cmd)
+			_, st, unlock, err := loadRuntimeForWrite(cmd)
 			if err != nil {
 				return err
 			}
+			defer unlock()
 			value, err := store.ParseValue(args[1])
 			if err != nil {
 				return err
@@ -139,15 +161,20 @@ func newSecretEditCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeSecretPaths,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			runtime, st, err := loadRuntime(cmd)
+			runtime, st, unlock, err := loadRuntimeForWrite(cmd)
 			if err != nil {
 				return err
 			}
+			defer unlock()
 			secret, ok := st.Get(args[0])
 			if !ok {
 				return fmt.Errorf("secret not found: %s", args[0])
 			}
-			bytes, err := json.MarshalIndent(secret, "", "  ")
+			editable, err := newEditableSecret(args[0], secret)
+			if err != nil {
+				return err
+			}
+			bytes, err := json.MarshalIndent(editable, "", "  ")
 			if err != nil {
 				return err
 			}
@@ -177,14 +204,14 @@ func newSecretEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var updated store.Secret
+			var updated editableSecret
 			if err := json.Unmarshal(edited, &updated); err != nil {
 				return err
 			}
-			if err := store.ValidateSecret(updated); err != nil {
+			id, secret := updated.secret()
+			if err := st.Update(args[0], id, secret); err != nil {
 				return err
 			}
-			st.Data.Secrets[args[0]] = updated
 			return st.Save()
 		},
 	}
@@ -216,10 +243,11 @@ func newSecretRmCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeSecretPaths,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, st, err := loadRuntime(cmd)
+			_, st, unlock, err := loadRuntimeForWrite(cmd)
 			if err != nil {
 				return err
 			}
+			defer unlock()
 			if !st.Delete(args[0]) {
 				return fmt.Errorf("secret not found: %s", args[0])
 			}
