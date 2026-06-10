@@ -2,14 +2,14 @@ _default:
     @just --list
 
 build:
-    go build -o ./shelf ./cmd/shelf
+    go build -o ./bin/shelf ./cmd/shelf
 
-install: build
-    cp ./shelf ~/.local/bin/shelf
+install:
+    go install ./cmd/shelf
 
 test:
     go test ./...
 
 tag version:
     git tag v{{version}}
-    @echo "tagged v{{version}} — rebuild (just install) to embed it"
+    @echo "tagged v{{version}} — reinstall (just install) to embed it"

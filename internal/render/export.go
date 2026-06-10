@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/han/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/store"
 )
 
 var nonEnvChar = regexp.MustCompile(`[^A-Za-z0-9]+`)

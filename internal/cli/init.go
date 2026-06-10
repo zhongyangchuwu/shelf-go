@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/han/shelf-go/internal/config"
-	"github.com/han/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/store"
 	"github.com/spf13/cobra"
 )
 

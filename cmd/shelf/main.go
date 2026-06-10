@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/han/shelf-go/internal/cli"
+	"github.com/zhongyangchuwu/shelf-go/internal/cli"
 )
 
 func main() {

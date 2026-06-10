@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"github.com/han/shelf-go/internal/config"
-	"github.com/han/shelf-go/internal/store"
-	"github.com/han/shelf-go/internal/version"
+	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/version"
 	"github.com/spf13/cobra"
 )
 

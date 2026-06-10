@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/han/shelf-go/internal/render"
-	"github.com/han/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/render"
+	"github.com/zhongyangchuwu/shelf-go/internal/store"
 	"github.com/spf13/cobra"
 )
 
