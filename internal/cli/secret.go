@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/render"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
-	"github.com/spf13/cobra"
 )
 
 type editableSecret struct {
@@ -49,9 +50,10 @@ func newSecretSetCmd() *cobra.Command {
 	var tags []string
 	var force bool
 	cmd := &cobra.Command{
-		Use:   "set <path> <value>",
-		Short: "Create a secret",
-		Args:  cobra.ExactArgs(2),
+		Use:               "set <path> <value>",
+		Short:             "Create a secret",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: completeSecretSetPathArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, st, unlock, err := loadRuntimeForWrite(cmd)
 			if err != nil {
@@ -234,6 +236,79 @@ func completeSecretPaths(cmd *cobra.Command, args []string, toComplete string) (
 		}
 	}
 	return comps, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeSecretSetPathArg(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	_, st, err := loadRuntime(cmd)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return completeSecretSetPathForArgs(st.List(""), args, toComplete)
+}
+
+func completeSecretSetPathForArgs(paths []string, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeSecretSetPath(paths, toComplete)
+	}
+	if len(args) == 1 && !strings.Contains(args[0], ":") {
+		return completeSecretSetKeyForGroup(paths, args[0], toComplete)
+	}
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeSecretSetKeyForGroup(paths []string, groupPath, keyPrefix string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	prefix := groupPath + ":" + keyPrefix
+	comps := make([]cobra.Completion, 0, len(paths))
+	for _, path := range paths {
+		if !strings.HasPrefix(path, prefix) {
+			continue
+		}
+		_, key, ok := strings.Cut(path, ":")
+		if !ok {
+			continue
+		}
+		comps = append(comps, cobra.Completion(key))
+	}
+	return comps, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeSecretSetPath(paths []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if strings.Contains(toComplete, ":") {
+		comps := make([]cobra.Completion, 0, len(paths))
+		for _, path := range paths {
+			if strings.HasPrefix(path, toComplete) {
+				comps = append(comps, cobra.Completion(path))
+			}
+		}
+		return comps, cobra.ShellCompDirectiveNoFileComp
+	}
+	seen := make(map[string]struct{}, len(paths))
+	groups := make([]string, 0, len(paths))
+	for _, path := range paths {
+		groupPath, _, ok := strings.Cut(path, ":")
+		if !ok || groupPath == "" {
+			continue
+		}
+		if !strings.HasPrefix(groupPath, toComplete) {
+			continue
+		}
+		completion := groupPath + ":"
+		if _, ok := seen[completion]; ok {
+			continue
+		}
+		seen[completion] = struct{}{}
+		groups = append(groups, completion)
+	}
+	sort.Strings(groups)
+	comps := make([]cobra.Completion, 0, len(groups))
+	for _, group := range groups {
+		comps = append(comps, cobra.Completion(group))
+	}
+	directive := cobra.ShellCompDirectiveNoFileComp
+	if len(comps) > 0 {
+		directive |= cobra.ShellCompDirectiveNoSpace
+	}
+	return comps, directive
 }
 
 func newSecretRmCmd() *cobra.Command {

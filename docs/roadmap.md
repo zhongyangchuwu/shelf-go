@@ -71,10 +71,21 @@ Output uses `ok`, `warn`, and `fail`; `fail` exits non-zero.
 
 The first `doctor` is intentionally not coupled to chezmoi, age, or external secret managers.
 
+
+### Project manifest (`project init` / `project explain`) — done
+
+Implemented for v0.2 scope:
+
+- `.shelf.json` manifest in Git root.
+- `shelf project init` with `--force` overwrite behavior.
+- `shelf project explain` read-only status output with `ok` / `warn` / `fail`.
+- Env resolution order: project entry `env` → secret `env` → derived path env.
+- Required missing secret → `fail`; optional missing secret → `warn`.
+- Env name conflict detection with non-zero exit.
+
 ## Next candidates
 
-The next releases should prove the Git-aware project model without adding write-side convenience APIs or encryption.
-
+The next release should focus on v0.3 project binding management (`project add/rm/list/export`) without adding write-side convenience APIs or encryption.
 Rejected ideas:
 
 - `secret set --stdin --raw`: `set` is a low-frequency management command. Scripts should not mutate Shelf as part of normal execution.

@@ -283,6 +283,181 @@ func TestProjectIDNormalizesGitRemote(t *testing.T) {
 	}
 }
 
+func TestProjectInitCreatesManifestAtGitRoot(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	out, err := runShelf(t, "project", "init")
+	if err != nil {
+		t.Fatalf("project init: %v", err)
+	}
+	manifestPath := filepath.Join(dir, ".shelf.json")
+	if !strings.Contains(out, "manifest: "+manifestPath+" (created)") {
+		t.Fatalf("unexpected init output: %q", out)
+	}
+	bytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	const want = "{\n  \"version\": 1,\n  \"secrets\": []\n}\n"
+	if string(bytes) != want {
+		t.Fatalf("unexpected manifest content:\n%s", string(bytes))
+	}
+}
+
+func TestProjectInitRequiresForceToOverwrite(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	manifestPath := filepath.Join(dir, ".shelf.json")
+	if err := os.WriteFile(manifestPath, []byte("{\n  \"version\": 1,\n  \"secrets\": []\n}\n"), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	if _, err := runShelf(t, "project", "init"); err == nil {
+		t.Fatalf("expected project init to refuse overwrite without --force")
+	} else if !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out, err := runShelf(t, "project", "init", "--force")
+	if err != nil {
+		t.Fatalf("project init --force: %v", err)
+	}
+	if !strings.Contains(out, "manifest: "+manifestPath+" (overwritten)") {
+		t.Fatalf("unexpected init --force output: %q", out)
+	}
+}
+
+func TestProjectExplainReportsStatuses(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-openai"); err != nil {
+		t.Fatalf("set openai: %v", err)
+	}
+	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openrouter/accounts/personal:api_key", "sk-openrouter"); err != nil {
+		t.Fatalf("set openrouter: %v", err)
+	}
+	manifest := `{
+  "version": 1,
+  "secrets": [
+    {
+      "path": "providers/openai/accounts/personal:api_key",
+      "env": "OPENAI_API_KEY",
+      "required": true
+    },
+    {
+      "path": "providers/anthropic/accounts/personal:api_key",
+      "required": false
+    },
+    {
+      "path": "providers/deepseek/accounts/personal:api_key"
+    },
+    {
+      "path": "providers/openrouter/accounts/personal:api_key",
+      "env": "OPENAI_API_KEY",
+      "required": true
+    }
+  ]
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "project", "explain")
+	if err == nil {
+		t.Fatalf("expected project explain failure")
+	}
+	for _, want := range []string{
+		"project:",
+		"root:    ",
+		"config:  .shelf.json",
+		"ok   providers/openai/accounts/personal:api_key -> OPENAI_API_KEY",
+		"warn providers/anthropic/accounts/personal:api_key missing optional",
+		"fail providers/deepseek/accounts/personal:api_key missing required",
+		"fail providers/openrouter/accounts/personal:api_key env name OPENAI_API_KEY conflicts with providers/openai/accounts/personal:api_key",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("project explain output missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "sk-openai") || strings.Contains(out, "sk-openrouter") {
+		t.Fatalf("project explain should not print secret values:\n%s", out)
+	}
+}
+
+func TestProjectExplainWarnsOptionalMissingWithoutFail(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-openai"); err != nil {
+		t.Fatalf("set openai: %v", err)
+	}
+	manifest := `{
+  "version": 1,
+  "secrets": [
+    {
+      "path": "providers/openai/accounts/personal:api_key",
+      "required": true
+    },
+    {
+      "path": "providers/anthropic/accounts/personal:api_key",
+      "required": false
+    }
+  ]
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "project", "explain")
+	if err != nil {
+		t.Fatalf("project explain: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "ok   providers/openai/accounts/personal:api_key") {
+		t.Fatalf("missing ok line:\n%s", out)
+	}
+	if !strings.Contains(out, "warn providers/anthropic/accounts/personal:api_key missing optional") {
+		t.Fatalf("missing optional warning:\n%s", out)
+	}
+}
+
+func TestProjectInitAndExplainFailOutsideGit(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if _, err := runShelf(t, "project", "init"); err == nil {
+		t.Fatalf("expected project init to fail outside git")
+	} else if !strings.Contains(err.Error(), "not inside a Git worktree") {
+		t.Fatalf("unexpected init error: %v", err)
+	}
+	if _, err := runShelf(t, "project", "explain"); err == nil {
+		t.Fatalf("expected project explain to fail outside git")
+	} else if !strings.Contains(err.Error(), "not inside a Git worktree") {
+		t.Fatalf("unexpected explain error: %v", err)
+	}
+}
+
+func TestProjectExplainPromptsInitWhenManifestMissing(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	if _, err := runShelf(t, "project", "explain"); err == nil {
+		t.Fatalf("expected project explain to fail without manifest")
+	} else if !strings.Contains(err.Error(), "run `shelf project init`") {
+		t.Fatalf("unexpected explain error: %v", err)
+	}
+}
+
 func runGit(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("git", args...)

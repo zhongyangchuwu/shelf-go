@@ -10,13 +10,13 @@ MVP product focus:
 Fast local secret management and direct export.
 ```
 
-Git-aware project workflows are the next priority after the secret manager foundation is stable. The planned progression is:
+Git-aware project workflows are the next priority after the secret manager foundation is stable. The release progression is:
 
-- v0.2: `.shelf.json` project manifest and `shelf project explain` (read-only).
+- v0.2: `.shelf.json` project manifest, `shelf project init`, and `shelf project explain` (implemented).
 - v0.3: `shelf project add/rm/list/export` (management and materialization).
 - v0.4: `shelf run` (runtime injection into child process).
 
-The commands described in this document beyond the MVP command surface are specifications for those future versions, not yet implemented.
+The commands described in this document for v0.3+ are specifications for future versions and are not implemented yet.
 
 ## Design rules
 
@@ -28,7 +28,7 @@ The commands described in this document beyond the MVP command surface are speci
 - Secret metadata belongs to the secret object, not to a group node.
 - Group/path is identity; tags are auxiliary labels.
 
-## MVP command surface
+## Current command surface
 
 ```bash
 shelf secret set <path> <value> [--env NAME] [--description TEXT] [--tag TAG ...] [--force]
@@ -42,13 +42,13 @@ shelf export <path-or-prefix> --format shell|env|json
 shelf doctor
 
 shelf project id
-```
-
-Planned project commands (v0.2–v0.4):
-
-```bash
 shelf project init
 shelf project explain
+```
+
+Planned project commands (v0.3–v0.4):
+
+```bash
 shelf project add <path-or-prefix> [--env NAME] [--optional]
 shelf project rm <path-or-prefix>
 shelf project list
@@ -57,7 +57,6 @@ shelf run -- command args...
 ```
 
 These are specifications for future versions, not yet implemented. They should not appear in the binary until their full behavior is specified and implemented.
-
 
 ## Secret paths
 
@@ -352,7 +351,7 @@ Rules:
 
 ## Project workflow (v0.2–v0.4)
 
-These commands build on the Git-aware `.shelf.json` project manifest. They are specified here for future implementation, not yet in the MVP binary.
+v0.2 foundation commands (`shelf project init` and `shelf project explain`) are implemented. The remaining commands in this section are specifications for future implementation.
 
 ### `.shelf.json` location and format
 
