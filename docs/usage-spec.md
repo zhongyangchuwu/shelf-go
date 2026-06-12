@@ -10,9 +10,13 @@ MVP product focus:
 Fast local secret management and direct export.
 ```
 
-Git-aware project workflows remain a possible future direction, but they do not drive the MVP. The first Go version should complete the secret manager mission before designing project setup/sync behavior.
+Git-aware project workflows are the next priority after the secret manager foundation is stable. The planned progression is:
 
-MVP scope proves the new secret object model, direct export workflow, and a small Git project identity utility without shipping incomplete project workflow commands.
+- v0.2: `.shelf.json` project manifest and `shelf project explain` (read-only).
+- v0.3: `shelf project add/rm/list/export` (management and materialization).
+- v0.4: `shelf run` (runtime injection into child process).
+
+The commands described in this document beyond the MVP command surface are specifications for those future versions, not yet implemented.
 
 ## Design rules
 
@@ -40,16 +44,19 @@ shelf doctor
 shelf project id
 ```
 
-Deferred project commands:
+Planned project commands (v0.2–v0.4):
 
 ```bash
-shelf project setup
-shelf project status
-shelf project sync
+shelf project init
 shelf project explain
+shelf project add <path-or-prefix> [--env NAME] [--optional]
+shelf project rm <path-or-prefix>
+shelf project list
+shelf project export --format env|shell|json
+shelf run -- command args...
 ```
 
-Those commands are possible future extensions, but not MVP requirements. They should not appear in the binary until their full behavior is specified and implemented.
+These are specifications for future versions, not yet implemented. They should not appear in the binary until their full behavior is specified and implemented.
 
 
 ## Secret paths
@@ -343,28 +350,164 @@ Rules:
 - Initial checks are local only: config resolution, version, data file existence and mode, store validation, ordinary Git tracking, and zsh completion paths discovered from `FPATH` / `fpath`.
 - It does not check chezmoi, age, or external secret-manager integrations.
 
-## Deferred project workflow
+## Project workflow (v0.2–v0.4)
 
-MVP is not project-first. Future project workflows should be based on real usage experience, not placeholder commands.
+These commands build on the Git-aware `.shelf.json` project manifest. They are specified here for future implementation, not yet in the MVP binary.
 
-The likely future direction is project-local environment materialization:
+### `.shelf.json` location and format
 
-```text
-Git project identity
-→ selected secret paths
-→ generated project-local env file such as .env.local
+Project manifest lives at `<git-root>/.shelf.json`. It declares which Shelf secret paths the project needs. It is a manifest of intent, not a secret store.
+
+Reasons for `.shelf.json` over `.env`:
+
+- `.env` is a key-value file for environment variables. It cannot reliably encode Shelf's `group_path:key` identity.
+- `.env` invites users to paste real secret values into project files.
+- `.env` cannot express include/exclude/required/collision/profiles.
+
+`.shelf.json` can be committed to Git; `.env.local` (generated output) must be gitignored.
+
+```json
+{
+  "version": 1,
+  "secrets": [
+    {
+      "path": "providers/openai/accounts/personal:api_key",
+      "env": "OPENAI_API_KEY",
+      "required": true
+    },
+    {
+      "prefix": "providers/openrouter/accounts/personal",
+      "required": false
+    }
+  ]
+}
 ```
 
-Possible future commands:
+Field rules:
+
+- `version`: required, fixed at `1`.
+- `secrets`: required array of entries.
+- `path`: exact Shelf secret path (mutually exclusive with `prefix`).
+- `prefix`: matches all secrets whose canonical path starts with this string. Deferred to v0.3; v0.2 supports `path` only.
+- `env`: optional project-level override for the environment variable name.
+- `required`: optional, defaults to `true`.
+- Fields prohibited: `value`, fallback plaintext, shell commands, template expressions.
+
+### `shelf project init`
 
 ```bash
-shelf project setup
-shelf project status
-shelf project sync
+shelf project init
+```
+
+Writes `<git-root>/.shelf.json` with a minimal scaffold. Must run inside a Git worktree. Fails if `.shelf.json` already exists unless `--force` is given. Writes no secret values.
+
+### `shelf project explain`
+
+```bash
 shelf project explain
 ```
 
-MVP intentionally defers them. The first Go version should not include placeholder project commands. Runtime injection commands such as `shelf project run` are not the default product story unless future usage proves they are needed.
+Read-only explanation. Shows project identity, manifest path, resolved env names, and missing/conflict status.
+
+```text
+project: github.com/alex/my-app
+root:    /Users/alex/code/my-app
+config:  .shelf.json
+
+ok   providers/openai/accounts/personal:api_key -> OPENAI_API_KEY
+ok   providers/openrouter/accounts/personal:api_key -> OPENROUTER_API_KEY
+warn providers/anthropic/accounts/personal:api_key missing optional
+fail providers/deepseek/accounts/personal:api_key missing required
+```
+
+Rules:
+
+- Does not print secret values, execute commands, or modify files.
+- Validates `.shelf.json` format, path existence, env name uniqueness, and required/optional coverage.
+- `ok`/`warn`/`fail` per entry; `fail` exits non-zero.
+- Env name resolution: project override → secret `env` field → derived from path.
+- Duplicate env name → `fail`.
+
+### `shelf project add`
+
+```bash
+shelf project add <path-or-prefix> [--env NAME] [--optional]
+```
+
+Appends an entry to `.shelf.json`. If the file does not exist, prompts to run `shelf project init` first. For `path`: validates secret exists in store; fails if not found. For `prefix` (v0.3): validates at least one match; fails if zero. Rejects duplicates.
+
+### `shelf project rm`
+
+```bash
+shelf project rm <path-or-prefix>
+```
+
+Removes the matching entry from `.shelf.json`.
+
+### `shelf project list`
+
+```bash
+shelf project list
+```
+
+Lists `.shelf.json` entries without resolving secret values.
+
+### `shelf project export`
+
+```bash
+shelf project export --format env|shell|json
+```
+
+Exports environment variables from the project manifest. Reads `.shelf.json`, resolves all `path`/`prefix` entries, expands prefixes to matching secrets (stable sort), computes env names, and outputs in the requested format. Reuses value conversion and shell quoting from `shelf export`.
+
+Distinction from `shelf export`:
+
+| Command | Source | Awareness |
+| --- | --- | --- |
+| `shelf export <path-or-prefix>` | explicit argument | direct |
+| `shelf project export` | `.shelf.json` in Git root | project-aware |
+
+Behavior:
+
+- Env name conflict → fail.
+- Required secret missing → fail.
+- Optional secret missing → skip with warning to stderr.
+
+Typical usage:
+
+```bash
+shelf project export --format env > .env.local
+```
+
+### `shelf run`
+
+```bash
+shelf run -- command args...
+shelf run --dry-run -- command args...
+```
+
+Runs a command with secrets from `.shelf.json` injected into the child process environment. `--dry-run` prints which env vars would be injected (no values) and skips execution.
+
+Runtime flow:
+
+1. Find Git root.
+2. Load `<git-root>/.shelf.json`.
+3. Resolve `path`/`prefix` entries.
+4. Read secret values from store.
+5. Compute env names.
+6. Check required missing → fail.
+7. Check env conflict → fail.
+8. Construct child env (Shelf overrides parent).
+9. Execute command.
+10. Return child exit code.
+
+Key principles:
+
+- Only injects into child process; does not mutate parent shell.
+- Does not write `.env.local`.
+- Does not print secret values.
+- Shelf-resolved env vars override parent env vars by default.
+- `explain` and `--dry-run` warn about overrides.
 
 ## Non-goals for MVP
 
@@ -372,8 +515,6 @@ MVP intentionally defers them. The first Go version should not include placehold
 - Stdin-based secret creation.
 - Field-specific metadata mutation commands.
 - Group metadata.
-- Project binding.
-- Project-aware env projection.
 - Shell hook.
 - Capture from `.env` files.
 - Clipboard integration.

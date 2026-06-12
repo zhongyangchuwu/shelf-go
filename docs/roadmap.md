@@ -33,7 +33,7 @@ Released as `v0.1.0`:
 - Treat writes as manual management operations; scripts should use `get` or `export`, not mutate the store.
 
 
-## v0.2.0 — Reliability and visibility
+## Completed since v0.1.0
 
 ### File locking — done
 
@@ -73,71 +73,339 @@ The first `doctor` is intentionally not coupled to chezmoi, age, or external sec
 
 ## Next candidates
 
-There are no write-path convenience features planned right now.
+The next releases should prove the Git-aware project model without adding write-side convenience APIs or encryption.
 
 Rejected ideas:
 
 - `secret set --stdin --raw`: `set` is a low-frequency management command. Scripts should not mutate Shelf as part of normal execution.
 - `export --output`: Unix redirection already handles this well: `shelf export ai --format env > .env.local`.
-- `.env` import: `.env` keys do not reliably encode Shelf's `group_path:key` identity, so import would need arbitrary naming rules.
+- `.env` as project config: `.env` keys do not reliably encode Shelf's `group_path:key` identity, and `.env` invites users to paste real secret values into project files. Shelf uses `.shelf.json` instead.
+- `.env` import: same identity-encoding problem. Project manifest with `shelf run` is the correct direction.
 
-The next feature should either improve safety/diagnostics or prove the Git-aware project model without adding write-side convenience APIs.
+## v0.2.0 — Project manifest and explain
 
-## Future — Git-aware project flow experiment
+Goal: let Shelf read what secrets a project needs, without injecting or exporting anything.
 
-The old Go rewrite idea card had a strong product direction: Shelf can autofill Git projects the way password managers autofill websites. This is promising, but should be introduced through read-only explanation first.
+### `.shelf.json` project manifest
 
-### `project explain`
+Project bindings live in `<git-root>/.shelf.json`, a file that declares which Shelf secret paths the project needs. It is a manifest of intent, not a secret store.
 
-Start with a read-only command:
+Why not `.env`:
+
+- `.env` is a key-value file for environment variables. It cannot reliably encode Shelf's `group_path:key` identity.
+- `.env` invites users to paste real secret values into project files, contradicting Shelf's goal of keeping secrets out of projects.
+- `.env` cannot express include/exclude/required/collision strategies or profiles.
+
+`.shelf.json` can be committed to Git; `.env.local` (the generated output) must be gitignored.
+
+**v0.2 minimal format:**
+
+```json
+{
+  "version": 1,
+  "secrets": [
+    {
+      "path": "providers/openai/accounts/personal:api_key",
+      "env": "OPENAI_API_KEY",
+      "required": true
+    },
+    {
+      "path": "providers/openrouter/accounts/personal:api_key",
+      "env": "OPENROUTER_API_KEY",
+      "required": true
+    }
+  ]
+}
+```
+
+Field rules:
+
+- `version`: required, fixed at `1`.
+- `secrets`: required array.
+- `path`: exact Shelf secret path (`group_path:key`).
+- `env`: optional project-level override for the environment variable name.
+- `required`: optional, defaults to `true`.
+- `prefix` and `profiles` are deferred to v0.3+.
+
+Fields **prohibited** from `.shelf.json`:
+
+- `value` / resolved values.
+- Fallback plaintext secrets.
+- Shell commands or template expressions.
+
+### `shelf project init`
+
+Writes a minimal `.shelf.json` in the Git root.
+
+```bash
+shelf project init
+```
+
+Behavior:
+
+- Must run inside a Git worktree.
+- Writes `<git-root>/.shelf.json`.
+- Fails if `.shelf.json` already exists unless `--force` is given.
+- Writes no secret values.
+
+### `shelf project explain`
+
+Read-only explanation of the current project's secret requirements.
 
 ```bash
 shelf project explain
 ```
 
-Purpose:
-
-- Show current project identity.
-- Show whether any project binding exists.
-- Show which secret paths would provide which env vars.
-- Show missing bindings or missing secrets.
-
-Do not inject anything in `explain`.
-
-### `project bind`
-
-Only after `project explain` proves useful, add explicit binding:
-
-```bash
-shelf project bind <path-or-prefix>
-shelf project unbind <path-or-prefix>
-```
-
-Preferred storage:
+Example output:
 
 ```text
-~/.config/shelf/projects.json
-```
+project: github.com/alex/my-app
+root:    /Users/alex/code/my-app
+config:  .shelf.json
 
-Avoid writing personal secret bindings into `.git/config` unless there is a strong reason later.
-
-### `project run`
-
-After bindings are stable:
-
-```bash
-shelf project run -- command args...
+ok   providers/openai/accounts/personal:api_key -> OPENAI_API_KEY
+ok   providers/openrouter/accounts/personal:api_key -> OPENROUTER_API_KEY
+warn providers/anthropic/accounts/personal:api_key missing optional
+fail providers/deepseek/accounts/personal:api_key missing required
 ```
 
 Rules:
 
-- Resolve current Git project.
-- Resolve bindings.
-- Inject env into the child process only.
-- Do not mutate shell parent environment.
-- Provide clear errors for missing secrets or conflicting env names.
+- Does **not** print secret values.
+- Does **not** execute commands.
+- Does **not** generate or modify files.
+- Validates `.shelf.json` format, secret path existence, env name uniqueness, and required/optional coverage.
+- `ok`/`warn`/`fail` per entry; `fail` exits non-zero.
 
-Defer shell hooks until project commands are proven. Hooks are expensive to debug and can hurt shell startup performance.
+Env name resolution order:
+
+1. `.shelf.json` entry `env` (project-level override).
+2. Secret object's `env` field.
+3. Derived from full secret path (uppercase, non-alphanumeric → `_`).
+
+Conflict: two entries resolving to the same env name → `fail`.
+
+**Acceptance criteria:**
+
+- Not in Git repo → fail.
+- No `.shelf.json` → clear prompt.
+- Invalid JSON → fail.
+- `version` ≠ 1 → fail.
+- Invalid `path` format → fail.
+- Invalid `env` name → fail.
+- Required secret missing → fail.
+- Optional secret missing → warn.
+- Duplicate env name → fail.
+- All secrets present, no conflicts → ok.
+
+## v0.3.0 — Project binding management and export
+
+Goal: let users manage `.shelf.json` without hand-editing JSON, and export environment variables from the project manifest.
+
+### New commands
+
+```bash
+shelf project add <path-or-prefix> [--env NAME] [--optional]
+shelf project rm <path-or-prefix>
+shelf project list
+shelf project export --format env|shell|json
+```
+
+### `shelf project add`
+
+Add a secret path or prefix to `.shelf.json`.
+
+```bash
+shelf project add providers/openai/accounts/personal:api_key --env OPENAI_API_KEY
+shelf project add providers/openrouter/accounts/personal --optional
+```
+
+Behavior:
+
+- If `.shelf.json` does not exist, prompts to run `shelf project init` first.
+- `path`: validates the secret exists in the store. Fails if not found.
+- `prefix`: validates at least one secret matches. Fails if zero matches.
+- Rejects duplicate entries (same path or prefix already present).
+- Appends entry and preserves JSON formatting.
+
+### `shelf project rm`
+
+Remove an entry from `.shelf.json`.
+
+```bash
+shelf project rm providers/openai/accounts/personal:api_key
+```
+
+### `shelf project list`
+
+List entries in `.shelf.json` without resolving secrets.
+
+```text
+path   providers/openai/accounts/personal:api_key -> OPENAI_API_KEY (required)
+prefix providers/openrouter/accounts/personal (optional)
+```
+
+Does not print secret values.
+
+### `.shelf.json` v0.3 format
+
+Adds `prefix` entries:
+
+```json
+{
+  "version": 1,
+  "secrets": [
+    {
+      "path": "providers/openai/accounts/personal:api_key",
+      "env": "OPENAI_API_KEY",
+      "required": true
+    },
+    {
+      "prefix": "providers/openrouter/accounts/personal",
+      "required": false
+    }
+  ]
+}
+```
+
+Prefix rules:
+
+- `prefix` matches all secrets whose canonical path starts with the given string.
+- `path` and `prefix` are mutually exclusive within one entry.
+- Prefix entries should not carry `env` because a prefix may expand to multiple secrets with different env names.
+- `profiles` are deferred to v0.5.
+
+### `shelf project export`
+
+Export environment variables from the project manifest.
+
+```bash
+shelf project export --format env
+shelf project export --format shell
+shelf project export --format json
+```
+
+Distinction from `shelf export`:
+
+| Command | Source | Awareness |
+| --- | --- | --- |
+| `shelf export <path-or-prefix>` | explicit path/prefix argument | direct |
+| `shelf project export` | `.shelf.json` in Git root | project-aware |
+
+Reuses existing value conversion and shell quoting from `shelf export`.
+
+Behavior:
+
+- Resolves all `path` and `prefix` entries from `.shelf.json`.
+- Expands prefix entries into matching secrets (stable sort).
+- Resolves env names (project override → secret `env` → derived).
+- On env name conflict: fail with clear message.
+- On required secret missing: fail.
+- On optional secret missing: skip with warning to stderr.
+
+Typical usage:
+
+```bash
+shelf project export --format env > .env.local
+```
+
+`.env.local` is a generated artifact, not a configuration source. It is never committed to Git.
+
+**Acceptance criteria:**
+
+- `project add` appends `path` entries.
+- `project add` appends `prefix` entries.
+- `project add` rejects duplicates.
+- `project rm` removes entries.
+- `project list` shows entries without values.
+- `project export env` outputs `KEY=value`.
+- `project export shell` is safe for `eval`.
+- `project export json` outputs a `{"KEY":"value"}` object.
+- Prefix expansion produces stable sorted output.
+- Env name conflicts fail export.
+- Required missing fails export.
+- Optional missing skips with warning.
+
+## v0.4.0 — Runtime injection: `shelf run`
+
+Goal: run commands with secrets injected directly into the child process, without writing files.
+
+```bash
+shelf run -- command args...
+shelf run --dry-run -- command args...
+```
+
+`--dry-run` prints which env vars would be injected (without values) and does not execute the command.
+
+Examples:
+
+```bash
+shelf run -- npm run dev
+shelf run -- python app.py
+shelf run -- go test ./...
+```
+
+### Runtime flow
+
+1. Find Git root.
+2. Load `<git-root>/.shelf.json`.
+3. Resolve `path`/`prefix` entries.
+4. Read secret values from store.
+5. Compute env names.
+6. Check required missing → fail.
+7. Check env name conflicts → fail.
+8. Construct child process environment (Shelf env overrides parent env).
+9. Execute command.
+10. Return child process exit code.
+
+### Key principles
+
+- Only injects into the child process.
+- Does **not** mutate the parent shell.
+- Does **not** write `.env.local` (use `shelf project export` for that).
+- Does **not** print secret values.
+- If resolution fails, the command never executes.
+- If the command fails, `shelf run` returns its exit code.
+
+### Env override strategy
+
+Shelf-resolved env vars override existing parent environment variables. Users run `shelf run` to explicitly activate the project manifest; stale env vars in the parent shell should not silently win.
+
+`explain` and `--dry-run` warn when Shelf would override an existing env var:
+
+```text
+warn OPENAI_API_KEY overrides existing environment variable
+```
+
+A future `--preserve-existing` flag is deferred.
+
+### What v0.4 does not do
+
+- Shell hooks (`eval "$(shelf hook zsh)"`).
+- Auto-injection on `cd`.
+- Profiles.
+- `.env` import.
+- Automatic `.env.local` generation.
+
+## Later / profiles
+
+After the single-profile workflow is stable, add `profiles` to `.shelf.json`:
+
+```json
+{
+  "version": 1,
+  "profiles": {
+    "default": {
+      "secrets": [...]
+    },
+    "work": {
+      "secrets": [...]
+    }
+  }
+}
+```
+
+Commands: `shelf project add --profile work ...`, `shelf run --profile work -- ...`.
 
 ## Later / careful design only
 

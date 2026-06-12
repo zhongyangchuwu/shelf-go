@@ -481,6 +481,76 @@ Validation after edit:
 - `tags`, when present, must be a list of strings.
 - If `group_path` or `key` changes, the edit is a rename and must fail when the destination path already exists.
 
+## `.shelf.json` project manifest (v0.2+)
+
+Project manifest lives at `<git-root>/.shelf.json`. It declares which Shelf secret paths a project needs. It is a manifest of intent, not a secret store.
+
+Rationale: `.env` is a key-value file for environment variables, not a project binding format. It cannot reliably encode Shelf's `group_path:key` identity, and it invites users to paste real secret values into project files.
+
+`.shelf.json` can be committed to Git. `.env.local` (generated output) must be gitignored.
+
+### Format
+
+```json
+{
+  "version": 1,
+  "secrets": [
+    {
+      "path": "providers/openai/accounts/personal:api_key",
+      "env": "OPENAI_API_KEY",
+      "required": true
+    },
+    {
+      "prefix": "providers/openrouter/accounts/personal",
+      "required": false
+    }
+  ]
+}
+```
+
+### Fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `version` | number | yes | Schema version; fixed at `1`. |
+| `secrets` | array | yes | Ordered list of secret references. |
+| `secrets[].path` | string | one of `path`/`prefix` | Exact Shelf secret path (`group_path:key`). |
+| `secrets[].prefix` | string | one of `path`/`prefix` | Prefix matching all secrets whose canonical path starts with this string. |
+| `secrets[].env` | string | no | Project-level env name override. Must match `^[A-Za-z_][A-Za-z0-9_]*$`. |
+| `secrets[].required` | boolean | no | Whether a missing secret should fail. Defaults to `true`. |
+
+### Entry rules
+
+- `path` and `prefix` are mutually exclusive; exactly one must be present per entry.
+- `prefix` entries should not carry `env` because a prefix may expand to multiple secrets with different env names.
+- `env` provides a project-level override; it does not modify the secret object's `env` field.
+- Duplicate `path` or `prefix` values within the same `.shelf.json` are rejected.
+
+### Prohibited fields
+
+`.shelf.json` MUST NOT contain:
+
+- `value` / resolved secret values.
+- Fallback plaintext secrets.
+- Shell commands or template expressions.
+- Secret object fields other than the reference (`path`/`prefix`) and projection hints (`env`, `required`).
+
+### Env name resolution
+
+When resolving an env name for a secret referenced from `.shelf.json`:
+
+1. Use the entry's `env` if present (project-level override).
+2. Otherwise use the secret object's `env` field.
+3. Otherwise derive from the full secret path (uppercase, non-alphanumeric → `_`).
+
+Two entries resolving to the same env name is a conflict and must be reported as an error.
+
+### Version evolution
+
+- v0.2: `path` entries only; no `prefix`, no `profiles`.
+- v0.3: adds `prefix` entries.
+- v0.5 (future): adds `profiles` dictionary.
+
 ## Unsupported in MVP data model
 
 - Group objects.
@@ -488,10 +558,9 @@ Validation after edit:
 - Parallel value/meta maps.
 - Arbitrary metadata map.
 - Provenance/source field.
-- Project bindings.
-- Views/projections.
 - Secret history.
 - Built-in encryption.
 - External secret-manager references.
 
 These may be added later, but are not part of the MVP store contract.
+
