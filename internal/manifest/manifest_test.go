@@ -72,6 +72,19 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 			wantErr: "secrets array is required",
 		},
 		{
+			name: "entry without path or prefix",
+			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{}}},
+			wantErr: "path or prefix is required",
+		},
+		{
+			name: "path and prefix both set",
+			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{
+				Path:   "providers/openai/accounts/personal:api_key",
+				Prefix: "providers/openai",
+			}}},
+			wantErr: "path and prefix are mutually exclusive",
+		},
+		{
 			name: "invalid path",
 			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{
 				Path: "bad",
@@ -95,11 +108,41 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 			wantErr: "duplicate secrets entry path",
 		},
 		{
-			name: "prefix not supported in v0.2",
+			name: "duplicate prefix",
+			in: Manifest{Version: CurrentVersion, Secrets: []Entry{
+				{Prefix: "providers/openai"},
+				{Prefix: "providers/openai"},
+			}},
+			wantErr: "duplicate secrets entry prefix",
+		},
+		{
+			name: "prefix with colon",
 			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{
-				Prefix: "providers/openai/accounts/personal",
+				Prefix: "providers/openai:api_key",
 			}}},
-			wantErr: "prefix is not supported in v0.2",
+			wantErr: "must not contain ':'",
+		},
+		{
+			name: "prefix with empty segment",
+			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{
+				Prefix: "providers//openai",
+			}}},
+			wantErr: "empty segment",
+		},
+		{
+			name: "prefix with env",
+			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{
+				Prefix: "providers/openai",
+				Env:    "OPENAI_KEY",
+			}}},
+			wantErr: "prefix entries must not carry env",
+		},
+		{
+			name: "prefix with invalid segment",
+			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{
+				Prefix: "providers/open ai",
+			}}},
+			wantErr: "unsupported characters in segment",
 		},
 	}
 	for _, tt := range tests {
@@ -112,6 +155,26 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestValidateAcceptsPrefixEntry(t *testing.T) {
+	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{
+		Prefix:   "providers/openai/accounts/personal",
+		Required: boolPtr(false),
+	}}}
+	if err := Validate(m); err != nil {
+		t.Fatalf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateAcceptsMixedPathAndPrefix(t *testing.T) {
+	m := Manifest{Version: CurrentVersion, Secrets: []Entry{
+		{Path: "providers/openai/accounts/personal:api_key", Env: "OPENAI_API_KEY"},
+		{Prefix: "providers/openrouter/accounts/personal", Required: boolPtr(false)},
+	}}
+	if err := Validate(m); err != nil {
+		t.Fatalf("expected valid, got: %v", err)
 	}
 }
 
@@ -129,3 +192,5 @@ func TestLoadRejectsUnknownFields(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func boolPtr(b bool) *bool { return &b }

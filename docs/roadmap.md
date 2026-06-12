@@ -85,10 +85,7 @@ Implemented for v0.2 scope:
 
 ## Next candidates
 
-The next release should focus on v0.3 project binding management (`project add/rm/list/export`) without adding write-side convenience APIs or encryption.
-Rejected ideas:
-
-- `secret set --stdin --raw`: `set` is a low-frequency management command. Scripts should not mutate Shelf as part of normal execution.
+The next release should focus on v0.4 runtime injection (`shelf run --`) with direct child process env injection. Rejected ideas:
 - `export --output`: Unix redirection already handles this well: `shelf export ai --format env > .env.local`.
 - `.env` as project config: `.env` keys do not reliably encode Shelf's `group_path:key` identity, and `.env` invites users to paste real secret values into project files. Shelf uses `.shelf.json` instead.
 - `.env` import: same identity-encoding problem. Project manifest with `shelf run` is the correct direction.
