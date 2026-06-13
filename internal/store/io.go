@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,18 +18,20 @@ type Store struct {
 }
 
 func Load(path string) (*Store, error) {
-	bytes, err := os.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return &Store{Path: path, Data: NewData()}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	if len(strings.TrimSpace(string(bytes))) == 0 {
+	if len(bytes.TrimSpace(content)) == 0 {
 		return &Store{Path: path, Data: NewData()}, nil
 	}
+	dec := json.NewDecoder(bytes.NewReader(content))
+	dec.DisallowUnknownFields()
 	var data Data
-	if err := json.Unmarshal(bytes, &data); err != nil {
+	if err := dec.Decode(&data); err != nil {
 		return nil, fmt.Errorf("invalid store JSON: %w", err)
 	}
 	if data.Version == 0 {

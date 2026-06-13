@@ -1,15 +1,12 @@
 package cli
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -21,6 +18,13 @@ import (
 type resolved struct {
 	path    string
 	envName string
+	value   string
+}
+
+type projectDiagnostic struct {
+	status  string
+	path    string
+	message string
 }
 
 func newProjectCmd() *cobra.Command {
@@ -112,58 +116,20 @@ func newProjectExplainCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			envOwners := map[string]string{}
+			resolvedEntries, diagnostics := resolveProjectEntries(m, st)
 			failed := false
-		for _, entry := range m.Secrets {
-			if entry.IsPrefix() {
-				matches := st.List(entry.Prefix)
-				if len(matches) == 0 {
-					if entry.IsRequired() {
-						fmt.Fprintf(cmd.OutOrStdout(), "fail %s (prefix) no matches required\n", entry.Prefix)
-						failed = true
-					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "warn %s (prefix) no matches optional\n", entry.Prefix)
-					}
-					continue
-				}
-				for _, p := range matches {
-					secret, ok := st.Get(p)
-					if !ok {
-						continue
-					}
-					envName := render.EnvName(p, secret)
-					if ownerPath, exists := envOwners[envName]; exists {
-						fmt.Fprintf(cmd.OutOrStdout(), "fail %s env name %s conflicts with %s\n", p, envName, ownerPath)
-						failed = true
-						continue
-					}
-					envOwners[envName] = p
-					fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", p, envName)
-				}
-			} else {
-				secret, ok := st.Get(entry.Path)
-				if !ok {
-					if entry.IsRequired() {
-						fmt.Fprintf(cmd.OutOrStdout(), "fail %s missing required\n", entry.Path)
-						failed = true
-					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "warn %s missing optional\n", entry.Path)
-					}
-					continue
-				}
-				envName := entry.Env
-				if envName == "" {
-					envName = render.EnvName(entry.Path, secret)
-				}
-				if ownerPath, exists := envOwners[envName]; exists {
-					fmt.Fprintf(cmd.OutOrStdout(), "fail %s env name %s conflicts with %s\n", entry.Path, envName, ownerPath)
+			for _, diagnostic := range diagnostics {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s %s %s\n", diagnostic.status, diagnostic.path, diagnostic.message)
+				if diagnostic.status == "fail" {
 					failed = true
-					continue
 				}
-				envOwners[envName] = entry.Path
-				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.Path, envName)
 			}
-		}
+			for _, entry := range resolvedEntries {
+				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.path, entry.envName)
+			}
+			for _, warning := range envOverrideWarnings(resolvedEntries, os.Environ()) {
+				fmt.Fprintln(cmd.OutOrStdout(), warning)
+			}
 			if failed {
 				return fmt.Errorf("project manifest check failed")
 			}
@@ -193,6 +159,9 @@ func newProjectAddCmd() *cobra.Command {
 
 			input := args[0]
 			isPrefix := !strings.Contains(input, ":")
+			if isPrefix && envName != "" {
+				return fmt.Errorf("--env is only valid for path entries")
+			}
 
 			// Validate against the store.
 			_, st, err := loadRuntime(cmd)
@@ -340,71 +309,28 @@ func newProjectExportCmd() *cobra.Command {
 				return err
 			}
 
-			// Resolve all entries into ordered path list with env names.
-			var paths []string
-			var resolvedEntries []resolved
-			envOwners := map[string]string{}
+			resolvedEntries, diagnostics := resolveProjectEntries(m, st)
 			failed := false
-
-			for _, entry := range m.Secrets {
-				if entry.IsPrefix() {
-					matches := st.List(entry.Prefix)
-					sort.Strings(matches)
-					for _, p := range matches {
-						secret, ok := st.Get(p)
-						if !ok {
-							continue
-						}
-						envName := render.EnvName(p, secret)
-						if owner, exists := envOwners[envName]; exists {
-							fmt.Fprintf(cmd.OutOrStderr(), "fail %s env name %s conflicts with %s\n", p, envName, owner)
-							failed = true
-							continue
-						}
-						envOwners[envName] = p
-						paths = append(paths, p)
-						resolvedEntries = append(resolvedEntries, resolved{path: p, envName: envName})
-					}
-				} else {
-					secret, ok := st.Get(entry.Path)
-					if !ok {
-						if entry.IsRequired() {
-							fmt.Fprintf(cmd.OutOrStderr(), "fail %s missing required\n", entry.Path)
-							failed = true
-						} else {
-							fmt.Fprintf(cmd.OutOrStderr(), "warn %s missing optional\n", entry.Path)
-						}
-						continue
-					}
-					envName := entry.Env
-					if envName == "" {
-						envName = render.EnvName(entry.Path, secret)
-					}
-					if owner, exists := envOwners[envName]; exists {
-						fmt.Fprintf(cmd.OutOrStderr(), "fail %s env name %s conflicts with %s\n", entry.Path, envName, owner)
-						failed = true
-						continue
-					}
-					envOwners[envName] = entry.Path
-					paths = append(paths, entry.Path)
-					resolvedEntries = append(resolvedEntries, resolved{path: entry.Path, envName: envName})
+			for _, diagnostic := range diagnostics {
+				fmt.Fprintf(cmd.OutOrStderr(), "%s %s %s\n", diagnostic.status, diagnostic.path, diagnostic.message)
+				if diagnostic.status == "fail" {
+					failed = true
 				}
 			}
-
 			if failed {
 				return fmt.Errorf("project export failed")
 			}
-			if len(paths) == 0 {
+			if len(resolvedEntries) == 0 {
 				return fmt.Errorf("no secrets to export")
 			}
 
 			switch format {
 			case "env":
-				return renderProjectExportEnv(cmd, st, resolvedEntries)
+				return renderProjectExportEnv(cmd, resolvedEntries)
 			case "shell":
-				return renderProjectExportShell(cmd, st, resolvedEntries)
+				return renderProjectExportShell(cmd, resolvedEntries)
 			case "json":
-				return renderProjectExportJSON(cmd, st, resolvedEntries)
+				return renderProjectExportJSON(cmd, resolvedEntries)
 			default:
 				return fmt.Errorf("unsupported format: %s", format)
 			}
@@ -417,60 +343,107 @@ func newProjectExportCmd() *cobra.Command {
 	return cmd
 }
 
-func renderProjectExportEnv(cmd *cobra.Command, st *store.Store, entries []resolved) error {
-	var b strings.Builder
-	for _, e := range entries {
-		secret, _ := st.Get(e.path)
-		value, err := render.ValueString(secret.Value)
-		if err != nil {
-			return err
+func resolveProjectEntries(m manifest.Manifest, st *store.Store) ([]resolved, []projectDiagnostic) {
+	entries := make([]resolved, 0)
+	diagnostics := make([]projectDiagnostic, 0)
+	envOwners := map[string]string{}
+
+	for _, entry := range m.Secrets {
+		if entry.IsPrefix() {
+			matches := st.List(entry.Prefix)
+			if len(matches) == 0 {
+				path := entry.Prefix + " (prefix)"
+				if entry.IsRequired() {
+					diagnostics = append(diagnostics, projectDiagnostic{status: "fail", path: path, message: "no matches required"})
+				} else {
+					diagnostics = append(diagnostics, projectDiagnostic{status: "warn", path: path, message: "no matches optional"})
+				}
+				continue
+			}
+			for _, path := range matches {
+				secret, ok := st.Get(path)
+				if !ok {
+					continue
+				}
+				appendResolvedEntry(&entries, &diagnostics, envOwners, path, secret, "")
+			}
+			continue
 		}
-		fmt.Fprintf(&b, "%s=%s\n", e.envName, value)
+
+		secret, ok := st.Get(entry.Path)
+		if !ok {
+			if entry.IsRequired() {
+				diagnostics = append(diagnostics, projectDiagnostic{status: "fail", path: entry.Path, message: "missing required"})
+			} else {
+				diagnostics = append(diagnostics, projectDiagnostic{status: "warn", path: entry.Path, message: "missing optional"})
+			}
+			continue
+		}
+		appendResolvedEntry(&entries, &diagnostics, envOwners, entry.Path, secret, entry.Env)
 	}
-	fmt.Fprint(cmd.OutOrStdout(), b.String())
+
+	return entries, diagnostics
+}
+
+func appendResolvedEntry(entries *[]resolved, diagnostics *[]projectDiagnostic, envOwners map[string]string, path string, secret store.Secret, envOverride string) {
+	envName := envOverride
+	if envName == "" {
+		var err error
+		envName, err = render.EnvName(path, secret)
+		if err != nil {
+			*diagnostics = append(*diagnostics, projectDiagnostic{status: "fail", path: path, message: err.Error()})
+			return
+		}
+	}
+	if owner, exists := envOwners[envName]; exists {
+		*diagnostics = append(*diagnostics, projectDiagnostic{status: "fail", path: path, message: fmt.Sprintf("env name %s conflicts with %s", envName, owner)})
+		return
+	}
+	envOwners[envName] = path
+	value, err := render.ValueString(secret.Value)
+	if err != nil {
+		*diagnostics = append(*diagnostics, projectDiagnostic{status: "fail", path: path, message: err.Error()})
+		return
+	}
+	*entries = append(*entries, resolved{path: path, envName: envName, value: value})
+}
+
+func renderProjectExportEnv(cmd *cobra.Command, entries []resolved) error {
+	bindings := make([]render.Binding, 0, len(entries))
+	for _, entry := range entries {
+		bindings = append(bindings, render.Binding{EnvName: entry.envName, Value: entry.value})
+	}
+	out, err := render.EnvBindings(bindings)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(cmd.OutOrStdout(), out)
 	return nil
 }
 
-func renderProjectExportShell(cmd *cobra.Command, st *store.Store, entries []resolved) error {
-	var b strings.Builder
-	for _, e := range entries {
-		secret, _ := st.Get(e.path)
-		value, err := render.ValueString(secret.Value)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(&b, "export %s=%s\n", e.envName, render.ShellQuote(value))
+func renderProjectExportShell(cmd *cobra.Command, entries []resolved) error {
+	bindings := make([]render.Binding, 0, len(entries))
+	for _, entry := range entries {
+		bindings = append(bindings, render.Binding{EnvName: entry.envName, Value: entry.value})
 	}
-	fmt.Fprint(cmd.OutOrStdout(), b.String())
+	out, err := render.ShellBindings(bindings)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(cmd.OutOrStdout(), out)
 	return nil
 }
 
-func renderProjectExportJSON(cmd *cobra.Command, st *store.Store, entries []resolved) error {
-	payload := map[string]json.RawMessage{}
-	for _, e := range entries {
-		secret, _ := st.Get(e.path)
-		payload[e.envName] = secret.Value
+func renderProjectExportJSON(cmd *cobra.Command, entries []resolved) error {
+	bindings := make([]render.Binding, 0, len(entries))
+	for _, entry := range entries {
+		bindings = append(bindings, render.Binding{EnvName: entry.envName, Value: entry.value})
 	}
-	keys := make([]string, 0, len(payload))
-	for k := range payload {
-		keys = append(keys, k)
+	out, err := render.JSONBindings(bindings)
+	if err != nil {
+		return err
 	}
-	sort.Strings(keys)
-	var buf bytes.Buffer
-	buf.WriteString("{\n")
-	for i, key := range keys {
-		value, err := json.Marshal(payload[key])
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(&buf, "  %q: %s", key, string(value))
-		if i < len(keys)-1 {
-			buf.WriteString(",")
-		}
-		buf.WriteString("\n")
-	}
-	buf.WriteString("}\n")
-	fmt.Fprint(cmd.OutOrStdout(), buf.String())
+	fmt.Fprint(cmd.OutOrStdout(), out)
 	return nil
 }
 

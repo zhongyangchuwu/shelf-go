@@ -13,13 +13,19 @@ import (
 
 var nonEnvChar = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
-func EnvName(path string, secret store.Secret) string {
+var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+func EnvName(path string, secret store.Secret) (string, error) {
 	if secret.Env != "" {
-		return secret.Env
+		return secret.Env, nil
 	}
 	name := nonEnvChar.ReplaceAllString(path, "_")
 	name = strings.Trim(name, "_")
-	return strings.ToUpper(name)
+	name = strings.ToUpper(name)
+	if !envNamePattern.MatchString(name) {
+		return "", fmt.Errorf("derived env name for %s is invalid: %s", path, name)
+	}
+	return name, nil
 }
 
 func ValueString(raw json.RawMessage) (string, error) {
@@ -38,35 +44,71 @@ func ValueString(raw json.RawMessage) (string, error) {
 }
 
 func Env(paths []string, secrets map[string]store.Secret) (string, error) {
-	var b strings.Builder
-	for _, path := range paths {
-		secret := secrets[path]
-		value, err := ValueString(secret.Value)
-		if err != nil {
-			return "", err
-		}
-		fmt.Fprintf(&b, "%s=%s\n", EnvName(path, secret), value)
+	entries, err := Bindings(paths, secrets)
+	if err != nil {
+		return "", err
 	}
-	return b.String(), nil
+	return EnvBindings(entries)
 }
 
 func Shell(paths []string, secrets map[string]store.Secret) (string, error) {
-	var b strings.Builder
+	entries, err := Bindings(paths, secrets)
+	if err != nil {
+		return "", err
+	}
+	return ShellBindings(entries)
+}
+
+func JSON(paths []string, secrets map[string]store.Secret) (string, error) {
+	entries, err := Bindings(paths, secrets)
+	if err != nil {
+		return "", err
+	}
+	return JSONBindings(entries)
+}
+
+type Binding struct {
+	EnvName string
+	Value   string
+}
+
+func Bindings(paths []string, secrets map[string]store.Secret) ([]Binding, error) {
+	entries := make([]Binding, 0, len(paths))
 	for _, path := range paths {
 		secret := secrets[path]
+		envName, err := EnvName(path, secret)
+		if err != nil {
+			return nil, err
+		}
 		value, err := ValueString(secret.Value)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		fmt.Fprintf(&b, "export %s=%s\n", EnvName(path, secret), ShellQuote(value))
+		entries = append(entries, Binding{EnvName: envName, Value: value})
+	}
+	return entries, nil
+}
+
+func EnvBindings(entries []Binding) (string, error) {
+	var b strings.Builder
+	for _, entry := range entries {
+		fmt.Fprintf(&b, "%s=%s\n", entry.EnvName, entry.Value)
 	}
 	return b.String(), nil
 }
 
-func JSON(paths []string, secrets map[string]store.Secret) (string, error) {
-	payload := map[string]json.RawMessage{}
-	for _, path := range paths {
-		payload[path] = secrets[path].Value
+func ShellBindings(entries []Binding) (string, error) {
+	var b strings.Builder
+	for _, entry := range entries {
+		fmt.Fprintf(&b, "export %s=%s\n", entry.EnvName, ShellQuote(entry.Value))
+	}
+	return b.String(), nil
+}
+
+func JSONBindings(entries []Binding) (string, error) {
+	payload := map[string]string{}
+	for _, entry := range entries {
+		payload[entry.EnvName] = entry.Value
 	}
 	keys := make([]string, 0, len(payload))
 	for key := range payload {

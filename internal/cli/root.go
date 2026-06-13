@@ -1,10 +1,10 @@
 package cli
 
 import (
+	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 	"github.com/zhongyangchuwu/shelf-go/internal/version"
-	"github.com/spf13/cobra"
 )
 
 func NewRootCmd() *cobra.Command {
@@ -25,6 +25,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newExportCmd())
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newProjectCmd())
+	root.AddCommand(newRunCmd())
 	return root
 }
 

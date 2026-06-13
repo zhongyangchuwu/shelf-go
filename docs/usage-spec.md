@@ -16,7 +16,7 @@ Git-aware project workflows are the next priority after the secret manager found
 - v0.3: `shelf project add/rm/list/export` (management and materialization).
 - v0.4: `shelf run` (runtime injection into child process).
 
-The commands described in this document for v0.3+ are specifications for future versions and are not implemented yet.
+The command surface below is implemented through v0.4. Later / profiles remains future work.
 
 ## Design rules
 
@@ -31,6 +31,7 @@ The commands described in this document for v0.3+ are specifications for future 
 ## Current command surface
 
 ```bash
+shelf secret add [path-or-group]
 shelf secret set <path> <value> [--env NAME] [--description TEXT] [--tag TAG ...] [--force]
 shelf secret get <path>
 shelf secret list [prefix]
@@ -44,19 +45,14 @@ shelf doctor
 shelf project id
 shelf project init
 shelf project explain
-```
-
-Planned project commands (v0.3–v0.4):
-
-```bash
 shelf project add <path-or-prefix> [--env NAME] [--optional]
 shelf project rm <path-or-prefix>
 shelf project list
 shelf project export --format env|shell|json
-shelf run -- command args...
-```
 
-These are specifications for future versions, not yet implemented. They should not appear in the binary until their full behavior is specified and implemented.
+shelf run -- command args...
+shelf run --dry-run -- command args...
+```
 
 ## Secret paths
 
@@ -95,6 +91,31 @@ shelf secret set flags:enabled true
 shelf secret set app:options '{"debug":false}'
 shelf secret set providers/openrouter/accounts/personal:api_key sk-xxx --env OPENROUTER_API_KEY
 ```
+
+
+### `shelf secret add`
+
+```bash
+shelf secret add
+shelf secret add providers/openai/accounts/personal:api_key
+shelf secret add providers/openai/accounts/personal
+```
+
+Interactively creates a secret for human use. `secret set` remains the scriptable non-interactive write path.
+
+Behavior:
+
+- Requires a terminal; non-interactive scripts should use `secret set`.
+- Shows existing group paths as lightweight hints before prompting.
+- With no argument, prompts for full secret path.
+- With a full `group:key` path, prompts only for secret fields.
+- With a group path argument, prompts for `key` and stores `group:key`.
+- Prompts for value using hidden input.
+- Prompts for optional env, description, and comma-separated tags.
+- Existing paths are not overwritten unless the user confirms.
+- Does not print secret values.
+
+This does not add group objects or group metadata; group remains the path prefix used to organize keys.
 
 ## `shelf secret get`
 
@@ -510,7 +531,6 @@ Key principles:
 
 ## Non-goals for MVP
 
-- Prompt-based secret creation.
 - Stdin-based secret creation.
 - Field-specific metadata mutation commands.
 - Group metadata.

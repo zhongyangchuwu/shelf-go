@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"sort"
@@ -11,7 +14,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/render"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"golang.org/x/term"
 )
+
+var secretAddIsTerminal = term.IsTerminal
+var secretAddReadPassword = term.ReadPassword
 
 type editableSecret struct {
 	GroupPath   string          `json:"group_path"`
@@ -36,6 +43,7 @@ func (e editableSecret) secret() (store.SecretID, store.Secret) {
 
 func newSecretCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "secret", Short: "Manage secrets"}
+	cmd.AddCommand(newSecretAddCmd())
 	cmd.AddCommand(newSecretSetCmd())
 	cmd.AddCommand(newSecretGetCmd())
 	cmd.AddCommand(newSecretListCmd())
@@ -45,6 +53,194 @@ func newSecretCmd() *cobra.Command {
 	return cmd
 }
 
+func newSecretAddCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "add [path-or-group]",
+		Short:             "Interactively create a secret",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completeSecretSetPathArg,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !secretAddIsTerminal(int(os.Stdin.Fd())) {
+				return fmt.Errorf("secret add requires a terminal; use `shelf secret set` for scripts")
+			}
+			_, st, unlock, err := loadRuntimeForWrite(cmd)
+			if err != nil {
+				return err
+			}
+			defer unlock()
+			prompt := newSecretAddPrompt(cmd.InOrStdin(), cmd.OutOrStdout(), st)
+			path, secret, force, err := prompt.collect(args)
+			if err != nil {
+				return err
+			}
+			if err := st.Set(path, secret, force); err != nil {
+				return err
+			}
+			if err := st.Save(); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "added %s\n", path)
+			return nil
+		},
+	}
+	return cmd
+}
+
+type secretAddPrompt struct {
+	in  *bufio.Reader
+	out io.Writer
+	st  *store.Store
+}
+
+func newSecretAddPrompt(in io.Reader, out io.Writer, st *store.Store) secretAddPrompt {
+	return secretAddPrompt{in: bufio.NewReader(in), out: out, st: st}
+}
+
+func (p secretAddPrompt) collect(args []string) (string, store.Secret, bool, error) {
+	p.printGroupHints()
+	path, err := p.collectPath(args)
+	if err != nil {
+		return "", store.Secret{}, false, err
+	}
+	force := false
+	if _, exists := p.st.Get(path); exists {
+		overwrite, err := p.confirm("secret exists; overwrite? [y/N]: ")
+		if err != nil {
+			return "", store.Secret{}, false, err
+		}
+		if !overwrite {
+			return "", store.Secret{}, false, fmt.Errorf("secret already exists: %s", path)
+		}
+		force = true
+	}
+	value, err := p.password("value: ")
+	if err != nil {
+		return "", store.Secret{}, false, err
+	}
+	if value == "" {
+		return "", store.Secret{}, false, fmt.Errorf("secret value is required")
+	}
+	envName, err := p.line("env (optional): ")
+	if err != nil {
+		return "", store.Secret{}, false, err
+	}
+	description, err := p.line("description (optional): ")
+	if err != nil {
+		return "", store.Secret{}, false, err
+	}
+	tagText, err := p.line("tags comma-separated (optional): ")
+	if err != nil {
+		return "", store.Secret{}, false, err
+	}
+	raw, err := store.ParseValue(value)
+	if err != nil {
+		return "", store.Secret{}, false, err
+	}
+	secret := store.Secret{Value: raw, Env: strings.TrimSpace(envName), Description: strings.TrimSpace(description), Tags: parsePromptTags(tagText)}
+	return path, secret, force, nil
+}
+
+func (p secretAddPrompt) collectPath(args []string) (string, error) {
+	if len(args) == 0 {
+		path, err := p.line("path (group/key as group:path): ")
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(path), nil
+	}
+	input := strings.TrimSpace(args[0])
+	if strings.Contains(input, ":") {
+		return input, nil
+	}
+	key, err := p.line("key: ")
+	if err != nil {
+		return "", err
+	}
+	return input + ":" + strings.TrimSpace(key), nil
+}
+
+func (p secretAddPrompt) printGroupHints() {
+	groups := existingGroups(p.st.List(""))
+	if len(groups) == 0 {
+		return
+	}
+	fmt.Fprintln(p.out, "existing groups:")
+	limit := len(groups)
+	if limit > 8 {
+		limit = 8
+	}
+	for _, group := range groups[:limit] {
+		fmt.Fprintf(p.out, "  %s\n", group)
+	}
+	if len(groups) > limit {
+		fmt.Fprintf(p.out, "  ... %d more\n", len(groups)-limit)
+	}
+}
+
+func (p secretAddPrompt) line(label string) (string, error) {
+	fmt.Fprint(p.out, label)
+	text, err := p.in.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", err
+	}
+	return strings.TrimRight(text, "\r\n"), nil
+}
+
+func (p secretAddPrompt) password(label string) (string, error) {
+	fmt.Fprint(p.out, label)
+	bytes, err := secretAddReadPassword(int(os.Stdin.Fd()))
+	fmt.Fprintln(p.out)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+func (p secretAddPrompt) confirm(label string) (bool, error) {
+	answer, err := p.line(label)
+	if err != nil {
+		return false, err
+	}
+	switch strings.ToLower(strings.TrimSpace(answer)) {
+	case "y", "yes":
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+func parsePromptTags(input string) []string {
+	if strings.TrimSpace(input) == "" {
+		return nil
+	}
+	parts := strings.Split(input, ",")
+	tags := make([]string, 0, len(parts))
+	for _, part := range parts {
+		tag := strings.TrimSpace(part)
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	return tags
+}
+
+func existingGroups(paths []string) []string {
+	seen := map[string]struct{}{}
+	groups := make([]string, 0, len(paths))
+	for _, path := range paths {
+		group, _, ok := strings.Cut(path, ":")
+		if !ok || group == "" {
+			continue
+		}
+		if _, exists := seen[group]; exists {
+			continue
+		}
+		seen[group] = struct{}{}
+		groups = append(groups, group)
+	}
+	sort.Strings(groups)
+	return groups
+}
 func newSecretSetCmd() *cobra.Command {
 	var envName, description string
 	var tags []string

@@ -22,6 +22,30 @@ func runShelf(t *testing.T, args ...string) (string, error) {
 	return out.String(), err
 }
 
+func runShelfWithInput(t *testing.T, input string, args ...string) (string, error) {
+	t.Helper()
+	cmd := NewRootCmd()
+	var out bytes.Buffer
+	cmd.SetIn(strings.NewReader(input))
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs(args)
+	err := cmd.Execute()
+	return out.String(), err
+}
+
+func withPromptPassword(t *testing.T, password string) {
+	t.Helper()
+	origIsTerminal := secretAddIsTerminal
+	origReadPassword := secretAddReadPassword
+	secretAddIsTerminal = func(int) bool { return true }
+	secretAddReadPassword = func(int) ([]byte, error) { return []byte(password), nil }
+	t.Cleanup(func() {
+		secretAddIsTerminal = origIsTerminal
+		secretAddReadPassword = origReadPassword
+	})
+}
+
 func TestSecretSetGetListInfoExport(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "secrets.json")
 
@@ -67,6 +91,115 @@ func TestSecretSetGetListInfoExport(t *testing.T) {
 	}
 }
 
+func TestSecretAddInteractiveFullPath(t *testing.T) {
+	withPromptPassword(t, "sk-test")
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	out, err := runShelfWithInput(t, "OPENAI_API_KEY\nOpenAI key\nai,personal\n", "--data", data, "secret", "add", "providers/openai/accounts/personal:api_key")
+	if err != nil {
+		t.Fatalf("secret add: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "sk-test") {
+		t.Fatalf("secret add leaked value:\n%s", out)
+	}
+	got, err := runShelf(t, "--data", data, "secret", "get", "providers/openai/accounts/personal:api_key")
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if got != "sk-test\n" {
+		t.Fatalf("unexpected secret value: %q", got)
+	}
+	info, err := runShelf(t, "--data", data, "secret", "info", "providers/openai/accounts/personal:api_key")
+	if err != nil {
+		t.Fatalf("info secret: %v", err)
+	}
+	for _, want := range []string{`"env": "OPENAI_API_KEY"`, `"description": "OpenAI key"`, `"ai"`, `"personal"`} {
+		if !strings.Contains(info, want) {
+			t.Fatalf("info missing %q:\n%s", want, info)
+		}
+	}
+}
+
+func TestSecretAddInteractiveGroupPathShowsExistingGroups(t *testing.T) {
+	withPromptPassword(t, "sk-work")
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-personal"); err != nil {
+		t.Fatalf("set seed: %v", err)
+	}
+	out, err := runShelfWithInput(t, "api_key\n\n\n\n", "--data", data, "secret", "add", "providers/openai/accounts/work")
+	if err != nil {
+		t.Fatalf("secret add: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "existing groups:") || !strings.Contains(out, "providers/openai/accounts/personal") {
+		t.Fatalf("missing existing group hint:\n%s", out)
+	}
+	got, err := runShelf(t, "--data", data, "secret", "get", "providers/openai/accounts/work:api_key")
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if got != "sk-work\n" {
+		t.Fatalf("unexpected secret value: %q", got)
+	}
+}
+
+func TestSecretAddRefusesOverwriteByDefault(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "old"); err != nil {
+		t.Fatalf("set seed: %v", err)
+	}
+	origIsTerminal := secretAddIsTerminal
+	origReadPassword := secretAddReadPassword
+	secretAddIsTerminal = func(int) bool { return true }
+	secretAddReadPassword = func(int) ([]byte, error) { return nil, fmt.Errorf("password prompt should not run") }
+	t.Cleanup(func() {
+		secretAddIsTerminal = origIsTerminal
+		secretAddReadPassword = origReadPassword
+	})
+	_, err := runShelfWithInput(t, "n\n", "--data", data, "secret", "add", "app:token")
+	if err == nil {
+		t.Fatalf("expected overwrite refusal")
+	}
+	got, err := runShelf(t, "--data", data, "secret", "get", "app:token")
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if got != "old\n" {
+		t.Fatalf("secret was overwritten: %q", got)
+	}
+}
+
+func TestSecretAddOverwritesWhenConfirmed(t *testing.T) {
+	withPromptPassword(t, "new")
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "old"); err != nil {
+		t.Fatalf("set seed: %v", err)
+	}
+	out, err := runShelfWithInput(t, "y\n\n\n\n", "--data", data, "secret", "add", "app:token")
+	if err != nil {
+		t.Fatalf("secret add overwrite: %v\n%s", err, out)
+	}
+	got, err := runShelf(t, "--data", data, "secret", "get", "app:token")
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if got != "new\n" {
+		t.Fatalf("secret was not overwritten: %q", got)
+	}
+}
+
+func TestSecretAddFailsWithoutTerminal(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	origIsTerminal := secretAddIsTerminal
+	secretAddIsTerminal = func(int) bool { return false }
+	t.Cleanup(func() { secretAddIsTerminal = origIsTerminal })
+	_, err := runShelfWithInput(t, "", "--data", data, "secret", "add", "app:token")
+	if err == nil {
+		t.Fatalf("expected non-terminal add to fail")
+	}
+	if !strings.Contains(err.Error(), "requires a terminal") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestSecretGetAndExportPreserveJSONNumbers(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "secrets.json")
 	want := "12345678901234567890"
@@ -86,6 +219,20 @@ func TestSecretGetAndExportPreserveJSONNumbers(t *testing.T) {
 	}
 	if !strings.Contains(out, want) {
 		t.Fatalf("export json changed number: %s", out)
+	}
+}
+
+func TestExportRejectsInvalidDerivedEnvName(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "123:token", "secret"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	_, err := runShelf(t, "--data", data, "export", "123:token", "--format", "shell", "--all")
+	if err == nil {
+		t.Fatalf("expected invalid derived env name to fail")
+	}
+	if !strings.Contains(err.Error(), "derived env name") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -521,6 +668,20 @@ func TestProjectAddPrefixEntry(t *testing.T) {
 	}
 }
 
+func TestProjectAddRejectsEnvForPrefix(t *testing.T) {
+	_, data := setupProjectTest(t)
+	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	_, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal", "--env", "OPENAI_API_KEY")
+	if err == nil {
+		t.Fatalf("expected --env for prefix to fail")
+	}
+	if !strings.Contains(err.Error(), "--env is only valid for path entries") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestProjectAddRejectsDuplicatePath(t *testing.T) {
 	_, data := setupProjectTest(t)
 	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
@@ -718,6 +879,23 @@ func TestProjectExportJSON(t *testing.T) {
 	}
 }
 
+func TestProjectExportJSONConvertsValuesToStrings(t *testing.T) {
+	_, data := setupProjectTest(t)
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:number", "123"); err != nil {
+		t.Fatalf("set number: %v", err)
+	}
+	if _, err := runShelf(t, "--data", data, "project", "add", "app:number", "--env", "APP_NUMBER"); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "project", "export", "--format", "json")
+	if err != nil {
+		t.Fatalf("project export json: %v", err)
+	}
+	if !strings.Contains(out, `"APP_NUMBER": "123"`) {
+		t.Fatalf("expected string-converted JSON value:\n%s", out)
+	}
+}
+
 func TestProjectExportFailsOnRequiredMissing(t *testing.T) {
 	_, data := setupProjectTest(t)
 	// Add a path entry but don't create the secret.
@@ -838,6 +1016,55 @@ func TestProjectExportExpandsPrefixSorted(t *testing.T) {
 	}
 }
 
+func TestProjectExportFailsOnRequiredEmptyPrefix(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"},{"prefix":"providers/missing","required":true}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	if err == nil {
+		t.Fatalf("expected required empty prefix to fail")
+	}
+	if !strings.Contains(out, "fail providers/missing (prefix) no matches required") {
+		t.Fatalf("missing required prefix failure:\n%s", out)
+	}
+}
+
+func TestProjectExportWarnsOnOptionalEmptyPrefix(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"},{"prefix":"providers/missing","required":false}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	if err != nil {
+		t.Fatalf("expected optional empty prefix to succeed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "APP_TOKEN=secret") {
+		t.Fatalf("missing present secret:\n%s", out)
+	}
+	if !strings.Contains(out, "warn providers/missing (prefix) no matches optional") {
+		t.Fatalf("missing optional prefix warning:\n%s", out)
+	}
+}
+
 func TestProjectExplainHandlesPrefixEntries(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
@@ -868,6 +1095,166 @@ func TestProjectExplainHandlesPrefixEntries(t *testing.T) {
 	}
 	if !strings.Contains(out, "warn providers/nonexistent (prefix) no matches optional") {
 		t.Fatalf("missing warn for empty optional prefix:\n%s", out)
+	}
+}
+
+func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	if err != nil {
+		t.Fatalf("run command: %v\n%s", err, out)
+	}
+	if out != "secret" {
+		t.Fatalf("unexpected child output: %q", out)
+	}
+}
+
+func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app/api:token", "secret"); err != nil {
+		t.Fatalf("set token: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"prefix":"app/api"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "run", "--", "sh", "-c", "printf %s \"$APP_API_TOKEN\"")
+	if err != nil {
+		t.Fatalf("run command: %v\n%s", err, out)
+	}
+	if out != "secret" {
+		t.Fatalf("unexpected child output: %q", out)
+	}
+}
+
+func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
+	entries := []resolved{{envName: "APP_TOKEN", value: "secret"}}
+	env := childEnv([]string{"APP_TOKEN", "OTHER=value"}, entries)
+	want := []string{"OTHER=value", "APP_TOKEN=secret"}
+	if strings.Join(env, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("unexpected env:\n%q", env)
+	}
+}
+
+func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	t.Setenv("APP_TOKEN", "parent")
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	if err != nil {
+		t.Fatalf("run command: %v\n%s", err, out)
+	}
+	if out != "secret" {
+		t.Fatalf("expected Shelf value to override parent env: %q", out)
+	}
+	out, err = runShelf(t, "--data", data, "run", "--dry-run", "--", "sh", "-c", "exit 99")
+	if err != nil {
+		t.Fatalf("dry-run: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "warn APP_TOKEN overrides existing environment variable") {
+		t.Fatalf("missing override warning:\n%s", out)
+	}
+	if !strings.Contains(out, "inject APP_TOKEN") {
+		t.Fatalf("missing dry-run inject line:\n%s", out)
+	}
+	if strings.Contains(out, "secret") || strings.Contains(out, "parent") {
+		t.Fatalf("dry-run leaked env value:\n%s", out)
+	}
+}
+
+func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	marker := filepath.Join(dir, "marker")
+	manifest := `{"version":1,"secrets":[{"path":"app:missing"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", filepath.Join(dir, "secrets.json"), "run", "--", "sh", "-c", "touch "+marker)
+	if err == nil {
+		t.Fatalf("expected run to fail")
+	}
+	if !strings.Contains(out, "fail app:missing missing required") {
+		t.Fatalf("missing resolution failure:\n%s", out)
+	}
+	if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
+		t.Fatalf("command executed despite resolution failure")
+	}
+}
+
+func TestRunReturnsChildExitCode(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(`{"version":1,"secrets":[]}`), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	_, err := runShelf(t, "--data", filepath.Join(dir, "secrets.json"), "run", "--", "sh", "-c", "exit 7")
+	if err == nil {
+		t.Fatalf("expected child failure")
+	}
+	if code := ExitCode(err); code != 7 {
+		t.Fatalf("expected exit code 7, got %d from %v", code, err)
+	}
+}
+
+func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	t.Setenv("APP_TOKEN", "parent")
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "project", "explain")
+	if err != nil {
+		t.Fatalf("project explain: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "warn APP_TOKEN overrides existing environment variable") {
+		t.Fatalf("missing override warning:\n%s", out)
+	}
+	if strings.Contains(out, "secret") || strings.Contains(out, "parent") {
+		t.Fatalf("explain leaked env value:\n%s", out)
 	}
 }
 

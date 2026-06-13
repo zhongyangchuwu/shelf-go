@@ -83,9 +83,35 @@ Implemented for v0.2 scope:
 - Required missing secret → `fail`; optional missing secret → `warn`.
 - Env name conflict detection with non-zero exit.
 
+
+### Project binding management and export — done
+
+Implemented for v0.3 scope:
+
+- `shelf project add <path-or-prefix> [--env NAME] [--optional]`.
+- `shelf project rm <path-or-prefix>`.
+- `shelf project list`.
+- `shelf project export --format env|shell|json`.
+- Prefix entries expand in stable sorted order.
+- Required/optional missing entries and env name conflicts use the same resolver as `project explain`.
+- Project export reuses direct export value conversion and shell quoting.
+
+### Runtime injection (`run`) — done
+
+Implemented for v0.4 scope:
+
+- `shelf run -- command args...`.
+- `shelf run --dry-run -- command args...`.
+- Resolves `.shelf.json` before executing; resolution failure prevents child execution.
+- Injects resolved env vars into the child process only.
+- Shelf-resolved env vars override parent env vars.
+- `project explain` and `run --dry-run` warn when a resolved env var overrides an existing parent variable.
+- `run --dry-run` prints env var names only, never values.
+- Child process exit codes are propagated by the binary.
+
 ## Next candidates
 
-The next release should focus on v0.4 runtime injection (`shelf run --`) with direct child process env injection. Rejected ideas:
+The v0.4 runtime injection scope is implemented. Rejected ideas:
 - `export --output`: Unix redirection already handles this well: `shelf export ai --format env > .env.local`.
 - `.env` as project config: `.env` keys do not reliably encode Shelf's `group_path:key` identity, and `.env` invites users to paste real secret values into project files. Shelf uses `.shelf.json` instead.
 - `.env` import: same identity-encoding problem. Project manifest with `shelf run` is the correct direction.
@@ -414,6 +440,18 @@ After the single-profile workflow is stable, add `profiles` to `.shelf.json`:
 ```
 
 Commands: `shelf project add --profile work ...`, `shelf run --profile work -- ...`.
+
+
+### Secret interactive add
+
+`shelf secret add [path-or-group]` provides a human-friendly prompt flow for the main secret creation path:
+
+- Shows existing group paths as hints.
+- Accepts a full path, a group path plus prompted key, or a prompted full path.
+- Reads the value with hidden terminal input.
+- Prompts for optional env, description, and tags.
+- Refuses non-terminal use; scripts should use `secret set`.
+- Does not introduce group objects or group metadata.
 
 ## Later / careful design only
 
