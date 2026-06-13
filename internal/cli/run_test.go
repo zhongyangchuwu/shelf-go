@@ -1,0 +1,136 @@
+package cli
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	if err != nil {
+		t.Fatalf("run command: %v\n%s", err, out)
+	}
+	if out != "secret" {
+		t.Fatalf("unexpected child output: %q", out)
+	}
+}
+func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app/api:token", "secret"); err != nil {
+		t.Fatalf("set token: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"prefix":"app/api"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "run", "--", "sh", "-c", "printf %s \"$APP_API_TOKEN\"")
+	if err != nil {
+		t.Fatalf("run command: %v\n%s", err, out)
+	}
+	if out != "secret" {
+		t.Fatalf("unexpected child output: %q", out)
+	}
+}
+func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
+	entries := []resolved{{envName: "APP_TOKEN", value: "secret"}}
+	env := childEnv([]string{"APP_TOKEN", "OTHER=value"}, entries)
+	want := []string{"OTHER=value", "APP_TOKEN=secret"}
+	if strings.Join(env, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("unexpected env:\n%q", env)
+	}
+}
+func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	t.Setenv("APP_TOKEN", "parent")
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", data, "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	if err != nil {
+		t.Fatalf("run command: %v\n%s", err, out)
+	}
+	if out != "secret" {
+		t.Fatalf("expected Shelf value to override parent env: %q", out)
+	}
+	out, err = runShelf(t, "--data", data, "run", "--dry-run", "--", "sh", "-c", "exit 99")
+	if err != nil {
+		t.Fatalf("dry-run: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "warn APP_TOKEN overrides existing environment variable") {
+		t.Fatalf("missing override warning:\n%s", out)
+	}
+	if !strings.Contains(out, "inject APP_TOKEN") {
+		t.Fatalf("missing dry-run inject line:\n%s", out)
+	}
+	if strings.Contains(out, "secret") || strings.Contains(out, "parent") {
+		t.Fatalf("dry-run leaked env value:\n%s", out)
+	}
+}
+func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	marker := filepath.Join(dir, "marker")
+	manifest := `{"version":1,"secrets":[{"path":"app:missing"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--data", filepath.Join(dir, "secrets.json"), "run", "--", "sh", "-c", "touch "+marker)
+	if err == nil {
+		t.Fatalf("expected run to fail")
+	}
+	if !strings.Contains(out, "fail app:missing missing required") {
+		t.Fatalf("missing resolution failure:\n%s", out)
+	}
+	if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
+		t.Fatalf("command executed despite resolution failure")
+	}
+}
+func TestRunReturnsChildExitCode(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(`{"version":1,"secrets":[]}`), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	_, err := runShelf(t, "--data", filepath.Join(dir, "secrets.json"), "run", "--", "sh", "-c", "exit 7")
+	if err == nil {
+		t.Fatalf("expected child failure")
+	}
+	if code := ExitCode(err); code != 7 {
+		t.Fatalf("expected exit code 7, got %d from %v", code, err)
+	}
+}
