@@ -1,8 +1,7 @@
 # Phase 1: Encrypted Vault Core - Discussion Log
 
-> **Audit trail only.** Do not use as input to planning, research, or execution agents.
-> Decisions are captured in CONTEXT.md - this log preserves the alternatives considered.
-
+> **Supplementary audit trail — not a required OMP artifact.**
+> Decisions are captured in CONTEXT.md; this log preserves the alternatives considered.
 **Date:** 2026-06-16
 **Phase:** 1-Encrypted Vault Core
 **Areas discussed:** Vault config contract, Age recipients and identities, Vault file format, Plaintext side-file policy

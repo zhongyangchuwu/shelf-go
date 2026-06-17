@@ -1,4 +1,3 @@
-<!-- GSD:project-start source:PROJECT.md -->
 
 ## Project
 
@@ -20,9 +19,7 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 - **Non-secret config**: Shelf config and `.shelf.json` project manifests must not contain secret values.
 - **Brownfield architecture**: New functionality should keep the current package boundaries: CLI orchestration in `internal/cli`, persistence in `internal/store`, project manifests in `internal/manifest`, rendering in `internal/render`, and config resolution in `internal/config`.
 
-<!-- GSD:project-end -->
 
-<!-- GSD:stack-start source:codebase/STACK.md -->
 
 ## Technology Stack
 
@@ -81,9 +78,7 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 - Build output defaults to `./bin/shelf` via `justfile`.
 - No server runtime, container runtime, hosted platform, or daemon process is detected.
 
-<!-- GSD:stack-end -->
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
 
 ## Conventions
 
@@ -143,9 +138,7 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 
 ## Module Design
 
-<!-- GSD:conventions-end -->
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
 
 ## Architecture
 
@@ -301,34 +294,19 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 
 ## Cross-Cutting Concerns
 
-<!-- GSD:architecture-end -->
 
-<!-- GSD:skills-start source:skills/ -->
 
 ## Project Skills
 
 No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
-<!-- GSD:skills-end -->
 
-<!-- GSD:workflow-start source:GSD defaults -->
+## OMP Workflow
 
-## GSD Workflow Enforcement
+Non-trivial work follows the omp-workflow cadence: classify, plan, execute, review, verify, capture, ship.
 
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+- Fast mode for small, clear, low-risk edits.
+- Focused mode for bounded work benefiting from written intent.
+- Full mode for phased, multi-session, risky, or coordinated work.
 
-Use these entry points:
+Keep planning artifacts in `.planning/`; update `STATE.md` when workflow position changes.
 
-- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
-
-<!-- GSD:profile-start -->
-
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
