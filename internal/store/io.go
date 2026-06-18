@@ -13,55 +13,76 @@ import (
 )
 
 type Store struct {
-	Path string
 	Data Data
 }
 
 func Load(path string) (*Store, error) {
 	content, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return &Store{Path: path, Data: NewData()}, nil
+		return &Store{Data: NewData()}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
 	if len(bytes.TrimSpace(content)) == 0 {
-		return &Store{Path: path, Data: NewData()}, nil
+		return &Store{Data: NewData()}, nil
 	}
+	data, err := decodeStore(content)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{Data: data}, nil
+}
+
+func Save(path string, st *Store) error {
+	plain, err := encodeStore(st.Data)
+	if err != nil {
+		return err
+	}
+	return writeStoreFile(path, plain)
+}
+
+func encodeStore(data Data) ([]byte, error) {
+	if data.Version == 0 {
+		data.Version = CurrentVersion
+	}
+	if data.Secrets == nil {
+		data.Secrets = map[string]Secret{}
+	}
+	if err := validateData(data); err != nil {
+		return nil, err
+	}
+	plain, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(plain, '\n'), nil
+}
+
+func decodeStore(content []byte) (Data, error) {
 	dec := json.NewDecoder(bytes.NewReader(content))
 	dec.DisallowUnknownFields()
 	var data Data
 	if err := dec.Decode(&data); err != nil {
-		return nil, fmt.Errorf("invalid store JSON: %w", err)
+		return Data{}, fmt.Errorf("invalid store JSON: %w", err)
 	}
 	if data.Version == 0 {
 		data.Version = CurrentVersion
 	}
 	if data.Version != CurrentVersion {
-		return nil, fmt.Errorf("unsupported store version %d", data.Version)
+		return Data{}, fmt.Errorf("unsupported store version %d", data.Version)
 	}
 	if data.Secrets == nil {
 		data.Secrets = map[string]Secret{}
 	}
-	for path, secret := range data.Secrets {
-		if err := ValidatePath(path); err != nil {
-			return nil, err
-		}
-		if err := ValidateSecret(secret); err != nil {
-			return nil, fmt.Errorf("invalid secret %s: %w", path, err)
-		}
+	if err := validateData(data); err != nil {
+		return Data{}, err
 	}
-	return &Store{Path: path, Data: data}, nil
+	return data, nil
 }
 
-func (s *Store) Save() error {
-	if s.Data.Version == 0 {
-		s.Data.Version = CurrentVersion
-	}
-	if s.Data.Secrets == nil {
-		s.Data.Secrets = map[string]Secret{}
-	}
-	for path, secret := range s.Data.Secrets {
+func validateData(data Data) error {
+	for path, secret := range data.Secrets {
 		if err := ValidatePath(path); err != nil {
 			return err
 		}
@@ -69,22 +90,22 @@ func (s *Store) Save() error {
 			return fmt.Errorf("invalid secret %s: %w", path, err)
 		}
 	}
-	bytes, err := json.MarshalIndent(s.Data, "", "  ")
-	if err != nil {
+	return nil
+}
+
+
+func writeStoreFile(path string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	bytes = append(bytes, '\n')
-	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
-		return err
-	}
-	if _, err := os.Stat(s.Path); err == nil {
-		if err := copyFile(s.Path, s.Path+".bak"); err != nil {
+	if _, err := os.Stat(path); err == nil {
+		if err := copyFile(path, path+".bak"); err != nil {
 			return err
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(s.Path), filepath.Base(s.Path)+".tmp-*")
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
 	if err != nil {
 		return err
 	}
@@ -94,7 +115,7 @@ func (s *Store) Save() error {
 		tmp.Close()
 		return err
 	}
-	if _, err := tmp.Write(bytes); err != nil {
+	if _, err := tmp.Write(content); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -105,7 +126,7 @@ func (s *Store) Save() error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmpName, s.Path)
+	return os.Rename(tmpName, path)
 }
 
 func (s *Store) Set(path string, secret Secret, force bool) error {
