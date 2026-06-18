@@ -37,10 +37,10 @@
 | Export command | Export a path or prefix directly from the secret store in shell/env/JSON formats | `internal/cli/export.go` |
 | Project commands | Manage `.shelf.json`, resolve project bindings, export project env, derive Git project identity | `internal/cli/project.go` |
 | Run command | Resolve project env bindings and execute a child process with injected environment | `internal/cli/run.go` |
-| Init command | Create config and data files with the configured paths | `internal/cli/init.go` |
-| Doctor command | Check config resolution, store loadability, file permissions, Git tracking, and completion install state | `internal/cli/doctor.go` |
+| Init command | Create vault-first config, age identity material when needed, and encrypted vault files | `internal/cli/init.go` |
+| Doctor command | Check config resolution, encrypted vault loadability, file permissions, and completion install state | `internal/cli/doctor.go` |
 | Config layer | Resolve runtime config from flags, environment variables, config YAML, and defaults | `internal/config/config.go` |
-| Store layer | Load, validate, mutate, lock, and atomically save the JSON secret store | `internal/store/io.go`, `internal/store/lock.go`, `internal/store/model.go`, `internal/store/path.go`, `internal/store/validate.go` |
+| Store layer | Own the plaintext data model, path grammar, JSON validation, encrypted vault persistence, backups, prefix listing, and write locking | `internal/store/io.go`, `internal/store/vault.go`, `internal/store/lock.go`, `internal/store/model.go`, `internal/store/path.go`, `internal/store/validate.go` |
 | Manifest layer | Load, validate, mutate, and save project manifest entries | `internal/manifest/manifest.go`, `internal/manifest/io.go`, `internal/manifest/validate.go` |
 | Render layer | Convert secrets and resolved bindings into env, shell, and JSON output | `internal/render/export.go` |
 | Version layer | Compose semantic version plus VCS revision from Go build info | `internal/version/version.go` |
@@ -51,8 +51,8 @@
 
 **Key Characteristics:**
 - Keep command construction and UX in `internal/cli/*.go`; keep reusable domain behavior in `internal/store`, `internal/manifest`, `internal/config`, and `internal/render`.
-- Persist state in local files, not a database or server: the secret store is JSON, config is YAML, and project bindings live in `.shelf.json`.
-- Use explicit load-mutate-save flows. Mutating secret-store commands acquire a file lock through `store.LockFile` before loading and saving.
+- Persist state in an age-encrypted vault file; config is YAML, and project bindings live in `.shelf.json`.
+- Use explicit load-mutate-encrypt-save flows. Mutating secret-store commands acquire a file lock through `store.Vault.Update` before loading and saving.
 - Treat project resolution as a shared CLI helper: `resolveProjectEntries` in `internal/cli/project.go` is reused by `project explain`, `project export`, and `run`.
 
 ## Layers
@@ -79,10 +79,10 @@
 - Used by: `internal/cli/root.go`, `internal/cli/init.go`, `internal/cli/doctor.go`.
 
 **Secret Store Layer:**
-- Purpose: Own the secret data model, path grammar, JSON validation, atomic persistence, backups, prefix listing, and write locking.
+- Purpose: Own the plaintext secret data model, encrypted vault boundary, path grammar, JSON validation, atomic persistence, backups, prefix listing, and write locking.
 - Location: `internal/store`
-- Contains: `Data`, `Secret`, `Info`, `Store`, `SecretID`, `Load`, `Save`, `Set`, `Update`, `Delete`, `LockFile`.
-- Depends on: Go standard library only.
+- Contains: `Data`, `Secret`, `Info`, `Store`, `Vault`, `VaultOptions`, `SecretID`, `Load`, `Save`, `Set`, `Update`, `Delete`, `LockFile`.
+- Depends on: `filippo.io/age` for vault encryption plus Go standard library packages.
 - Used by: `internal/cli`, `internal/manifest/validate.go`, `internal/render/export.go`.
 
 **Project Manifest Layer:**
@@ -104,9 +104,9 @@
 ### Direct Secret Write Path
 
 1. User invokes a mutating command such as `shelf secret set ...`; Cobra routes through `NewRootCmd` (`internal/cli/root.go:10`) to secret command handlers (`internal/cli/secret.go`).
-2. The handler calls `loadRuntimeForWrite`, which resolves paths with `config.Resolve`, locks `<data-path>.lock` with `store.LockFile`, then loads latest store data with `store.Load` (`internal/cli/root.go:46`).
-3. The command validates and mutates in-memory store state through methods such as `Store.Set`, `Store.Update`, or `Store.Delete` (`internal/store/io.go:111`).
-4. The handler calls `Store.Save`, which validates the full store, creates a `.bak` backup when the file exists, writes a temp file with mode `0600`, syncs it, and renames it into place (`internal/store/io.go:57`).
+2. The handler calls `updateVault`, which resolves config with `config.Resolve`, constructs `store.Vault`, locks `<vault-path>.lock`, then decrypts the latest vault into a `store.Store` (`internal/cli/root.go:58`).
+3. The command validates and mutates in-memory store state through methods such as `Store.Set`, `Store.Update`, or `Store.Delete`.
+4. `Vault.Save` validates and encodes the store, encrypts bytes for configured age recipients, creates an encrypted `.bak` backup when replacing an existing vault, writes encrypted temp bytes with mode `0600`, syncs them, and renames into place.
 5. The deferred unlock releases the flock from `internal/store/lock.go`.
 
 ### Direct Export Path
@@ -120,14 +120,14 @@
 
 1. User invokes `shelf project export`; the command discovers the Git root using `git rev-parse --show-toplevel` (`internal/cli/project.go:474`).
 2. It loads `.shelf.json` with `manifest.Load` from the Git root (`internal/manifest/io.go:12`).
-3. It loads the configured secret store with `loadRuntime` (`internal/cli/root.go:32`).
-4. `resolveProjectEntries` expands path and prefix manifest entries, checks required/optional missing values, derives env names, converts values to strings, and detects duplicate env names (`internal/cli/project.go:346`).
+3. It loads the configured encrypted vault with `loadRuntime` (`internal/cli/root.go:46`).
+4. `resolveProjectEntries` expands path and prefix manifest entries, checks required/optional missing values, derives env names, converts decrypted values to strings, and detects duplicate env names (`internal/cli/project.go:346`).
 5. The selected project renderer writes env, shell, or JSON output via `render.*Bindings` (`internal/cli/project.go:411`).
 
 ### Runtime Injection Path
 
 1. User invokes `shelf run -- command args...`; Cobra routes to `newRunCmd` (`internal/cli/run.go:41`).
-2. The command loads `.shelf.json`, loads the secret store, and calls `resolveProjectEntries` (`internal/cli/run.go:49`).
+2. The command loads `.shelf.json`, loads the encrypted vault through `loadRuntime`, and calls `resolveProjectEntries` (`internal/cli/run.go:49`).
 3. Diagnostics are written to stderr; any `fail` diagnostic stops execution before child process launch (`internal/cli/run.go:62`).
 4. In dry-run mode, the command prints override warnings and env names only (`internal/cli/run.go:72`).
 5. In execution mode, `childEnv` overlays resolved bindings onto `os.Environ`, then `exec.Command` runs the requested program with inherited stdin and command stdout/stderr (`internal/cli/run.go:82`).
@@ -135,8 +135,8 @@
 
 **State Management:**
 - Application state is file-backed. Global in-memory state is avoided except for test seams around interactive password input in `internal/cli/secret.go`.
-- `Store` is an in-memory snapshot of one JSON file and is not shared across commands.
-- Mutating store writes must use `loadRuntimeForWrite` to serialize concurrent writers with `store.LockFile`.
+- `Store` is an in-memory snapshot of one decrypted vault and is not shared across commands.
+- Mutating vault writes must use `updateVault`/`store.Vault.Update` to serialize concurrent writers with `store.LockFile`.
 - Project manifest writes are atomic but do not use the secret-store lock because `.shelf.json` is a separate project file.
 
 ## Key Abstractions
@@ -149,12 +149,12 @@
 **Runtime:**
 - Purpose: Resolved paths and editor executable for one command invocation.
 - Examples: `internal/config/config.go`, `internal/cli/root.go`, `internal/cli/init.go`.
-- Pattern: Use `config.Resolve(configFlag, dataFlag)`; do not read config paths directly in command handlers.
+- Pattern: Use `config.Resolve(configFlag, vaultFlag)`; do not read config paths directly in command handlers.
 
-**Store:**
-- Purpose: File-backed secret collection with validated path and value semantics.
-- Examples: `internal/store/model.go`, `internal/store/io.go`.
-- Pattern: Use `store.Load(path)` for reads; use `loadRuntimeForWrite` plus `Store.Save` for writes.
+**Store and Vault:**
+- Purpose: File-backed encrypted secret collection with validated path and value semantics.
+- Examples: `internal/store/model.go`, `internal/store/io.go`, `internal/store/vault.go`.
+- Pattern: CLI runtime uses `store.Vault.Load` for reads and `store.Vault.Update` for writes. Plaintext `store.Load` / `store.Save(path, st)` remain internal helpers for legacy/plaintext boundaries only.
 
 **SecretID and Path Grammar:**
 - Purpose: Enforce the `group_path:key` identity format.
@@ -189,9 +189,9 @@
 - Responsibilities: Register persistent flags and subcommands; expose shared runtime loading helpers.
 
 **Secret Store Entry:**
-- Location: `internal/store/io.go`
-- Triggers: `store.Load`, `Store.Save`, `Store.Set`, `Store.Update`, `Store.Delete`.
-- Responsibilities: Load and persist the JSON store with validation and atomic writes.
+- Location: `internal/store/io.go`, `internal/store/vault.go`
+- Triggers: `store.NewVault`, `Vault.Load`, `Vault.Save`, `Vault.Update`, `store.Load`, `store.Save`, `Store.Set`, `Store.Update`, `Store.Delete`.
+- Responsibilities: Load/decrypt, validate, mutate, encrypt, and atomically persist the store model.
 
 **Project Manifest Entry:**
 - Location: `internal/manifest/io.go`
@@ -221,15 +221,16 @@
 
 ### Bypassing Runtime Resolution
 
-**What happens:** A command reads `SHELF_CONFIG`, `SHELF_DATA`, default paths, or config YAML directly.
-**Why it's wrong:** It duplicates precedence rules and can disagree with `--config`, `--data`, and relative config data paths.
-**Do this instead:** Call `config.Resolve` through `loadRuntime` or `loadRuntimeForWrite` in `internal/cli/root.go`.
+**What happens:** A command reads `SHELF_CONFIG`, `SHELF_VAULT`, default paths, or config YAML directly.
+**Why it's wrong:** It duplicates precedence rules and can disagree with `--config`, `--vault`, and relative config vault paths.
+**Do this instead:** Call `config.Resolve` through `loadRuntime`, `readVault`, or `updateVault` in `internal/cli/root.go`.
 
 ### Mutating Store Without Locking
 
-**What happens:** A command calls `store.Load`, mutates `Store.Data`, and then calls `Store.Save` without `store.LockFile`.
+**What happens:** A command calls `store.Load` or `Vault.Load`, mutates `Store.Data`, and then saves without `Vault.Update`.
 **Why it's wrong:** Concurrent writes can lose updates because each command works from a snapshot.
-**Do this instead:** Use `loadRuntimeForWrite` in `internal/cli/root.go` before any write to the secret data file.
+**Do this instead:** Use `updateVault` in `internal/cli/root.go` before any write to the encrypted vault.
+
 
 ### Reimplementing Project Binding Expansion
 

@@ -9,16 +9,16 @@ Requirements for the encrypted-vault milestone. Each requirement maps to one roa
 
 ### Encrypted Vault
 
-- [ ] **VAULT-01**: User can configure Shelf to use an age-encrypted vault file as the durable secret store.
-- [ ] **VAULT-02**: User can configure one or more age recipients without storing private identity material in Shelf config.
-- [ ] **VAULT-03**: User can configure identity file paths or identity discovery needed to decrypt the vault.
-- [ ] **VAULT-04**: Shelf decrypts the vault on load, validates the plaintext store model, and exposes the existing in-memory secret model to commands.
-- [ ] **VAULT-05**: Shelf encrypts the full validated store to configured age recipients on save.
-- [ ] **VAULT-06**: Shelf rejects unreadable, undecryptable, corrupt, or unsupported vault formats with actionable errors.
+- [x] **VAULT-01**: User can configure Shelf to use an age-encrypted vault file as the durable secret store.
+- [x] **VAULT-02**: User can configure one or more age recipients without storing private identity material in Shelf config.
+- [x] **VAULT-03**: User can configure identity file paths or identity discovery needed to decrypt the vault.
+- [x] **VAULT-04**: Shelf decrypts the vault on load, validates the plaintext store model, and exposes the existing in-memory secret model to commands.
+- [x] **VAULT-05**: Shelf encrypts the full validated store to configured age recipients on save.
+- [x] **VAULT-06**: Shelf rejects unreadable, undecryptable, corrupt, or unsupported vault formats with actionable errors.
 
 ### CLI Compatibility
 
-- [ ] **CLI-01**: Existing `shelf secret` read and write commands work against the encrypted vault.
+- [x] **CLI-01**: Existing `shelf secret` read and write commands work against the encrypted vault.
 - [ ] **CLI-02**: Existing `shelf export` path and prefix flows work against the encrypted vault.
 - [ ] **CLI-03**: Existing `shelf project` manifest commands work against the encrypted vault without writing secret values to `.shelf.json`.
 - [ ] **CLI-04**: Existing `shelf run -- ...` and `shelf run --dry-run -- ...` work against the encrypted vault and preserve current value-printing rules.
@@ -94,13 +94,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VAULT-01 | Phase 1 | Pending |
-| VAULT-02 | Phase 1 | Pending |
-| VAULT-03 | Phase 1 | Pending |
-| VAULT-04 | Phase 1 | Pending |
-| VAULT-05 | Phase 1 | Pending |
-| VAULT-06 | Phase 1 | Pending |
-| CLI-01 | Phase 1 | Pending |
+| VAULT-01 | Phase 1 | Complete |
+| VAULT-02 | Phase 1 | Complete |
+| VAULT-03 | Phase 1 | Complete |
+| VAULT-04 | Phase 1 | Complete |
+| VAULT-05 | Phase 1 | Complete |
+| VAULT-06 | Phase 1 | Complete |
+| CLI-01 | Phase 1 | Complete |
 | MIGR-01 | Phase 2 | Pending |
 | MIGR-02 | Phase 2 | Pending |
 | MIGR-03 | Phase 2 | Pending |
@@ -135,4 +135,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-16 after roadmap creation*
+*Last updated: 2026-06-18 after Phase 1 verification*

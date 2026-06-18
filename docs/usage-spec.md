@@ -344,7 +344,7 @@ Rules:
 
 ## `shelf doctor`
 
-Check local Shelf configuration and data health.
+Check local Shelf configuration and vault health.
 
 ```bash
 shelf doctor
@@ -355,10 +355,9 @@ Output example:
 ```text
 ok   config resolves (/home/han/.config/shelf/config.yaml)
 ok   version (v0.1.0 go1.26 linux/amd64)
-ok   data file exists (/home/han/.local/share/shelf/secrets.json)
-ok   data file mode (-rw-------)
-ok   store loads (/home/han/.local/share/shelf/secrets.json)
-ok   git tracking (data file is not inside a Git worktree)
+ok   vault file exists (/home/han/.local/share/shelf/vault.age)
+ok   vault file mode (-rw-------)
+ok   vault loads (/home/han/.local/share/shelf/vault.age)
 ok   completion installed (/home/han/.zfunc/_shelf)
 ```
 
@@ -367,8 +366,9 @@ Rules:
 - `ok` means the check passed.
 - `warn` means usable but needs attention.
 - `fail` means doctor exits non-zero.
-- Initial checks are local only: config resolution, version, data file existence and mode, store validation, ordinary Git tracking, and zsh completion paths discovered from `FPATH` / `fpath`.
-- It does not check chezmoi, age, or external secret-manager integrations.
+- Initial checks are local only: config resolution, version, encrypted vault existence/mode/loadability, and zsh completion paths discovered from `FPATH` / `fpath`.
+- Full chezmoi/git safety classification is handled by the migration and git-safety phase.
+
 
 ## Project workflow (v0.2–v0.4)
 

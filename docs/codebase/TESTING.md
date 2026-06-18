@@ -131,7 +131,7 @@ go test -cover ./...
 - Cover validation and pure helper behavior with table tests and direct function calls. Examples: `manifest.Validate` in `internal/manifest/manifest_test.go`, `store.Load` strict JSON behavior in `internal/store/io_test.go`, `childEnv` in `internal/cli/run_test.go`, and completion helpers in `internal/cli/secret_test.go`.
 
 **Integration Tests:**
-- CLI tests exercise Cobra command execution, persisted JSON files, git repositories, editor scripts, shell child processes, file locking, and environment injection. Examples: `internal/cli/run_test.go`, `internal/cli/project_test.go`, and `internal/cli/secret_test.go`.
+- CLI tests exercise Cobra command execution, encrypted vault files, git repositories, editor scripts, shell child processes, file locking, and environment injection. Examples: `internal/cli/run_test.go`, `internal/cli/project_test.go`, and `internal/cli/secret_test.go`.
 
 **E2E Tests:**
 - No separate E2E framework is used. The closest E2E coverage is package-level CLI execution through `runShelf` in `internal/cli/test_helpers_test.go`.
@@ -148,7 +148,7 @@ for i := 0; i < count; i++ {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := runShelf(t, "--data", data, "secret", "set", fmt.Sprintf("app:key_%02d", i), fmt.Sprintf("value-%02d", i))
+		_, err := runShelf(t, "--vault", data, "secret", "set", fmt.Sprintf("app:key_%02d", i), fmt.Sprintf("value-%02d", i))
 		errs <- err
 	}()
 }
@@ -156,7 +156,7 @@ for i := 0; i < count; i++ {
 
 **Error Testing:**
 ```go
-_, err := runShelf(t, "--data", data, "secret", "rm", "app:token")
+_, err := runShelf(t, "--vault", data, "secret", "rm", "app:token")
 if err == nil {
 	t.Fatalf("expected rm on missing to fail")
 }

@@ -35,30 +35,30 @@ MVP store shape:
 
 ## Storage and encryption policy
 
-MVP uses a managed JSON file, not a database.
+Shelf persists secrets as an age-encrypted vault file, not a database.
 
 Reasons:
 
 - The expected data size is small.
-- The MVP access pattern is simple path lookup, prefix listing, object editing, and export.
+- The access pattern is simple path lookup, prefix listing, object editing, and export.
 - A database does not solve plaintext-at-rest by itself; an unencrypted SQLite file is still plaintext storage.
-- A file store keeps backup, sync, migration, and future encryption boundaries straightforward.
+- A portable encrypted file keeps backup, sync, migration, and chezmoi workflows straightforward.
 
 Security stance:
 
-- `secrets.json` is sensitive.
-- `config.yaml`, if present, is non-sensitive runtime configuration and must not contain secret values.
-- The MVP may store plaintext JSON, but the data model is designed so a later encrypted backend can wrap the load/save layer.
-- Future encryption should preserve command semantics: commands operate on the same plaintext data model after decryption.
-- Users should not manually edit `secrets.json`; `secret edit` is the supported edit path.
+- `vault.age` is the durable encrypted source of truth.
+- `config.yaml`, if present, is non-sensitive runtime configuration and must not contain secret values or private age identities.
+- Config may contain public age recipients and identity file paths.
+- Commands operate on the same plaintext data model only after decrypt/load and before validate/encrypt/save.
+- Users should not manually edit the encrypted vault; `secret edit` is the supported edit path.
 
 Recommended filesystem behavior:
 
-- Create the data file with user-only permissions where the platform supports it.
-- Warn when the data file is tracked by ordinary Git without an encryption workflow.
-- Keep atomic writes and backups in the storage layer.
-- Mutating commands must take an exclusive lock at `<data-path>.lock` before loading the store for modification.
-- Write flow is: lock, load latest data, mutate in memory, save via temp file + rename, unlock.
+- Create the vault file with user-only permissions where the platform supports it.
+- Warn when plaintext legacy stores are still present or tracked by ordinary Git.
+- Keep atomic writes and backups in the storage layer, and encrypt backup bytes before durable persistence.
+- Mutating commands must take an exclusive lock at `<vault-path>.lock` before loading the store for modification.
+- Write flow is: lock, decrypt latest vault, mutate in memory, validate, encrypt to temp file, rename, unlock.
 
 ## Why flat secrets
 

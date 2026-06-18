@@ -104,6 +104,64 @@ func TestVaultModeRejectsPlaintextStore(t *testing.T) {
 	}
 }
 
+func TestVaultModeReportsUnsupportedCorruptAndInvalidStore(t *testing.T) {
+	identity, err := age.GenerateX25519Identity()
+	if err != nil {
+		t.Fatalf("generate identity: %v", err)
+	}
+	identityPath := writeTestIdentity(t, identity)
+	recipients := []string{identity.Recipient().String()}
+
+	t.Run("unsupported header", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "secrets.vault")
+		if err := os.WriteFile(path, []byte("shelf-vault/v2\n"), 0o600); err != nil {
+			t.Fatalf("write vault: %v", err)
+		}
+		vault, err := NewVault(path, VaultOptions{Recipients: recipients, IdentityPaths: []string{identityPath}})
+		if err != nil {
+			t.Fatalf("new vault: %v", err)
+		}
+		_, err = vault.Load()
+		if err == nil || !strings.Contains(err.Error(), "unsupported vault format") {
+			t.Fatalf("expected unsupported format error, got %v", err)
+		}
+	})
+
+	t.Run("corrupt ciphertext", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "secrets.vault")
+		if err := os.WriteFile(path, []byte(vaultHeader+"not-age-ciphertext"), 0o600); err != nil {
+			t.Fatalf("write vault: %v", err)
+		}
+		vault, err := NewVault(path, VaultOptions{Recipients: recipients, IdentityPaths: []string{identityPath}})
+		if err != nil {
+			t.Fatalf("new vault: %v", err)
+		}
+		_, err = vault.Load()
+		if err == nil || !strings.Contains(err.Error(), "could not decrypt vault") {
+			t.Fatalf("expected decrypt error, got %v", err)
+		}
+	})
+
+	t.Run("invalid decrypted store", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "secrets.vault")
+		content, err := sealVault([]byte("not-json"), recipients)
+		if err != nil {
+			t.Fatalf("seal invalid store: %v", err)
+		}
+		if err := os.WriteFile(path, content, 0o600); err != nil {
+			t.Fatalf("write vault: %v", err)
+		}
+		vault, err := NewVault(path, VaultOptions{Recipients: recipients, IdentityPaths: []string{identityPath}})
+		if err != nil {
+			t.Fatalf("new vault: %v", err)
+		}
+		_, err = vault.Load()
+		if err == nil || !strings.Contains(err.Error(), "invalid decrypted store") {
+			t.Fatalf("expected invalid decrypted store error, got %v", err)
+		}
+	})
+}
+
 func TestVaultModeReportsMissingAndWrongIdentity(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "secrets.vault")
 	identity, err := age.GenerateX25519Identity()
