@@ -5,16 +5,16 @@
 ## Tech Debt
 
 **Plaintext Store Boundary:**
-- Issue: Secrets are persisted as plaintext JSON through `json.MarshalIndent` and `os.Rename`; this is an intentional MVP policy, but it is still the primary security debt for a secret manager.
-- Files: `internal/store/io.go:57`, `internal/store/io.go:72`, `docs/data-spec.md`
-- Impact: Anyone with filesystem access, backup access, synced-folder access, or ordinary Git access to `secrets.json` or `secrets.json.bak` can read every secret value.
-- Fix approach: Add an encryption boundary inside `internal/store/io.go` so command code continues to operate on `store.Data` after decrypt/load and before encrypt/save. Keep file permissions and locking as defense-in-depth, not as the only protection.
+- Status: Phase 1 encrypted vault core now routes CLI runtime through `store.Vault`; encrypted vault writes and `.bak` backups are covered by tests.
+- Remaining risk: legacy plaintext helpers still exist for internal/plaintext boundaries and migration work, and `secret edit` still writes a plaintext editor temp file.
+- Files: `internal/store/vault.go`, `internal/store/io.go`, `internal/cli/root.go`, `internal/cli/secret.go`, `docs/data-spec.md`
+- Follow-up: Phase 2 should provide plaintext migration and git/chezmoi safety classification instead of treating any encrypted vault path as fully safe.
 
-**Store Write Responsibilities Are Concentrated:**
-- Issue: `Store.Save` validates data, creates backups, writes temp files, fsyncs, closes, and renames in one function.
-- Files: `internal/store/io.go:57`, `internal/store/io.go:77`, `internal/store/io.go:80`, `internal/store/io.go:87`, `internal/store/io.go:101`, `internal/store/io.go:108`
-- Impact: Adding encryption, migrations, backup rotation, or platform-specific durability will make one already central method harder to reason about.
-- Fix approach: Split `Store.Save` into small helpers for validation, serialization, backup, atomic write, and optional encryption. Keep `Save` as the orchestration point used by CLI write commands.
+**Store Write Responsibilities Are Split Across Helpers:**
+- Status: Phase 1 split encrypted vault persistence into `store.Vault`, `encodeStore`, `writeStoreFile`, and plaintext model helpers.
+- Remaining risk: backup retention, restore commands, platform-specific durability, and migration still converge around the same persistence helpers.
+- Files: `internal/store/io.go`, `internal/store/vault.go`
+- Follow-up: Keep future migration and restore behavior at the store/vault boundary instead of adding command-local file writes.
 
 **Large CLI Command Files:**
 - Issue: Command construction, command behavior, project resolution, completion, and rendering glue are concentrated in large files.
@@ -36,19 +36,19 @@
 - Trigger: Store both `app:token` and `app2:token`, then add/export prefix `app`.
 - Workaround: Use explicit path entries in `.shelf.json` instead of broad prefixes when group names share leading characters.
 
-**Store Files With Multiple JSON Values Are Accepted:**
-- Symptoms: `store.Load` decodes one JSON object with `dec.Decode(&data)` and does not verify EOF after the first value.
+**Plaintext Store Files With Multiple JSON Values Are Accepted:**
+- Symptoms: plaintext `store.Load` decodes one JSON object with `dec.Decode(&data)` and does not verify EOF after the first value.
 - Files: `internal/store/io.go:31`, `internal/store/io.go:34`
-- Trigger: A `secrets.json` containing a valid store object followed by another JSON token can load successfully while trailing data is ignored.
-- Workaround: Do not manually edit `secrets.json`; use `shelf doctor` and CLI commands for normal operations.
+- Trigger: A legacy plaintext store containing a valid store object followed by another JSON token can load successfully while trailing data is ignored.
+- Workaround: Use encrypted vault mode for CLI workflows; migration hardening should strict-decode any plaintext source before encrypting it.
 
 ## Security Considerations
 
 **Plaintext Secrets at Rest:**
-- Risk: The application protects file mode on writes but does not encrypt secret values.
-- Files: `internal/store/io.go:72`, `internal/store/io.go:93`, `internal/store/io.go:193`, `docs/data-spec.md`
-- Current mitigation: Data directory creation uses `0700`, store temp files and backups use `0600`, and `doctor` warns when the data file mode is broader than user-only.
-- Recommendations: Add encryption before the first non-local or sync-heavy use case. Include backup encryption because `secrets.json.bak` is created next to the primary store.
+- Risk: legacy plaintext stores and editor temp files can still contain secret values outside the encrypted vault boundary.
+- Files: `internal/store/io.go`, `internal/store/vault.go`, `internal/cli/secret.go`, `docs/data-spec.md`
+- Current mitigation: CLI runtime writes the active vault through `store.Vault`, encrypted temp files, encrypted replacement backups, and user-only file modes.
+- Recommendations: Add the migration flow and git safety checks before declaring synced repositories fully safe; harden `secret edit` temp-file handling separately.
 
 **Editor Temp File Contains Secret Values:**
 - Risk: `secret edit` writes the complete secret object, including `value`, to an OS temp file outside the private Shelf data directory.
@@ -70,10 +70,10 @@
 
 ## Performance Bottlenecks
 
-**Whole-File Store Load and Save:**
-- Problem: Every read command loads the whole JSON store, and every write command rewrites the whole store.
-- Files: `internal/store/io.go:20`, `internal/store/io.go:57`, `internal/store/io.go:72`, `internal/store/io.go:108`
-- Cause: The MVP store is a single JSON file with an in-memory map.
+**Whole-Vault Load and Save:**
+- Problem: Every read command decrypts and decodes the whole vault, and every write command rewrites the whole encrypted vault.
+- Files: `internal/store/vault.go`, `internal/store/io.go`
+- Cause: The vault wraps a single JSON model with an in-memory map.
 - Improvement path: Keep this design while data remains small. If large stores become common, add indexing or a backend abstraction under `internal/store` before optimizing CLI code.
 
 **Full Prefix Scans:**
@@ -121,8 +121,8 @@
 - Limit: Large stores make every command pay full JSON decode cost; every write rewrites and backs up the whole file.
 - Scaling path: Introduce a backend interface below `internal/store` if secret counts grow beyond the expected small local usage.
 
-**Single Global Write Lock Per Data File:**
-- Current capacity: One writer at a time per data path.
+**Single Global Write Lock Per Vault File:**
+- Current capacity: One writer at a time per vault path.
 - Limit: Long-running write flows like `secret edit` hold the write lock while the editor is open.
 - Scaling path: For edit flows, consider loading under lock, releasing while editing a copy, then reacquiring and applying an optimistic update with conflict detection before save.
 
@@ -135,14 +135,14 @@
 
 **`gopkg.in/yaml.v3`:**
 - Risk: Config parsing currently uses permissive YAML unmarshalling without strict unknown-field rejection.
-- Impact: Typos in `config.yaml` can be silently ignored, leading to unexpected default data paths or editor behavior.
+- Impact: Typos in `config.yaml` can be silently ignored, leading to unexpected default vault paths or editor behavior.
 - Migration plan: Decode config with `KnownFields(true)` or equivalent strict parsing in `internal/config/config.go`.
 
 ## Missing Critical Features
 
-**Encrypted Backend:**
-- Problem: The project is a secret manager whose MVP store is plaintext.
-- Blocks: Safer use on synced directories, shared workstations, unmanaged backups, and repositories with accidental data-file tracking.
+**Migration and Git-Safety Flow:**
+- Problem: encrypted vault mode exists, but there is no command that migrates a legacy plaintext store or proves a git/chezmoi path is safe.
+- Blocks: Safe onboarding from existing legacy plaintext store files and reliable guidance for synced repositories.
 
 **Store Migration Framework:**
 - Problem: `store.Load` rejects unsupported versions but there is no migration path.
@@ -161,9 +161,9 @@
 - Priority: High
 
 **Locking and Concurrent Writes:**
-- What's not tested: Multiple processes or goroutines contending for the same `secrets.json.lock`.
-- Files: `internal/store/lock.go`, `internal/cli/root.go`
-- Risk: Concurrent write regressions can lose secrets or corrupt backups.
+- What's tested: goroutine-level `secret set` contention against one `--vault` path keeps all writes.
+- What's not tested: separate OS processes contending for the same `<vault-path>.lock`.
+- Risk: cross-process locking regressions can lose secrets or corrupt encrypted backups.
 - Priority: High
 
 **Prefix Boundary Matching:**

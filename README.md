@@ -54,3 +54,4 @@ shelf run --dry-run -- command args...
 - v0.4 runtime injection implemented (`run`, `run --dry-run`).
 - Secret interactive add implemented (`secret add`).
 
+- Encrypted vault core implemented (`--vault`, `SHELF_VAULT`, `vault_path`, age recipients, identity paths, encrypted backups).

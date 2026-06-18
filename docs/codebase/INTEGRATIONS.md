@@ -8,7 +8,7 @@
 - Not detected - The Go code does not import HTTP API SDKs or call external web services. No `net/http` client usage is present in `cmd/shelf/main.go` or `internal/**`.
 
 **Command-Line Tools:**
-- Git - Used to discover project roots, normalize project identity, and check whether the data file is tracked.
+- Git - Used to discover project roots and normalize project identity; full vault/git safety classification is Phase 2 scope.
   - SDK/Client: `os/exec` calls to `git` in `internal/cli/project.go`, `internal/cli/run.go`, and `internal/cli/doctor.go`.
   - Auth: Git uses the user's local Git configuration; Shelf does not manage Git credentials.
 - User editor - Used by `shelf secret edit` to edit a JSON representation of one secret.
@@ -26,12 +26,12 @@
 ## Data Storage
 
 **Databases:**
-- Local JSON file store, not a database.
-  - Connection: `SHELF_DATA`, `--data`, optional config `data`, or default `~/.local/share/shelf/secrets.json` resolved by `internal/config/config.go`.
-  - Client: Custom file-backed store in `internal/store/io.go` and data model in `internal/store/model.go`.
-- Store writes use temp-file plus rename behavior in `internal/store/io.go`.
-- Mutating commands take an exclusive lock at `<data-path>.lock` through `internal/store/lock.go` and `internal/cli/root.go`.
-- The data file is written with user-only file mode `0600` and parent directories with `0700` in `internal/store/io.go`.
+- Local age-encrypted vault file, not a database.
+  - Connection: `SHELF_VAULT`, `--vault`, optional config `vault_path`, or default `~/.local/share/shelf/vault.age` resolved by `internal/config/config.go`.
+  - Client: `store.Vault` in `internal/store/vault.go` wraps the JSON data model in `internal/store/model.go`.
+- Vault writes encrypt before durable temp-file, rename, or backup persistence through `internal/store/vault.go` and `internal/store/io.go`.
+- Mutating commands take an exclusive lock at `<vault-path>.lock` through `internal/store/lock.go` and `internal/cli/root.go`.
+- The vault file is written with user-only file mode `0600` and parent directories with `0700` in `internal/store/io.go`.
 
 **File Storage:**
 - Local filesystem only.
@@ -83,13 +83,13 @@
 
 **Optional env vars:**
 - `SHELF_CONFIG` - Overrides config file path in `internal/config/config.go`.
-- `SHELF_DATA` - Overrides secret store path in `internal/config/config.go`.
+- `SHELF_VAULT` - Overrides encrypted vault path in `internal/config/config.go`.
 - `EDITOR` - Fallback editor for `shelf secret edit` in `internal/config/config.go`.
 - `FPATH` / `fpath` - Used by `shelf doctor` to check zsh completion installation in `internal/cli/doctor.go`.
 - User-defined exported variables such as `OPENAI_API_KEY` or `OPENROUTER_API_KEY` are metadata values stored in secret records and are injected by `internal/cli/run.go`.
 
 **Secrets location:**
-- Secrets are stored in the local JSON data file resolved by `internal/config/config.go`.
+- Secrets are stored in the encrypted vault resolved by `internal/config/config.go`; command code sees plaintext only after vault decryption.
 - Project `.shelf.json` manifests store references to secret paths/prefixes only; they do not store secret values.
 - No `.env` files were detected in the repository scan.
 

@@ -38,6 +38,7 @@
 ## Key Dependencies
 
 **Critical:**
+- `filippo.io/age` v1.3.1 - Encrypts and decrypts the Shelf vault in `internal/store/vault.go`.
 - `github.com/spf13/cobra` v1.9.1 - Defines the entire CLI command surface; use it for new commands under `internal/cli/`.
 - `gopkg.in/yaml.v3` v3.0.1 - Parses optional runtime config from `~/.config/shelf/config.yaml` in `internal/config/config.go`.
 - `golang.org/x/term` v0.44.0 - Reads hidden terminal input for `shelf secret add` in `internal/cli/secret.go`.
@@ -52,9 +53,9 @@
 **Environment:**
 - Runtime config resolution is implemented in `internal/config/config.go`.
 - Default config path: `~/.config/shelf/config.yaml` from `internal/config/config.go`.
-- Default data path: `~/.local/share/shelf/secrets.json` from `internal/config/config.go`.
+- Default vault path: `~/.local/share/shelf/vault.age` from `internal/config/config.go`.
 - `SHELF_CONFIG` overrides the config file path in `internal/config/config.go`.
-- `SHELF_DATA` overrides the data file path in `internal/config/config.go`.
+- `SHELF_VAULT` overrides the encrypted vault path in `internal/config/config.go`.
 - `EDITOR` supplies the default editor when config has no editor value in `internal/config/config.go`.
 - `FPATH` / `fpath` are inspected by `shelf doctor` for zsh completion installation in `internal/cli/doctor.go`.
 

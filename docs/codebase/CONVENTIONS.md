@@ -56,7 +56,7 @@
 - Wrap contextual parse and validation failures with `fmt.Errorf(...: %w)` when callers need the original error, as in `internal/store/io.go` and `internal/manifest/io.go`.
 - Use `errors.Is` for sentinel filesystem cases, especially `os.ErrNotExist`, in `internal/store/io.go`, `internal/config/config.go`, and `internal/cli/run.go`.
 - Use `errors.As` for typed exit behavior in `internal/cli/run.go`; `ExitCode(err)` maps command failures to CLI exit codes.
-- Validate data before saving or mutating state. `store.Store.Save` and `store.Store.Set` call validation in `internal/store/io.go`; `manifest.Validate` enforces project manifest rules in `internal/manifest/validate.go`.
+- Validate data before saving or mutating state. `store.Vault.Save`, `store.Save(path, st)`, and `store.Store.Set` validate through `internal/store/io.go`; `manifest.Validate` enforces project manifest rules in `internal/manifest/validate.go`.
 - Keep user-facing error strings concise and actionable, usually lower-case and without punctuation: examples include `secret not found: %s` in `internal/cli/secret.go` and `.shelf.json not found; run shelf project init` style messages in `internal/cli/project.go`.
 
 ## Logging

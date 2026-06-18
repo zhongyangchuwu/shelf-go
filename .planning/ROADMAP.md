@@ -22,6 +22,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 
 **Goal:** Existing `shelf secret` workflows can read and write an age-encrypted vault file without changing command semantics.
 **Mode:** mvp
+**Status:** Complete (verified 2026-06-18)
 
 **Requirements:** VAULT-01, VAULT-02, VAULT-03, VAULT-04, VAULT-05, VAULT-06, CLI-01
 
@@ -113,13 +114,13 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VAULT-01 | Phase 1 | Pending |
-| VAULT-02 | Phase 1 | Pending |
-| VAULT-03 | Phase 1 | Pending |
-| VAULT-04 | Phase 1 | Pending |
-| VAULT-05 | Phase 1 | Pending |
-| VAULT-06 | Phase 1 | Pending |
-| CLI-01 | Phase 1 | Pending |
+| VAULT-01 | Phase 1 | Complete |
+| VAULT-02 | Phase 1 | Complete |
+| VAULT-03 | Phase 1 | Complete |
+| VAULT-04 | Phase 1 | Complete |
+| VAULT-05 | Phase 1 | Complete |
+| VAULT-06 | Phase 1 | Complete |
+| CLI-01 | Phase 1 | Complete |
 | MIGR-01 | Phase 2 | Pending |
 | MIGR-02 | Phase 2 | Pending |
 | MIGR-03 | Phase 2 | Pending |
@@ -151,6 +152,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 - v1 requirements: 33 total
 - Mapped to phases: 33
 - Unmapped: 0
+- Completed: 7
 
 ---
-*Roadmap created: 2026-06-16*
+*Last updated: 2026-06-18 after Phase 1 verification*

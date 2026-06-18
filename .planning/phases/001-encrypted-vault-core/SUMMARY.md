@@ -64,8 +64,9 @@ Execution continued with a breaking vault-first refactor. The current code remov
 
 ## Verification Evidence
 
-- `go test ./internal/config ./internal/store ./internal/cli` passed.
-- `go test ./...` passed.
+- `go test ./internal/config ./internal/store ./internal/cli` passed after verification coverage updates.
+- `go test ./...` passed after verification coverage updates.
+- `VERIFICATION.md` records direct evidence for every Phase 1 success criterion.
 
 Focused tests cover:
 
@@ -73,6 +74,7 @@ Focused tests cover:
 - encrypted replacement backup is loadable and does not contain plaintext secret values;
 - vault mode rejects legacy plaintext JSON;
 - missing and wrong identity errors are actionable;
+- unsupported vault header, corrupt ciphertext, and invalid decrypted store errors are actionable;
 - YAML template config resolution for `vault_path`, recipients, identity paths, and editor;
 - CLI `secret set/get/list/info/edit/rm` works through encrypted vault config;
 - `shelf init` creates reusable vault config and preserves existing vault contents on force.
@@ -85,6 +87,4 @@ Focused tests cover:
 
 ## Remaining Phase 1 Work
 
-- Final review of error text across all required vault failure classes.
-- Produce `VERIFICATION.md` after all Phase 1 success criteria have direct evidence.
-- Update root planning artifacts after Phase 1 verification completes.
+- None. Phase 2 owns plaintext migration and git/chezmoi safety classification.
