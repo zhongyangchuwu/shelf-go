@@ -17,7 +17,7 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	root.PersistentFlags().String("config", "", "Path to config.yaml")
-	root.PersistentFlags().String("data", "", "Path to secrets.json")
+	root.PersistentFlags().String("vault", "", "Path to encrypted vault")
 
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newInitCmd())
@@ -29,36 +29,44 @@ func NewRootCmd() *cobra.Command {
 	return root
 }
 
-func loadRuntime(cmd *cobra.Command) (config.Runtime, *store.Store, error) {
+func loadVault(cmd *cobra.Command) (config.Runtime, *store.Vault, error) {
 	configPath, _ := cmd.Flags().GetString("config")
-	dataPath, _ := cmd.Flags().GetString("data")
-	runtime, err := config.Resolve(configPath, dataPath)
+	vaultPath, _ := cmd.Flags().GetString("vault")
+	runtime, err := config.Resolve(configPath, vaultPath)
 	if err != nil {
 		return config.Runtime{}, nil, err
 	}
-	st, err := store.Load(runtime.DataPath)
+	vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	if err != nil {
+		return config.Runtime{}, nil, err
+	}
+	return runtime, vault, nil
+}
+
+func loadRuntime(cmd *cobra.Command) (config.Runtime, *store.Store, error) {
+	runtime, vault, err := loadVault(cmd)
+	if err != nil {
+		return config.Runtime{}, nil, err
+	}
+	st, err := vault.Load()
 	if err != nil {
 		return config.Runtime{}, nil, err
 	}
 	return runtime, st, nil
 }
 
-func loadRuntimeForWrite(cmd *cobra.Command) (config.Runtime, *store.Store, func(), error) {
-	configPath, _ := cmd.Flags().GetString("config")
-	dataPath, _ := cmd.Flags().GetString("data")
-	runtime, err := config.Resolve(configPath, dataPath)
+func updateVault(cmd *cobra.Command, fn func(*store.Store) error) error {
+	_, vault, err := loadVault(cmd)
 	if err != nil {
-		return config.Runtime{}, nil, nil, err
+		return err
 	}
-	lock, err := store.LockFile(runtime.DataPath)
+	return vault.Update(fn)
+}
+
+func readVault(cmd *cobra.Command, fn func(*store.Store) error) error {
+	_, vault, err := loadVault(cmd)
 	if err != nil {
-		return config.Runtime{}, nil, nil, err
+		return err
 	}
-	unlock := func() { _ = lock.Unlock() }
-	st, err := store.Load(runtime.DataPath)
-	if err != nil {
-		unlock()
-		return config.Runtime{}, nil, nil, err
-	}
-	return runtime, st, unlock, nil
+	return vault.Read(fn)
 }
