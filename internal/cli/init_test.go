@@ -8,58 +8,56 @@ import (
 
 func TestInitCreatesFilesAndReportsStatus(t *testing.T) {
 	dir := t.TempDir()
-	data := filepath.Join(dir, "secrets.json")
+	vault := filepath.Join(dir, "secrets.vault")
 	cfg := filepath.Join(dir, "shelf.yaml")
 
-	out, err := runShelf(t, "--config", cfg, "--data", data, "init")
+	out, err := runShelf(t, "--config", cfg, "--vault", vault, "init")
 	if err != nil {
 		t.Fatalf("init: %v", err)
 	}
-	for _, want := range []string{data, "(created)", cfg, "(created)"} {
+	for _, want := range []string{vault, "(created)", cfg, "(created)"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("init output missing %q: %s", want, out)
 		}
 	}
 
-	out2, err := runShelf(t, "--config", cfg, "--data", data, "init")
+	out2, err := runShelf(t, "--config", cfg, "--vault", vault, "init")
 	if err != nil {
 		t.Fatalf("second init: %v", err)
 	}
-	for _, want := range []string{data, "(exists)", cfg, "(exists)"} {
+	for _, want := range []string{vault, "(exists)", cfg, "(exists)"} {
 		if !strings.Contains(out2, want) {
 			t.Fatalf("second init output missing %q: %s", want, out2)
 		}
 	}
 
-	out3, err := runShelf(t, "--config", cfg, "--data", data, "init", "--minimal")
-	if err != nil {
-		t.Fatalf("minimal init: %v", err)
-	}
-	if strings.Contains(out3, "config") {
-		t.Fatalf("minimal init mentioned config: %s", out3)
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "init", "--minimal"); err == nil {
+		t.Fatalf("expected removed --minimal flag to fail")
 	}
 }
-func TestInitForceOverwrites(t *testing.T) {
+
+func TestInitForcePreservesExistingVault(t *testing.T) {
 	dir := t.TempDir()
-	data := filepath.Join(dir, "secrets.json")
+	vault := filepath.Join(dir, "secrets.vault")
 	cfg := filepath.Join(dir, "config.yaml")
-	if _, err := runShelf(t, "--config", cfg, "--data", data, "init"); err != nil {
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "init"); err != nil {
 		t.Fatalf("first init: %v", err)
 	}
-	if _, err := runShelf(t, "--config", cfg, "--data", data, "secret", "set", "app:token", "val"); err != nil {
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "secret", "set", "app:token", "val"); err != nil {
 		t.Fatalf("set: %v", err)
 	}
-	if _, err := runShelf(t, "--config", cfg, "--data", data, "init", "--force"); err != nil {
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "init", "--force"); err != nil {
 		t.Fatalf("force init: %v", err)
 	}
-	out, err := runShelf(t, "--config", cfg, "--data", data, "secret", "list")
+	out, err := runShelf(t, "--config", cfg, "--vault", vault, "secret", "get", "app:token")
 	if err != nil {
-		t.Fatalf("list after force init: %v", err)
+		t.Fatalf("get after force init: %v", err)
 	}
-	if strings.TrimSpace(out) != "" {
-		t.Fatalf("expected empty store after force init, got: %s", out)
+	if out != "val\n" {
+		t.Fatalf("force init should preserve existing vault, got: %s", out)
 	}
 }
+
 func TestVersionFlagPrintsVersion(t *testing.T) {
 	out, err := runShelf(t, "--version")
 	if err != nil {

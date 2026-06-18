@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 	"github.com/zhongyangchuwu/shelf-go/internal/version"
-	"github.com/spf13/cobra"
 )
 
 type doctorReport struct {
@@ -26,8 +26,8 @@ func newDoctorCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report := doctorReport{out: cmd}
 			configPath, _ := cmd.Flags().GetString("config")
-			dataPath, _ := cmd.Flags().GetString("data")
-			runtime, err := config.Resolve(configPath, dataPath)
+			vaultPath, _ := cmd.Flags().GetString("vault")
+			runtime, err := config.Resolve(configPath, vaultPath)
 			if err != nil {
 				report.fail("config resolves", err.Error())
 				return fmt.Errorf("doctor found failures")
@@ -35,9 +35,9 @@ func newDoctorCmd() *cobra.Command {
 			report.ok("config resolves", runtime.ConfigPath)
 			report.ok("version", version.String())
 
-			checkDataFile(&report, runtime.DataPath)
-			checkStoreLoads(&report, runtime.DataPath)
-			checkGitTracking(&report, runtime.DataPath)
+			checkVaultFile(&report, runtime.VaultPath)
+			checkVaultLoads(&report, runtime)
+			checkVaultTracking(&report, runtime.VaultPath)
 			checkCompletion(&report)
 
 			if report.failed {
@@ -74,59 +74,63 @@ func (r *doctorReport) fail(check, detail string) {
 	fmt.Fprintln(r.out.OutOrStdout())
 }
 
-func checkDataFile(report *doctorReport, dataPath string) {
-	info, err := os.Stat(dataPath)
+func checkVaultFile(report *doctorReport, vaultPath string) {
+	info, err := os.Stat(vaultPath)
 	if os.IsNotExist(err) {
-		report.warn("data file exists", dataPath+" will be created on first write")
+		report.warn("vault file exists", vaultPath+" will be created on first write")
 		return
 	}
 	if err != nil {
-		report.fail("data file exists", err.Error())
+		report.fail("vault file exists", err.Error())
 		return
 	}
 	if info.IsDir() {
-		report.fail("data file is regular file", dataPath+" is a directory")
+		report.fail("vault file is regular file", vaultPath+" is a directory")
 		return
 	}
-	report.ok("data file exists", dataPath)
+	report.ok("vault file exists", vaultPath)
 	mode := info.Mode().Perm()
 	if mode&0o077 == 0 {
-		report.ok("data file mode", mode.String())
+		report.ok("vault file mode", mode.String())
 	} else {
-		report.warn("data file mode", mode.String()+" is broader than 0600")
+		report.warn("vault file mode", mode.String()+" is broader than 0600")
 	}
 }
-
-func checkStoreLoads(report *doctorReport, dataPath string) {
-	if _, err := store.Load(dataPath); err != nil {
-		report.fail("store loads", err.Error())
+func checkVaultLoads(report *doctorReport, runtime config.Runtime) {
+	vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	if err != nil {
+		report.fail("vault loads", err.Error())
 		return
 	}
-	report.ok("store loads", dataPath)
+	if _, err := vault.Load(); err != nil {
+		report.fail("vault loads", err.Error())
+		return
+	}
+	report.ok("vault loads", runtime.VaultPath)
 }
 
-func checkGitTracking(report *doctorReport, dataPath string) {
-	abs, err := filepath.Abs(dataPath)
+func checkVaultTracking(report *doctorReport, vaultPath string) {
+	abs, err := filepath.Abs(vaultPath)
 	if err != nil {
 		report.warn("git tracking", err.Error())
 		return
 	}
 	rootBytes, err := exec.Command("git", "-C", filepath.Dir(abs), "rev-parse", "--show-toplevel").Output()
 	if err != nil {
-		report.ok("git tracking", "data file is not inside a Git worktree")
+		report.ok("git tracking", "vault file is not inside a Git worktree")
 		return
 	}
 	root := strings.TrimSpace(string(rootBytes))
 	rel, err := filepath.Rel(root, abs)
 	if err != nil || strings.HasPrefix(rel, "..") {
-		report.ok("git tracking", "data file is outside Git worktree")
+		report.ok("git tracking", "vault file is outside Git worktree")
 		return
 	}
 	if err := exec.Command("git", "-C", root, "ls-files", "--error-unmatch", "--", rel).Run(); err == nil {
-		report.warn("git tracking", "data file appears tracked by ordinary git: "+rel)
+		report.warn("git tracking", "vault file appears tracked by ordinary git: "+rel)
 		return
 	}
-	report.ok("git tracking", "data file is not tracked by ordinary git")
+	report.ok("git tracking", "vault file is not tracked by ordinary git")
 }
 
 func checkCompletion(report *doctorReport) {

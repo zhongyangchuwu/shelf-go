@@ -77,10 +77,10 @@ func TestProjectExplainReportsStatuses(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-openai"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-openai"); err != nil {
 		t.Fatalf("set openai: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openrouter/accounts/personal:api_key", "sk-openrouter"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openrouter/accounts/personal:api_key", "sk-openrouter"); err != nil {
 		t.Fatalf("set openrouter: %v", err)
 	}
 	manifest := `{
@@ -109,7 +109,7 @@ func TestProjectExplainReportsStatuses(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "explain")
 	if err == nil {
 		t.Fatalf("expected project explain failure")
 	}
@@ -137,7 +137,7 @@ func TestProjectExplainWarnsOptionalMissingWithoutFail(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-openai"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-openai"); err != nil {
 		t.Fatalf("set openai: %v", err)
 	}
 	manifest := `{
@@ -157,7 +157,7 @@ func TestProjectExplainWarnsOptionalMissingWithoutFail(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "explain")
 	if err != nil {
 		t.Fatalf("project explain: %v\n%s", err, out)
 	}
@@ -197,10 +197,10 @@ func TestProjectExplainPromptsInitWhenManifestMissing(t *testing.T) {
 // --- v0.3: project add/rm/list/export ---
 func TestProjectAddPathEntry(t *testing.T) {
 	dir, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key", "--env", "OPENAI_API_KEY")
+	out, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key", "--env", "OPENAI_API_KEY")
 	if err != nil {
 		t.Fatalf("project add: %v", err)
 	}
@@ -218,10 +218,10 @@ func TestProjectAddPathEntry(t *testing.T) {
 }
 func TestProjectAddPrefixEntry(t *testing.T) {
 	dir, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal", "--optional")
+	out, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal", "--optional")
 	if err != nil {
 		t.Fatalf("project add prefix: %v", err)
 	}
@@ -241,10 +241,10 @@ func TestProjectAddPrefixEntry(t *testing.T) {
 }
 func TestProjectAddRejectsEnvForPrefix(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	_, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal", "--env", "OPENAI_API_KEY")
+	_, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal", "--env", "OPENAI_API_KEY")
 	if err == nil {
 		t.Fatalf("expected --env for prefix to fail")
 	}
@@ -254,13 +254,13 @@ func TestProjectAddRejectsEnvForPrefix(t *testing.T) {
 }
 func TestProjectAddRejectsDuplicatePath(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
 		t.Fatalf("first add: %v", err)
 	}
-	_, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key")
+	_, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key")
 	if err == nil {
 		t.Fatalf("expected duplicate add to fail")
 	}
@@ -270,7 +270,7 @@ func TestProjectAddRejectsDuplicatePath(t *testing.T) {
 }
 func TestProjectAddRejectsMissingSecret(t *testing.T) {
 	_, data := setupProjectTest(t)
-	_, err := runShelf(t, "--data", data, "project", "add", "providers/nonexistent/accounts/personal:api_key")
+	_, err := runShelf(t, "--vault", data, "project", "add", "providers/nonexistent/accounts/personal:api_key")
 	if err == nil {
 		t.Fatalf("expected add of missing secret to fail")
 	}
@@ -280,7 +280,7 @@ func TestProjectAddRejectsMissingSecret(t *testing.T) {
 }
 func TestProjectAddRejectsEmptyPrefix(t *testing.T) {
 	_, data := setupProjectTest(t)
-	_, err := runShelf(t, "--data", data, "project", "add", "providers/nonexistent")
+	_, err := runShelf(t, "--vault", data, "project", "add", "providers/nonexistent")
 	if err == nil {
 		t.Fatalf("expected add of non-matching prefix to fail")
 	}
@@ -295,10 +295,10 @@ func TestProjectAddPromptsInitWhenNoManifest(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	_, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key")
+	_, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key")
 	if err == nil {
 		t.Fatalf("expected add to fail without manifest")
 	}
@@ -308,13 +308,13 @@ func TestProjectAddPromptsInitWhenNoManifest(t *testing.T) {
 }
 func TestProjectRmRemovesEntry(t *testing.T) {
 	dir, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
 		t.Fatalf("project add: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "rm", "providers/openai/accounts/personal:api_key")
+	out, err := runShelf(t, "--vault", data, "project", "rm", "providers/openai/accounts/personal:api_key")
 	if err != nil {
 		t.Fatalf("project rm: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestProjectRmRemovesEntry(t *testing.T) {
 }
 func TestProjectRmFailsOnMissingEntry(t *testing.T) {
 	_, data := setupProjectTest(t)
-	_, err := runShelf(t, "--data", data, "project", "rm", "providers/nonexistent:api_key")
+	_, err := runShelf(t, "--vault", data, "project", "rm", "providers/nonexistent:api_key")
 	if err == nil {
 		t.Fatalf("expected rm of missing entry to fail")
 	}
@@ -341,13 +341,13 @@ func TestProjectRmFailsOnMissingEntry(t *testing.T) {
 }
 func TestProjectRmRemovesPrefixEntry(t *testing.T) {
 	dir, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal", "--optional"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal", "--optional"); err != nil {
 		t.Fatalf("project add prefix: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "rm", "providers/openai/accounts/personal")
+	out, err := runShelf(t, "--vault", data, "project", "rm", "providers/openai/accounts/personal")
 	if err != nil {
 		t.Fatalf("project rm prefix: %v", err)
 	}
@@ -364,19 +364,19 @@ func TestProjectRmRemovesPrefixEntry(t *testing.T) {
 }
 func TestProjectListShowsEntries(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openrouter/accounts/personal:api_key", "sk-router"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openrouter/accounts/personal:api_key", "sk-router"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key", "--env", "OPENAI_API_KEY"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key", "--env", "OPENAI_API_KEY"); err != nil {
 		t.Fatalf("add path: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openrouter/accounts/personal", "--optional"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openrouter/accounts/personal", "--optional"); err != nil {
 		t.Fatalf("add prefix: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "list")
+	out, err := runShelf(t, "--vault", data, "project", "list")
 	if err != nil {
 		t.Fatalf("project list: %v", err)
 	}
@@ -392,13 +392,13 @@ func TestProjectListShowsEntries(t *testing.T) {
 }
 func TestProjectExportEnv(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err != nil {
 		t.Fatalf("project export env: %v", err)
 	}
@@ -408,13 +408,13 @@ func TestProjectExportEnv(t *testing.T) {
 }
 func TestProjectExportShell(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "shell")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "shell")
 	if err != nil {
 		t.Fatalf("project export shell: %v", err)
 	}
@@ -424,13 +424,13 @@ func TestProjectExportShell(t *testing.T) {
 }
 func TestProjectExportJSON(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "json")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "json")
 	if err != nil {
 		t.Fatalf("project export json: %v", err)
 	}
@@ -440,13 +440,13 @@ func TestProjectExportJSON(t *testing.T) {
 }
 func TestProjectExportJSONConvertsValuesToStrings(t *testing.T) {
 	_, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--data", data, "secret", "set", "app:number", "123"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:number", "123"); err != nil {
 		t.Fatalf("set number: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "project", "add", "app:number", "--env", "APP_NUMBER"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "project", "add", "app:number", "--env", "APP_NUMBER"); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "json")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "json")
 	if err != nil {
 		t.Fatalf("project export json: %v", err)
 	}
@@ -463,7 +463,7 @@ func TestProjectExportFailsOnRequiredMissing(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	_, err := runShelf(t, "--data", filepath.Join(dir, "secrets.json"), "project", "export", "--format", "env")
+	_, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "project", "export", "--format", "env")
 	if err == nil {
 		t.Fatalf("expected export to fail with missing required")
 	}
@@ -475,7 +475,7 @@ func TestProjectExportSkipsOptionalMissing(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{
@@ -489,7 +489,7 @@ func TestProjectExportSkipsOptionalMissing(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err != nil {
 		t.Fatalf("expected export to succeed with optional missing: %v\n%s", err, out)
 	}
@@ -510,10 +510,10 @@ func TestProjectExportFailsOnEnvConflict(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/work:api_key", "sk-work"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/work:api_key", "sk-work"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	// Both explicitly override to same env name.
@@ -528,7 +528,7 @@ func TestProjectExportFailsOnEnvConflict(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	_, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	_, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err == nil {
 		t.Fatalf("expected env name conflict to fail")
 	}
@@ -540,10 +540,10 @@ func TestProjectExportExpandsPrefixSorted(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-personal"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-personal"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/work:api_key", "sk-work"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/work:api_key", "sk-work"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{
@@ -556,7 +556,7 @@ func TestProjectExportExpandsPrefixSorted(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err != nil {
 		t.Fatalf("project export: %v\n%s", err, out)
 	}
@@ -577,14 +577,14 @@ func TestProjectExportFailsOnRequiredEmptyPrefix(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{"version":1,"secrets":[{"path":"app:token"},{"prefix":"providers/missing","required":true}]}`
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err == nil {
 		t.Fatalf("expected required empty prefix to fail")
 	}
@@ -599,14 +599,14 @@ func TestProjectExportWarnsOnOptionalEmptyPrefix(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{"version":1,"secrets":[{"path":"app:token"},{"prefix":"providers/missing","required":false}]}`
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "export", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err != nil {
 		t.Fatalf("expected optional empty prefix to succeed: %v\n%s", err, out)
 	}
@@ -624,7 +624,7 @@ func TestProjectExplainHandlesPrefixEntries(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{
@@ -638,7 +638,7 @@ func TestProjectExplainHandlesPrefixEntries(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "explain")
 	if err != nil {
 		t.Fatalf("project explain: %v\n%s", err, out)
 	}
@@ -657,14 +657,14 @@ func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 	}
 	t.Setenv("APP_TOKEN", "parent")
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--data", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--data", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "explain")
 	if err != nil {
 		t.Fatalf("project explain: %v\n%s", err, out)
 	}

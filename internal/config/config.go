@@ -11,22 +11,26 @@ import (
 
 const (
 	DefaultConfigPath = "~/.config/shelf/config.yaml"
-	DefaultDataPath   = "~/.local/share/shelf/secrets.json"
+	DefaultVaultPath  = "~/.local/share/shelf/vault.age"
 )
 
 type Config struct {
-	Version int    `yaml:"version"`
-	Data    string `yaml:"data"`
-	Editor  string `yaml:"editor"`
+	Version       int      `yaml:"version"`
+	VaultPath     string   `yaml:"vault_path"`
+	Recipients    []string `yaml:"recipients"`
+	IdentityPaths []string `yaml:"identity_paths"`
+	Editor        string   `yaml:"editor"`
 }
 
 type Runtime struct {
-	ConfigPath string
-	DataPath   string
-	Editor     string
+	ConfigPath    string
+	VaultPath     string
+	Recipients    []string
+	IdentityPaths []string
+	Editor        string
 }
 
-func Resolve(configPathFlag, dataPathFlag string) (Runtime, error) {
+func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
 	configPath, err := resolveConfigPath(configPathFlag)
 	if err != nil {
 		return Runtime{}, err
@@ -37,7 +41,11 @@ func Resolve(configPathFlag, dataPathFlag string) (Runtime, error) {
 		return Runtime{}, err
 	}
 
-	dataPath, err := resolveDataPath(dataPathFlag, cfg.Data, configPath)
+	vaultPath, err := resolveVaultPath(vaultPathFlag, cfg.VaultPath, configPath)
+	if err != nil {
+		return Runtime{}, err
+	}
+	identityPaths, err := resolvePathList(cfg.IdentityPaths, configPath)
 	if err != nil {
 		return Runtime{}, err
 	}
@@ -50,7 +58,7 @@ func Resolve(configPathFlag, dataPathFlag string) (Runtime, error) {
 		editor = "vi"
 	}
 
-	return Runtime{ConfigPath: configPath, DataPath: dataPath, Editor: editor}, nil
+	return Runtime{ConfigPath: configPath, VaultPath: vaultPath, Recipients: cfg.Recipients, IdentityPaths: identityPaths, Editor: editor}, nil
 }
 
 func resolveConfigPath(flag string) (string, error) {
@@ -63,17 +71,32 @@ func resolveConfigPath(flag string) (string, error) {
 	return expandPath(DefaultConfigPath, "")
 }
 
-func resolveDataPath(flag, configData, configPath string) (string, error) {
+func resolveVaultPath(flag, configVaultPath, configPath string) (string, error) {
 	if flag != "" {
 		return expandPath(flag, "")
 	}
-	if env := os.Getenv("SHELF_DATA"); env != "" {
+	if env := os.Getenv("SHELF_VAULT"); env != "" {
 		return expandPath(env, "")
 	}
-	if configData != "" {
-		return expandPath(configData, filepath.Dir(configPath))
+	if configVaultPath != "" {
+		return expandPath(configVaultPath, filepath.Dir(configPath))
 	}
-	return expandPath(DefaultDataPath, "")
+	return expandPath(DefaultVaultPath, "")
+}
+
+func resolvePathList(paths []string, configPath string) ([]string, error) {
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	resolved := make([]string, 0, len(paths))
+	for _, path := range paths {
+		path, err := expandPath(path, filepath.Dir(configPath))
+		if err != nil {
+			return nil, err
+		}
+		resolved = append(resolved, path)
+	}
+	return resolved, nil
 }
 
 func loadConfig(path string) (Config, error) {
