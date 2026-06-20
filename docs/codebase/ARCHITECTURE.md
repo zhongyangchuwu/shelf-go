@@ -38,7 +38,8 @@
 | Project commands | Manage `.shelf.json`, resolve project bindings, export project env, derive Git project identity | `internal/cli/project.go` |
 | Run command | Resolve project env bindings and execute a child process with injected environment | `internal/cli/run.go` |
 | Init command | Create vault-first config, age identity material when needed, and encrypted vault files | `internal/cli/init.go` |
-| Doctor command | Check config resolution, encrypted vault loadability, file permissions, and completion install state | `internal/cli/doctor.go` |
+| Migrate command | Convert a legacy plaintext JSON store into an encrypted vault, verify the target, and preserve the source | `internal/cli/migrate.go` |
+| Doctor command | Check config resolution, encrypted vault format/loadability, file permissions, git tracking safety, and completion install state | `internal/cli/doctor.go` |
 | Config layer | Resolve runtime config from flags, environment variables, config YAML, and defaults | `internal/config/config.go` |
 | Store layer | Own the plaintext data model, path grammar, JSON validation, encrypted vault persistence, backups, prefix listing, and write locking | `internal/store/io.go`, `internal/store/vault.go`, `internal/store/lock.go`, `internal/store/model.go`, `internal/store/path.go`, `internal/store/validate.go` |
 | Manifest layer | Load, validate, mutate, and save project manifest entries | `internal/manifest/manifest.go`, `internal/manifest/io.go`, `internal/manifest/validate.go` |
@@ -81,7 +82,7 @@
 **Secret Store Layer:**
 - Purpose: Own the plaintext secret data model, encrypted vault boundary, path grammar, JSON validation, atomic persistence, backups, prefix listing, and write locking.
 - Location: `internal/store`
-- Contains: `Data`, `Secret`, `Info`, `Store`, `Vault`, `VaultOptions`, `SecretID`, `Load`, `Save`, `Set`, `Update`, `Delete`, `LockFile`.
+- Contains: `Data`, `Secret`, `Info`, `Store`, `Vault`, `VaultOptions`, `FileFormat`, `DetectFileFormat`, `SecretID`, `Load`, `Save`, `Set`, `Update`, `Delete`, `LockFile`.
 - Depends on: `filippo.io/age` for vault encryption plus Go standard library packages.
 - Used by: `internal/cli`, `internal/manifest/validate.go`, `internal/render/export.go`.
 
@@ -108,6 +109,21 @@
 3. The command validates and mutates in-memory store state through methods such as `Store.Set`, `Store.Update`, or `Store.Delete`.
 4. `Vault.Save` validates and encodes the store, encrypts bytes for configured age recipients, creates an encrypted `.bak` backup when replacing an existing vault, writes encrypted temp bytes with mode `0600`, syncs them, and renames into place.
 5. The deferred unlock releases the flock from `internal/store/lock.go`.
+
+### Plaintext Migration Path
+
+1. User invokes `shelf migrate --from <plaintext.json> [--to <vault.age>] [--force]`; Cobra routes to `newMigrateCmd` (`internal/cli/migrate.go`).
+2. The command resolves the active config and target vault through `loadVault`, unless `--to` supplies a separate target path.
+3. It reads and validates the source through plaintext `store.Load`, then refuses an existing target unless `--force` is set.
+4. It writes through `Vault.Save`, so target bytes and any replacement `.bak` are encrypted before durable persistence.
+5. It immediately decrypts and validates the target through `Vault.Load`, checks the source bytes are unchanged, then reports that the plaintext source remains for manual cleanup.
+
+### Vault Format and Git Safety Check Path
+
+1. `shelf doctor` calls `store.DetectFileFormat` on the active vault path before attempting decryption.
+2. Encrypted `shelf-vault/v1` files proceed to load validation; plaintext JSON, unsupported vault headers, and unsupported content fail at the format check.
+3. If the active path is inside a Git worktree, doctor checks whether ordinary Git tracks that exact path.
+4. Tracked plaintext JSON fails as unsafe. Tracked encrypted vaults are confirmed as encrypted and suitable for git/chezmoi-style dotfile workflows.
 
 ### Direct Export Path
 

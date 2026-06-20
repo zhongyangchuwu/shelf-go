@@ -39,6 +39,7 @@ shelf secret info <path>
 shelf secret edit <path>
 
 shelf export <path-or-prefix> --format shell|env|json
+shelf migrate --from <plaintext.json> [--to <vault.age>] [--force]
 
 shelf doctor
 
@@ -283,6 +284,32 @@ Rules:
 - Tags must not replace path hierarchy.
 - MVP does not include group metadata.
 
+## `shelf migrate`
+
+Migrate an existing plaintext Shelf JSON store into an age-encrypted vault.
+
+```bash
+shelf migrate --from ~/.local/share/shelf/secrets.json --to ~/.local/share/shelf/vault.age
+```
+
+Behavior:
+
+- Reads the plaintext source through the legacy JSON store reader.
+- Writes the target through encrypted vault persistence.
+- Decrypts and validates the new vault before reporting success.
+- Leaves the plaintext source unchanged; the user must move, delete, or archive it after confirming the new vault and config.
+- Refuses to replace an existing target unless `--force` is supplied.
+- When `--force` replaces an encrypted vault, the `.bak` file is encrypted because replacement uses the same vault save path.
+- Refuses plaintext JSON as the target path; choose a different `--to` path or move the plaintext file first.
+
+Rules:
+
+- `--from` is required.
+- `--to` defaults to the active configured vault path.
+- Configured age recipients encrypt the target.
+- Configured age identities verify the target after writing.
+- Migration does not delete or rewrite the plaintext source.
+
 ## `shelf export`
 
 Directly export secrets from the secret namespace.
@@ -357,7 +384,9 @@ ok   config resolves (/home/han/.config/shelf/config.yaml)
 ok   version (v0.1.0 go1.26 linux/amd64)
 ok   vault file exists (/home/han/.local/share/shelf/vault.age)
 ok   vault file mode (-rw-------)
+ok   vault format (encrypted shelf-vault/v1)
 ok   vault loads (/home/han/.local/share/shelf/vault.age)
+ok   git tracking (tracked vault is encrypted: dot_shelf/vault.age)
 ok   completion installed (/home/han/.zfunc/_shelf)
 ```
 
@@ -366,8 +395,10 @@ Rules:
 - `ok` means the check passed.
 - `warn` means usable but needs attention.
 - `fail` means doctor exits non-zero.
-- Initial checks are local only: config resolution, version, encrypted vault existence/mode/loadability, and zsh completion paths discovered from `FPATH` / `fpath`.
-- Full chezmoi/git safety classification is handled by the migration and git-safety phase.
+- Checks are local only: config resolution, version, encrypted vault existence/mode/format/loadability, ordinary Git tracking state, and zsh completion paths discovered from `FPATH` / `fpath`.
+- `vault format` reports encrypted `shelf-vault/v1`, plaintext JSON, missing/empty, or unsupported content. Plaintext JSON is a failure with migration guidance.
+- `git tracking` fails when the active secret file is tracked plaintext JSON, confirms tracked encrypted vaults, and otherwise reports whether the vault path is outside or untracked by ordinary Git.
+- Chezmoi command integration is not required; a chezmoi-managed vault is safe when the file tracked by Git is the encrypted vault, not a plaintext JSON store.
 
 
 ## Project workflow (v0.2–v0.4)

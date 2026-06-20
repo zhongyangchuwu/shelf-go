@@ -21,6 +21,7 @@ func NewRootCmd() *cobra.Command {
 
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newInitCmd())
+	root.AddCommand(newMigrateCmd())
 	root.AddCommand(newSecretCmd())
 	root.AddCommand(newExportCmd())
 	root.AddCommand(newDoctorCmd())

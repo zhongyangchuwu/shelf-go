@@ -51,12 +51,14 @@ Security stance:
 - Config may contain public age recipients and identity file paths.
 - Commands operate on the same plaintext data model only after decrypt/load and before validate/encrypt/save.
 - Users should not manually edit the encrypted vault; `secret edit` is the supported edit path.
+- `shelf migrate --from <plaintext.json>` is the supported plaintext-to-vault conversion path. It preserves the plaintext source, writes an encrypted target, then decrypts and validates the target before reporting success.
 
 Recommended filesystem behavior:
 
 - Create the vault file with user-only permissions where the platform supports it.
 - Warn when plaintext legacy stores are still present or tracked by ordinary Git.
 - Keep atomic writes and backups in the storage layer, and encrypt backup bytes before durable persistence.
+- When replacing an encrypted vault, backups are encrypted vault bytes; plaintext migration sources are never rewritten or backed up by Shelf.
 - Mutating commands must take an exclusive lock at `<vault-path>.lock` before loading the store for modification.
 - Write flow is: lock, decrypt latest vault, mutate in memory, validate, encrypt to temp file, rename, unlock.
 

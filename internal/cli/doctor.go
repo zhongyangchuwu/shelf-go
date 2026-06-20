@@ -97,6 +97,28 @@ func checkVaultFile(report *doctorReport, vaultPath string) {
 	}
 }
 func checkVaultLoads(report *doctorReport, runtime config.Runtime) {
+	format, err := store.DetectFileFormat(runtime.VaultPath)
+	if err != nil {
+		report.fail("vault format", err.Error())
+		return
+	}
+	switch format {
+	case store.FileFormatMissing:
+		report.warn("vault format", runtime.VaultPath+" is missing and will be encrypted on first write")
+	case store.FileFormatEmpty:
+		report.warn("vault format", runtime.VaultPath+" is empty and will be encrypted on first write")
+	case store.FileFormatEncryptedVault:
+		report.ok("vault format", "encrypted shelf-vault/v1")
+	case store.FileFormatPlaintextStore:
+		report.fail("vault format", "plaintext JSON store; run shelf migrate before using encrypted vault mode")
+		return
+	case store.FileFormatUnsupportedVault:
+		report.fail("vault format", "unsupported shelf vault format")
+		return
+	default:
+		report.fail("vault format", "unsupported file content")
+		return
+	}
 	vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 	if err != nil {
 		report.fail("vault loads", err.Error())
@@ -110,6 +132,7 @@ func checkVaultLoads(report *doctorReport, runtime config.Runtime) {
 }
 
 func checkVaultTracking(report *doctorReport, vaultPath string) {
+	format, formatErr := store.DetectFileFormat(vaultPath)
 	abs, err := filepath.Abs(vaultPath)
 	if err != nil {
 		report.warn("git tracking", err.Error())
@@ -126,8 +149,21 @@ func checkVaultTracking(report *doctorReport, vaultPath string) {
 		report.ok("git tracking", "vault file is outside Git worktree")
 		return
 	}
-	if err := exec.Command("git", "-C", root, "ls-files", "--error-unmatch", "--", rel).Run(); err == nil {
-		report.warn("git tracking", "vault file appears tracked by ordinary git: "+rel)
+	tracked := exec.Command("git", "-C", root, "ls-files", "--error-unmatch", "--", rel).Run() == nil
+	if formatErr != nil {
+		report.warn("git tracking", formatErr.Error())
+		return
+	}
+	if tracked && format == store.FileFormatPlaintextStore {
+		report.fail("git tracking", "tracked plaintext secret store is unsafe: "+rel)
+		return
+	}
+	if tracked && format == store.FileFormatEncryptedVault {
+		report.ok("git tracking", "tracked vault is encrypted: "+rel)
+		return
+	}
+	if tracked {
+		report.warn("git tracking", "tracked vault path is not confirmed encrypted: "+rel)
 		return
 	}
 	report.ok("git tracking", "vault file is not tracked by ordinary git")

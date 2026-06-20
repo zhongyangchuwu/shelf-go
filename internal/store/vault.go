@@ -13,6 +13,43 @@ import (
 
 const vaultHeader = "shelf-vault/v1\n"
 
+type FileFormat string
+
+const (
+	FileFormatMissing          FileFormat = "missing"
+	FileFormatEmpty            FileFormat = "empty"
+	FileFormatEncryptedVault   FileFormat = "encrypted-vault"
+	FileFormatPlaintextStore   FileFormat = "plaintext-store"
+	FileFormatUnsupportedVault FileFormat = "unsupported-vault"
+	FileFormatUnsupported      FileFormat = "unsupported"
+)
+
+func DetectFileFormat(path string) (FileFormat, error) {
+	content, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return FileFormatMissing, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) == 0 {
+		return FileFormatEmpty, nil
+	}
+	if bytes.HasPrefix(content, []byte(vaultHeader)) {
+		return FileFormatEncryptedVault, nil
+	}
+	if bytes.HasPrefix(content, []byte("shelf-vault/")) {
+		return FileFormatUnsupportedVault, nil
+	}
+	if bytes.HasPrefix(trimmed, []byte("{")) {
+		if _, err := decodeStore(content); err == nil {
+			return FileFormatPlaintextStore, nil
+		}
+	}
+	return FileFormatUnsupported, nil
+}
+
 type VaultOptions struct {
 	Recipients    []string
 	IdentityPaths []string

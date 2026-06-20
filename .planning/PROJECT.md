@@ -23,15 +23,15 @@ A single developer can safely carry and use project secrets across machines thro
 - [x] Local health checks exist through `shelf doctor`.
 - [x] Mutating secret-store commands use a write-side lock and atomic save behavior.
 - [x] Age-encrypted vault persistence exists for core secret workflows, including vault config, recipients, identity paths, encrypted writes, encrypted backups, and actionable vault load errors.
+- [x] Plaintext-to-vault migration exists through `shelf migrate`, preserving the source until the encrypted target decrypts and validates successfully.
+- [x] Git safety checks exist through `shelf doctor`, distinguishing plaintext JSON from encrypted vault files and flagging tracked plaintext stores as unsafe.
 
 ### Active
 
-- [ ] Make the encrypted vault safe to commit or sync through git-backed dotfile workflows, especially chezmoi-managed repositories.
-- [ ] Keep Shelf's configuration non-secret and portable, with clear separation between config files, project manifests, and encrypted vault data.
 - [ ] Preserve fast CLI workflows for setting, listing, exporting, project binding, and `shelf run`.
 - [ ] Add a localhost-only vault manager that can search, inspect metadata, and edit secrets.
 - [ ] Improve secret editing so common edit workflows do not require manually editing full JSON in `$EDITOR`.
-- [ ] Harden remaining storage edges around plaintext migration, git/chezmoi safety checks, backup recovery, and editor temp files.
+- [ ] Harden remaining storage edges around editor temp files and future recovery UX.
 
 ### Out of Scope
 
@@ -66,7 +66,8 @@ The target user uses chezmoi and age encryption today. Shelf should fit that men
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Use age encryption for the vault | The target workflow already uses age with chezmoi, and age fits portable file encryption better than a hosted secret manager. | Implemented for Phase 1 core vault persistence. |
-| Keep the vault as a portable file | A normal encrypted file can be managed by git and chezmoi without building sync infrastructure. | Implemented as `shelf-vault/v1` age-encrypted file; full git/chezmoi safety checks remain Phase 2. |
+| Keep the vault as a portable file | A normal encrypted file can be managed by git and chezmoi without building sync infrastructure. | Implemented as `shelf-vault/v1` age-encrypted file; doctor now confirms tracked encrypted vaults and fails tracked plaintext stores. |
+| Preserve plaintext sources during migration | Deleting or rewriting the old store before validating the new vault creates data-loss risk. | `shelf migrate` leaves the plaintext source unchanged and reports manual cleanup guidance after encrypted target verification. |
 | Keep Shelf CLI-first | The core audience is solo developers and hackers who need fast terminal workflows for env export and runtime injection. | Pending |
 | Add a localhost vault manager with editing | CLI JSON editing is painful; a local UI can improve search and edits while staying local-first. | Pending |
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, sharing protocols, and conflict handling before the solo workflow is solid. | Pending |
@@ -89,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-18 after Phase 1 verification*
+*Last updated: 2026-06-20 after Phase 2 verification*

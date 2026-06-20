@@ -41,6 +41,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 
 **Goal:** Users can convert existing plaintext Shelf data into an encrypted portable vault and verify that git/chezmoi workflows are safe.
 **Mode:** mvp
+**Status:** Complete (verified 2026-06-20)
 
 **Requirements:** MIGR-01, MIGR-02, MIGR-03, MIGR-04, MIGR-05, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05
 
@@ -121,16 +122,16 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 | VAULT-05 | Phase 1 | Complete |
 | VAULT-06 | Phase 1 | Complete |
 | CLI-01 | Phase 1 | Complete |
-| MIGR-01 | Phase 2 | Pending |
-| MIGR-02 | Phase 2 | Pending |
-| MIGR-03 | Phase 2 | Pending |
-| MIGR-04 | Phase 2 | Pending |
-| MIGR-05 | Phase 2 | Pending |
-| SAFE-01 | Phase 2 | Pending |
-| SAFE-02 | Phase 2 | Pending |
-| SAFE-03 | Phase 2 | Pending |
-| SAFE-04 | Phase 2 | Pending |
-| SAFE-05 | Phase 2 | Pending |
+| MIGR-01 | Phase 2 | Complete |
+| MIGR-02 | Phase 2 | Complete |
+| MIGR-03 | Phase 2 | Complete |
+| MIGR-04 | Phase 2 | Complete |
+| MIGR-05 | Phase 2 | Complete |
+| SAFE-01 | Phase 2 | Complete |
+| SAFE-02 | Phase 2 | Complete |
+| SAFE-03 | Phase 2 | Complete |
+| SAFE-04 | Phase 2 | Complete |
+| SAFE-05 | Phase 2 | Complete |
 | CLI-02 | Phase 3 | Pending |
 | CLI-03 | Phase 3 | Pending |
 | CLI-04 | Phase 3 | Pending |
@@ -152,7 +153,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 - v1 requirements: 33 total
 - Mapped to phases: 33
 - Unmapped: 0
-- Completed: 7
+- Completed: 17
 
 ---
-*Last updated: 2026-06-18 after Phase 1 verification*
+*Last updated: 2026-06-20 after Phase 2 verification*

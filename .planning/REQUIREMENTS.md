@@ -26,19 +26,19 @@ Requirements for the encrypted-vault milestone. Each requirement maps to one roa
 
 ### Migration and Recovery
 
-- [ ] **MIGR-01**: User can migrate an existing plaintext Shelf JSON store into an age-encrypted vault.
-- [ ] **MIGR-02**: Migration preserves the original plaintext source until the encrypted target decrypts and validates successfully.
-- [ ] **MIGR-03**: Migration reports clear next steps for moving, deleting, or archiving the old plaintext store.
-- [ ] **MIGR-04**: Shelf creates backups or recovery artifacts in encrypted form when secret values are involved.
-- [ ] **MIGR-05**: Shelf avoids writing plaintext secret values to durable temp files during normal store operations.
+- [x] **MIGR-01**: User can migrate an existing plaintext Shelf JSON store into an age-encrypted vault.
+- [x] **MIGR-02**: Migration preserves the original plaintext source until the encrypted target decrypts and validates successfully.
+- [x] **MIGR-03**: Migration reports clear next steps for moving, deleting, or archiving the old plaintext store.
+- [x] **MIGR-04**: Shelf creates backups or recovery artifacts in encrypted form when secret values are involved.
+- [x] **MIGR-05**: Shelf avoids writing plaintext secret values to durable temp files during normal store operations.
 
 ### Git and Chezmoi Safety
 
-- [ ] **SAFE-01**: User can keep the encrypted vault as a normal portable file suitable for git-backed dotfile workflows such as chezmoi.
-- [ ] **SAFE-02**: Shelf config remains non-secret and can be reviewed or committed without exposing secret values or private identities.
-- [ ] **SAFE-03**: `shelf doctor` reports whether the active store is plaintext or encrypted.
-- [ ] **SAFE-04**: `shelf doctor` warns when plaintext secret storage appears to be tracked by git.
-- [ ] **SAFE-05**: `shelf doctor` confirms when the tracked/synced vault path is encrypted and value-free project manifests remain safe.
+- [x] **SAFE-01**: User can keep the encrypted vault as a normal portable file suitable for git-backed dotfile workflows such as chezmoi.
+- [x] **SAFE-02**: Shelf config remains non-secret and can be reviewed or committed without exposing secret values or private identities.
+- [x] **SAFE-03**: `shelf doctor` reports whether the active store is plaintext or encrypted.
+- [x] **SAFE-04**: `shelf doctor` warns when plaintext secret storage appears to be tracked by git.
+- [x] **SAFE-05**: `shelf doctor` confirms when the tracked/synced vault path is encrypted and value-free project manifests remain safe.
 
 ### Localhost Vault Manager
 
@@ -101,16 +101,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAULT-05 | Phase 1 | Complete |
 | VAULT-06 | Phase 1 | Complete |
 | CLI-01 | Phase 1 | Complete |
-| MIGR-01 | Phase 2 | Pending |
-| MIGR-02 | Phase 2 | Pending |
-| MIGR-03 | Phase 2 | Pending |
-| MIGR-04 | Phase 2 | Pending |
-| MIGR-05 | Phase 2 | Pending |
-| SAFE-01 | Phase 2 | Pending |
-| SAFE-02 | Phase 2 | Pending |
-| SAFE-03 | Phase 2 | Pending |
-| SAFE-04 | Phase 2 | Pending |
-| SAFE-05 | Phase 2 | Pending |
+| MIGR-01 | Phase 2 | Complete |
+| MIGR-02 | Phase 2 | Complete |
+| MIGR-03 | Phase 2 | Complete |
+| MIGR-04 | Phase 2 | Complete |
+| MIGR-05 | Phase 2 | Complete |
+| SAFE-01 | Phase 2 | Complete |
+| SAFE-02 | Phase 2 | Complete |
+| SAFE-03 | Phase 2 | Complete |
+| SAFE-04 | Phase 2 | Complete |
+| SAFE-05 | Phase 2 | Complete |
 | CLI-02 | Phase 3 | Pending |
 | CLI-03 | Phase 3 | Pending |
 | CLI-04 | Phase 3 | Pending |
@@ -135,4 +135,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-18 after Phase 1 verification*
+*Last updated: 2026-06-20 after Phase 2 verification*
