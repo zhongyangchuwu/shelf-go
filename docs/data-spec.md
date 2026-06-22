@@ -1,8 +1,8 @@
-# Shelf Go Rewrite Data Spec
+# Shelf Go Data Spec
 
 ## Purpose
 
-This document defines the MVP data model for the Go rewrite.
+This document defines the encrypted vault data model and the plaintext in-memory model used after decrypt/load.
 
 The model intentionally does not copy the Python store architecture. It keeps the useful `group:key` path idea, but makes each secret a first-class object with its metadata stored beside the value.
 
@@ -15,9 +15,9 @@ Metadata lives with the secret.
 Namespaces are derived from secret paths, not stored as nested group nodes.
 ```
 
-## Store format
+## Plaintext model inside the encrypted vault
 
-MVP store shape:
+After decrypting the vault, Shelf validates this JSON shape:
 
 ```json
 {
@@ -52,6 +52,40 @@ Security stance:
 - Commands operate on the same plaintext data model only after decrypt/load and before validate/encrypt/save.
 - Users should not manually edit the encrypted vault; `secret edit` is the supported edit path.
 - `shelf migrate --from <plaintext.json>` is the supported plaintext-to-vault conversion path. It preserves the plaintext source, writes an encrypted target, then decrypts and validates the target before reporting success.
+
+## Runtime config boundary
+
+Shelf config is YAML and must stay value-free:
+
+```yaml
+version: 1
+vault_path: ~/.local/share/shelf/vault.age
+recipients:
+  - age1...
+identity_paths:
+  - ~/.config/shelf/identity.txt
+editor: vim
+```
+
+Rules:
+
+- `recipients` are public age recipients.
+- `identity_paths` are filesystem paths to private identity files; the private identity material is not embedded in config.
+- `vault_path` points at the encrypted durable store.
+- Config can be reviewed or committed only if it contains no private key material or secret values.
+
+## Value materialization boundaries
+
+These operations intentionally materialize plaintext values:
+
+- decrypting the vault into memory during command execution;
+- `secret get`;
+- `secret edit` editor buffer;
+- `export` and `project export` output;
+- `run` child process environment;
+- `manager` explicit reveal endpoint and browser reveal action.
+
+Generated env files and copied terminal/browser output are plaintext artifacts outside the vault and must not be committed.
 
 Recommended filesystem behavior:
 
@@ -483,13 +517,13 @@ Validation after edit:
 - `tags`, when present, must be a list of strings.
 - If `group_path` or `key` changes, the edit is a rename and must fail when the destination path already exists.
 
-## `.shelf.json` project manifest (v0.2+)
+## `.shelf.json` project manifest
 
 Project manifest lives at `<git-root>/.shelf.json`. It declares which Shelf secret paths a project needs. It is a manifest of intent, not a secret store.
 
 Rationale: `.env` is a key-value file for environment variables, not a project binding format. It cannot reliably encode Shelf's `group_path:key` identity, and it invites users to paste real secret values into project files.
 
-`.shelf.json` can be committed to Git. `.env.local` (generated output) must be gitignored.
+`.shelf.json` can be committed to Git when reviewed as value-free. `.env.local` and other generated exports contain plaintext values and must be gitignored.
 
 ### Format
 
@@ -553,7 +587,19 @@ Two entries resolving to the same env name is a conflict and must be reported as
 - v0.3: adds `prefix` entries.
 - v0.5 (future): adds `profiles` dictionary.
 
-## Unsupported in MVP data model
+## Localhost manager API boundary
+
+The localhost vault manager exposes the same vault data through a local HTTP server.
+
+Rules:
+
+- List/search responses include path, env, description, tags, and `value_set`; they do not include `value`.
+- Reveal is a separate explicit route that returns plaintext value only after token/Host checks.
+- Create/update/delete routes reuse `Vault.Update` and `Store.Set`/`Store.Delete`, so validation, locking, encrypted save, and encrypted backups remain centralized.
+- Unsafe write routes require token and Origin/Host controls because malicious browser pages can target loopback.
+- The manager is not a durable store. The encrypted vault remains the only source of truth.
+
+## Unsupported in v1 data model
 
 - Group objects.
 - Group metadata.
@@ -561,7 +607,6 @@ Two entries resolving to the same env name is a conflict and must be reported as
 - Arbitrary metadata map.
 - Provenance/source field.
 - Secret history.
-- Built-in encryption.
 - External secret-manager references.
 
 These may be added later, but are not part of the MVP store contract.

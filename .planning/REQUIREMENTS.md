@@ -19,10 +19,10 @@ Requirements for the encrypted-vault milestone. Each requirement maps to one roa
 ### CLI Compatibility
 
 - [x] **CLI-01**: Existing `shelf secret` read and write commands work against the encrypted vault.
-- [ ] **CLI-02**: Existing `shelf export` path and prefix flows work against the encrypted vault.
-- [ ] **CLI-03**: Existing `shelf project` manifest commands work against the encrypted vault without writing secret values to `.shelf.json`.
-- [ ] **CLI-04**: Existing `shelf run -- ...` and `shelf run --dry-run -- ...` work against the encrypted vault and preserve current value-printing rules.
-- [ ] **CLI-05**: Existing command tests or equivalent regression coverage verify that encryption did not change command semantics.
+- [x] **CLI-02**: Existing `shelf export` path and prefix flows work against the encrypted vault.
+- [x] **CLI-03**: Existing `shelf project` manifest commands work against the encrypted vault without writing secret values to `.shelf.json`.
+- [x] **CLI-04**: Existing `shelf run -- ...` and `shelf run --dry-run -- ...` work against the encrypted vault and preserve current value-printing rules.
+- [x] **CLI-05**: Existing command tests or equivalent regression coverage verify that encryption did not change command semantics.
 
 ### Migration and Recovery
 
@@ -42,21 +42,21 @@ Requirements for the encrypted-vault milestone. Each requirement maps to one roa
 
 ### Localhost Vault Manager
 
-- [ ] **WEB-01**: User can start a localhost-only vault manager from the CLI.
-- [ ] **WEB-02**: User can search and browse secret paths and non-secret metadata in the vault manager.
-- [ ] **WEB-03**: User can view and intentionally reveal/copy a secret value from the vault manager.
-- [ ] **WEB-04**: User can create, update, and delete secrets from the vault manager.
-- [ ] **WEB-05**: Vault-manager writes use the same validation, locking, encrypted-save, and backup rules as CLI writes.
-- [ ] **WEB-06**: Vault manager binds to loopback by default and uses session/write-safety controls for state-changing requests.
-- [ ] **WEB-07**: Vault manager does not require a permanent daemon or hosted service.
+- [x] **WEB-01**: User can start a localhost-only vault manager from the CLI.
+- [x] **WEB-02**: User can search and browse secret paths and non-secret metadata in the vault manager.
+- [x] **WEB-03**: User can view and intentionally reveal/copy a secret value from the vault manager.
+- [x] **WEB-04**: User can create, update, and delete secrets from the vault manager.
+- [x] **WEB-05**: Vault-manager writes use the same validation, locking, encrypted-save, and backup rules as CLI writes.
+- [x] **WEB-06**: Vault manager binds to loopback by default and uses session/write-safety controls for state-changing requests.
+- [x] **WEB-07**: Vault manager does not require a permanent daemon or hosted service.
 
 ### Documentation and Verification
 
-- [ ] **DOCS-01**: Documentation explains the encrypted vault model, age recipient and identity configuration, and chezmoi-friendly workflow.
-- [ ] **DOCS-02**: Documentation clearly separates Shelf config, `.shelf.json` project manifests, encrypted vault data, and generated/exported env files.
-- [ ] **DOCS-03**: Documentation warns about plaintext export, terminal output, browser reveal/copy actions, and old plaintext store cleanup.
-- [ ] **TEST-01**: Automated tests cover encrypted load/save, wrong identity or missing identity errors, migration success/failure paths, and CLI compatibility.
-- [ ] **TEST-02**: Automated or manual verification covers localhost manager write protections and no-plaintext side files for representative edit flows.
+- [x] **DOCS-01**: Documentation explains the encrypted vault model, age recipient and identity configuration, and chezmoi-friendly workflow.
+- [x] **DOCS-02**: Documentation clearly separates Shelf config, `.shelf.json` project manifests, encrypted vault data, and generated/exported env files.
+- [x] **DOCS-03**: Documentation warns about plaintext export, terminal output, browser reveal/copy actions, and old plaintext store cleanup.
+- [x] **TEST-01**: Automated tests cover encrypted load/save, wrong identity or missing identity errors, migration success/failure paths, and CLI compatibility.
+- [x] **TEST-02**: Automated or manual verification covers localhost manager write protections and no-plaintext side files for representative edit flows.
 
 ## v2 Requirements
 
@@ -111,22 +111,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAFE-03 | Phase 2 | Complete |
 | SAFE-04 | Phase 2 | Complete |
 | SAFE-05 | Phase 2 | Complete |
-| CLI-02 | Phase 3 | Pending |
-| CLI-03 | Phase 3 | Pending |
-| CLI-04 | Phase 3 | Pending |
-| CLI-05 | Phase 3 | Pending |
-| TEST-01 | Phase 3 | Pending |
-| WEB-01 | Phase 4 | Pending |
-| WEB-02 | Phase 4 | Pending |
-| WEB-03 | Phase 4 | Pending |
-| WEB-04 | Phase 4 | Pending |
-| WEB-05 | Phase 4 | Pending |
-| WEB-06 | Phase 4 | Pending |
-| WEB-07 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| DOCS-01 | Phase 5 | Pending |
-| DOCS-02 | Phase 5 | Pending |
-| DOCS-03 | Phase 5 | Pending |
+| CLI-02 | Phase 3 | Complete |
+| CLI-03 | Phase 3 | Complete |
+| CLI-04 | Phase 3 | Complete |
+| CLI-05 | Phase 3 | Complete |
+| TEST-01 | Phase 3 | Complete |
+| WEB-01 | Phase 4 | Complete |
+| WEB-02 | Phase 4 | Complete |
+| WEB-03 | Phase 4 | Complete |
+| WEB-04 | Phase 4 | Complete |
+| WEB-05 | Phase 4 | Complete |
+| WEB-06 | Phase 4 | Complete |
+| WEB-07 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| DOCS-01 | Phase 5 | Complete |
+| DOCS-02 | Phase 5 | Complete |
+| DOCS-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total
@@ -135,4 +135,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-06-16*
-*Last updated: 2026-06-20 after Phase 2 verification*
+*Last updated: 2026-06-22 after Phase 5 verification*

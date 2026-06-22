@@ -216,6 +216,52 @@ func TestProjectAddPathEntry(t *testing.T) {
 		t.Fatalf("manifest missing env override:\n%s", string(content))
 	}
 }
+
+func TestProjectAddKeepsManifestValueFree(t *testing.T) {
+	dir, data := setupProjectTest(t)
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-secret-value", "--env", "OPENAI_API_KEY"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key", "--env", "OPENAI_API_KEY"); err != nil {
+		t.Fatalf("project add: %v", err)
+	}
+	manifest, err := os.ReadFile(filepath.Join(dir, ".shelf.json"))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if strings.Contains(string(manifest), "sk-secret-value") {
+		t.Fatalf("manifest contains secret value:\n%s", manifest)
+	}
+	for _, want := range []string{"providers/openai/accounts/personal:api_key", "OPENAI_API_KEY"} {
+		if !strings.Contains(string(manifest), want) {
+			t.Fatalf("manifest missing non-secret binding %q:\n%s", want, manifest)
+		}
+	}
+}
+
+func TestProjectExportUsesEncryptedVaultWithoutPlaintextSideData(t *testing.T) {
+	_, data := setupProjectTest(t)
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-encrypted-project", "--env", "OPENAI_API_KEY"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
+	if err != nil {
+		t.Fatalf("project export env: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "OPENAI_API_KEY=sk-encrypted-project") {
+		t.Fatalf("project export missing encrypted-vault value:\n%s", out)
+	}
+	content, err := os.ReadFile(data)
+	if err != nil {
+		t.Fatalf("read vault: %v", err)
+	}
+	if strings.Contains(string(content), "sk-encrypted-project") || strings.Contains(string(content), "providers/openai/accounts/personal:api_key") {
+		t.Fatalf("encrypted vault contains plaintext project data")
+	}
+}
 func TestProjectAddPrefixEntry(t *testing.T) {
 	dir, data := setupProjectTest(t)
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test"); err != nil {

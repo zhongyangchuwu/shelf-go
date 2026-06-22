@@ -60,6 +60,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 
 **Goal:** The developer workflows that make Shelf useful for projects continue to work over encrypted storage.
 **Mode:** mvp
+**Status:** Complete (verified 2026-06-22)
 
 **Requirements:** CLI-02, CLI-03, CLI-04, CLI-05, TEST-01
 
@@ -78,6 +79,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 
 **Goal:** Users can search, reveal, copy, create, update, and delete secrets through a localhost-only manager without introducing unsafe write paths.
 **Mode:** mvp
+**Status:** Complete (verified 2026-06-22)
 
 **Requirements:** WEB-01, WEB-02, WEB-03, WEB-04, WEB-05, WEB-06, WEB-07, TEST-02
 
@@ -98,6 +100,7 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 
 **Goal:** The encrypted-vault workflow is clear enough to use safely and has final verification evidence for release.
 **Mode:** mvp
+**Status:** Complete (verified 2026-06-22)
 
 **Requirements:** DOCS-01, DOCS-02, DOCS-03
 
@@ -132,28 +135,28 @@ This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, por
 | SAFE-03 | Phase 2 | Complete |
 | SAFE-04 | Phase 2 | Complete |
 | SAFE-05 | Phase 2 | Complete |
-| CLI-02 | Phase 3 | Pending |
-| CLI-03 | Phase 3 | Pending |
-| CLI-04 | Phase 3 | Pending |
-| CLI-05 | Phase 3 | Pending |
-| TEST-01 | Phase 3 | Pending |
-| WEB-01 | Phase 4 | Pending |
-| WEB-02 | Phase 4 | Pending |
-| WEB-03 | Phase 4 | Pending |
-| WEB-04 | Phase 4 | Pending |
-| WEB-05 | Phase 4 | Pending |
-| WEB-06 | Phase 4 | Pending |
-| WEB-07 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| DOCS-01 | Phase 5 | Pending |
-| DOCS-02 | Phase 5 | Pending |
-| DOCS-03 | Phase 5 | Pending |
+| CLI-02 | Phase 3 | Complete |
+| CLI-03 | Phase 3 | Complete |
+| CLI-04 | Phase 3 | Complete |
+| CLI-05 | Phase 3 | Complete |
+| TEST-01 | Phase 3 | Complete |
+| WEB-01 | Phase 4 | Complete |
+| WEB-02 | Phase 4 | Complete |
+| WEB-03 | Phase 4 | Complete |
+| WEB-04 | Phase 4 | Complete |
+| WEB-05 | Phase 4 | Complete |
+| WEB-06 | Phase 4 | Complete |
+| WEB-07 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| DOCS-01 | Phase 5 | Complete |
+| DOCS-02 | Phase 5 | Complete |
+| DOCS-03 | Phase 5 | Complete |
 
 **Coverage Summary:**
 - v1 requirements: 33 total
 - Mapped to phases: 33
 - Unmapped: 0
-- Completed: 17
+- Completed: 33
 
 ---
-*Last updated: 2026-06-20 after Phase 2 verification*
+*Last updated: 2026-06-22 after Phase 5 verification*
