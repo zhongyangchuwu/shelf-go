@@ -49,7 +49,7 @@ func TestSecretSetGetListInfoExport(t *testing.T) {
 		}
 	}
 
-	out, err = runShelf(t, "--vault", data, "export", "providers/openrouter/accounts/personal:api_key", "--format", "shell")
+	out, err = runShelf(t, "--vault", data, "secret", "export", "providers/openrouter/accounts/personal:api_key", "--format", "shell")
 	if err != nil {
 		t.Fatalf("export shell: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestSecretGetAndExportPreserveJSONNumbers(t *testing.T) {
 	if out != want+"\n" {
 		t.Fatalf("secret get changed number: %q", out)
 	}
-	out, err = runShelf(t, "--vault", data, "export", "app:big_number", "--format", "json", "--all")
+	out, err = runShelf(t, "--vault", data, "secret", "export", "app:big_number", "--format", "json", "--all")
 	if err != nil {
 		t.Fatalf("export json: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestExportRejectsInvalidDerivedEnvName(t *testing.T) {
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "123:token", "secret"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
-	_, err := runShelf(t, "--vault", data, "export", "123:token", "--format", "shell", "--all")
+	_, err := runShelf(t, "--vault", data, "secret", "export", "123:token", "--format", "shell", "--all")
 	if err == nil {
 		t.Fatalf("expected invalid derived env name to fail")
 	}
@@ -266,7 +266,7 @@ func TestExportExactPathDoesNotIncludeLongerPrefixMatch(t *testing.T) {
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token_extra", "two", "--env", "APP_TOKEN_EXTRA"); err != nil {
 		t.Fatalf("set prefix: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "export", "app:token", "--format", "shell")
+	out, err := runShelf(t, "--vault", data, "secret", "export", "app:token", "--format", "shell")
 	if err != nil {
 		t.Fatalf("export exact: %v", err)
 	}
@@ -282,7 +282,7 @@ func TestExportFiltersEnvOnlyByDefaultAndAllFlag(t *testing.T) {
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:no_env", "two"); err != nil {
 		t.Fatalf("set no env: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "export", "app", "--format", "shell")
+	out, err := runShelf(t, "--vault", data, "secret", "export", "app", "--format", "shell")
 	if err != nil {
 		t.Fatalf("export without --all: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestExportFiltersEnvOnlyByDefaultAndAllFlag(t *testing.T) {
 	if !strings.Contains(out, "WITH_ENV=one") {
 		t.Fatalf("default export missing env secret: %q", out)
 	}
-	out, err = runShelf(t, "--vault", data, "export", "app", "--format", "shell", "--all")
+	out, err = runShelf(t, "--vault", data, "secret", "export", "app", "--format", "shell", "--all")
 	if err != nil {
 		t.Fatalf("export with --all: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestSecretEditUsesEditorAndValidatesJSON(t *testing.T) {
 	if _, err := runShelf(t, "--vault", data, "secret", "edit", "app:token"); err != nil {
 		t.Fatalf("edit secret: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "export", "app:token", "--format", "shell")
+	out, err := runShelf(t, "--vault", data, "secret", "export", "app:token", "--format", "shell")
 	if err != nil {
 		t.Fatalf("export edited: %v", err)
 	}

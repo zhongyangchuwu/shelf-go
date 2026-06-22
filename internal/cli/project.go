@@ -36,6 +36,7 @@ func newProjectCmd() *cobra.Command {
 	cmd.AddCommand(newProjectRmCmd())
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectExportCmd())
+	cmd.AddCommand(newRunCmd())
 	return cmd
 }
 

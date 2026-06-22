@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-func TestInitCreatesFilesAndReportsStatus(t *testing.T) {
+func TestSetupCreatesFilesAndReportsStatus(t *testing.T) {
 	dir := t.TempDir()
 	vault := filepath.Join(dir, "secrets.vault")
 	cfg := filepath.Join(dir, "shelf.yaml")
 
-	out, err := runShelf(t, "--config", cfg, "--vault", vault, "init")
+	out, err := runShelf(t, "--config", cfg, "--vault", vault, "setup")
 	if err != nil {
-		t.Fatalf("init: %v", err)
+		t.Fatalf("setup: %v", err)
 	}
 	for _, want := range []string{vault, "(created)", cfg, "(created)"} {
 		if !strings.Contains(out, want) {
@@ -21,9 +21,9 @@ func TestInitCreatesFilesAndReportsStatus(t *testing.T) {
 		}
 	}
 
-	out2, err := runShelf(t, "--config", cfg, "--vault", vault, "init")
+	out2, err := runShelf(t, "--config", cfg, "--vault", vault, "setup")
 	if err != nil {
-		t.Fatalf("second init: %v", err)
+		t.Fatalf("second setup: %v", err)
 	}
 	for _, want := range []string{vault, "(exists)", cfg, "(exists)"} {
 		if !strings.Contains(out2, want) {
@@ -31,27 +31,43 @@ func TestInitCreatesFilesAndReportsStatus(t *testing.T) {
 		}
 	}
 
-	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "init", "--minimal"); err == nil {
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "setup", "--minimal"); err == nil {
 		t.Fatalf("expected removed --minimal flag to fail")
 	}
 }
 
-func TestInitForcePreservesExistingVault(t *testing.T) {
+func TestVaultInitCreatesFilesAndReportsStatus(t *testing.T) {
+	dir := t.TempDir()
+	vault := filepath.Join(dir, "secrets.vault")
+	cfg := filepath.Join(dir, "shelf.yaml")
+
+	out, err := runShelf(t, "--config", cfg, "--vault", vault, "vault", "init")
+	if err != nil {
+		t.Fatalf("vault init: %v", err)
+	}
+	for _, want := range []string{vault, "(created)", cfg, "(created)"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("vault init output missing %q: %s", want, out)
+		}
+	}
+}
+
+func TestSetupForcePreservesExistingVault(t *testing.T) {
 	dir := t.TempDir()
 	vault := filepath.Join(dir, "secrets.vault")
 	cfg := filepath.Join(dir, "config.yaml")
-	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "init"); err != nil {
-		t.Fatalf("first init: %v", err)
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "setup"); err != nil {
+		t.Fatalf("first setup: %v", err)
 	}
 	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "secret", "set", "app:token", "val"); err != nil {
 		t.Fatalf("set: %v", err)
 	}
-	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "init", "--force"); err != nil {
-		t.Fatalf("force init: %v", err)
+	if _, err := runShelf(t, "--config", cfg, "--vault", vault, "setup", "--force"); err != nil {
+		t.Fatalf("force setup: %v", err)
 	}
 	out, err := runShelf(t, "--config", cfg, "--vault", vault, "secret", "get", "app:token")
 	if err != nil {
-		t.Fatalf("get after force init: %v", err)
+		t.Fatalf("get after force setup: %v", err)
 	}
 	if out != "val\n" {
 		t.Fatalf("force init should preserve existing vault, got: %s", out)

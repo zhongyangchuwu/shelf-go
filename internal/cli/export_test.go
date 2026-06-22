@@ -24,7 +24,7 @@ func TestExportFormatsReadEncryptedVault(t *testing.T) {
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			out, err := runShelf(t, "--vault", data, "export", "app:token", "--format", tt.format)
+			out, err := runShelf(t, "--vault", data, "secret", "export", "app:token", "--format", tt.format)
 			if err != nil {
 				t.Fatalf("export %s: %v\n%s", tt.format, err, out)
 			}
@@ -55,7 +55,7 @@ func TestExportPrefixReadsEncryptedVault(t *testing.T) {
 		t.Fatalf("set internal: %v", err)
 	}
 
-	out, err := runShelf(t, "--vault", data, "export", "app/api", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "secret", "export", "app/api", "--format", "env")
 	if err != nil {
 		t.Fatalf("export prefix: %v\n%s", err, out)
 	}
@@ -68,7 +68,7 @@ func TestExportPrefixReadsEncryptedVault(t *testing.T) {
 		t.Fatalf("prefix export included secret without env by default:\n%s", out)
 	}
 
-	out, err = runShelf(t, "--vault", data, "export", "app/api", "--format", "env", "--all")
+	out, err = runShelf(t, "--vault", data, "secret", "export", "app/api", "--format", "env", "--all")
 	if err != nil {
 		t.Fatalf("export prefix all: %v\n%s", err, out)
 	}

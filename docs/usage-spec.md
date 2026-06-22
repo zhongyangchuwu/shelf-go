@@ -57,8 +57,9 @@ Rules:
 ## Initialization
 
 ```bash
-shelf init
-shelf init --vault-path ~/.local/share/shelf/vault.age --recipient age1... --identity ~/.config/shelf/identity.txt
+shelf setup
+shelf setup --vault-path ~/.local/share/shelf/vault.age --recipient age1... --identity ~/.config/shelf/identity.txt
+shelf vault init --vault-path ~/.local/share/shelf/vault.age --recipient age1... --identity ~/.config/shelf/identity.txt
 ```
 
 Behavior:
@@ -66,6 +67,16 @@ Behavior:
 - Creates config if needed.
 - Creates or preserves the encrypted vault.
 - Does not overwrite an existing vault when `--force` rewrites config.
+
+Vault lifecycle commands:
+
+```bash
+shelf vault init
+shelf vault status
+shelf vault check
+```
+
+`vault status` and `vault check` report config path, vault path, encrypted/plaintext format, and decrypt/load status without revealing secret values.
 
 ## Secret paths
 
@@ -118,7 +129,7 @@ shelf secret set providers/openrouter/accounts/personal:api_key sk-xxx --env OPE
 ## Migration
 
 ```bash
-shelf migrate --from ~/.local/share/shelf/secrets.json --to ~/.local/share/shelf/vault.age
+shelf vault migrate --from ~/.local/share/shelf/secrets.json --to ~/.local/share/shelf/vault.age
 ```
 
 Behavior:
@@ -138,7 +149,7 @@ Cleanup requirement:
 ## Direct export
 
 ```bash
-shelf export <path-or-prefix> --format shell|env|json [--all]
+shelf secret export <path-or-prefix> --format shell|env|json [--all]
 ```
 
 Formats:
@@ -154,7 +165,7 @@ Rules:
 - Exact paths and prefixes are supported.
 - By default, prefix export includes secrets with an explicit `env` field.
 - `--all` includes secrets without `env` by deriving names from paths.
-- `shell` output is intended for `eval "$(shelf export ... --format shell)"`.
+- `shell` output is intended for `eval "$(shelf secret export ... --format shell)"`.
 - Export output contains plaintext values by design.
 - Redirected env files such as `.env.local` contain plaintext values and must be gitignored.
 
@@ -211,8 +222,8 @@ shelf project export --format env > .env.local
 ## Runtime injection
 
 ```bash
-shelf run -- command args...
-shelf run --dry-run -- command args...
+shelf project run -- command args...
+shelf project run --dry-run -- command args...
 ```
 
 Behavior:
@@ -227,9 +238,9 @@ Behavior:
 
 Rules:
 
-- `run` injects values into the child process only; it does not mutate the parent shell.
+- `project run` injects values into the child process only; it does not mutate the parent shell.
 - Shelf-resolved env vars override parent env vars.
-- `run --dry-run` prints injected env names and override warnings, not values.
+- `project run --dry-run` prints injected env names and override warnings, not values.
 - Child process output may print values if the child command prints them.
 
 ## Doctor
@@ -256,8 +267,8 @@ Safety behavior:
 ## Localhost vault manager
 
 ```bash
-shelf manager
-shelf manager --addr 127.0.0.1:0
+shelf vault open
+shelf vault open --addr 127.0.0.1:0
 ```
 
 Behavior:

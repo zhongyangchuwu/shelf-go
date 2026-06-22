@@ -21,7 +21,7 @@ func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
 	if err != nil {
 		t.Fatalf("run command: %v\n%s", err, out)
 	}
@@ -43,7 +43,7 @@ func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "run", "--", "sh", "-c", "printf %s \"$APP_API_TOKEN\"")
+	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "printf %s \"$APP_API_TOKEN\"")
 	if err != nil {
 		t.Fatalf("run command: %v\n%s", err, out)
 	}
@@ -74,14 +74,14 @@ func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
 	if err != nil {
 		t.Fatalf("run command: %v\n%s", err, out)
 	}
 	if out != "secret" {
 		t.Fatalf("expected Shelf value to override parent env: %q", out)
 	}
-	out, err = runShelf(t, "--vault", data, "run", "--dry-run", "--", "sh", "-c", "exit 99")
+	out, err = runShelf(t, "--vault", data, "project", "run", "--dry-run", "--", "sh", "-c", "exit 99")
 	if err != nil {
 		t.Fatalf("dry-run: %v\n%s", err, out)
 	}
@@ -111,7 +111,7 @@ func TestRunDryRunUsesEncryptedVaultWithoutPlaintextSideData(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "run", "--dry-run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
+	out, err := runShelf(t, "--vault", data, "project", "run", "--dry-run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
 	if err != nil {
 		t.Fatalf("dry-run: %v\n%s", err, out)
 	}
@@ -143,7 +143,7 @@ func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "run", "--", "sh", "-c", "touch "+marker)
+	out, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "project", "run", "--", "sh", "-c", "touch "+marker)
 	if err == nil {
 		t.Fatalf("expected run to fail")
 	}
@@ -163,7 +163,7 @@ func TestRunReturnsChildExitCode(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(`{"version":1,"secrets":[]}`), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	_, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "run", "--", "sh", "-c", "exit 7")
+	_, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "project", "run", "--", "sh", "-c", "exit 7")
 	if err == nil {
 		t.Fatalf("expected child failure")
 	}

@@ -110,7 +110,7 @@ func checkVaultLoads(report *doctorReport, runtime config.Runtime) {
 	case store.FileFormatEncryptedVault:
 		report.ok("vault format", "encrypted shelf-vault/v1")
 	case store.FileFormatPlaintextStore:
-		report.fail("vault format", "plaintext JSON store; run shelf migrate before using encrypted vault mode")
+		report.fail("vault format", "plaintext JSON store; run shelf vault migrate before using encrypted vault mode")
 		return
 	case store.FileFormatUnsupportedVault:
 		report.fail("vault format", "unsupported shelf vault format")

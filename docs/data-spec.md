@@ -51,7 +51,7 @@ Security stance:
 - Config may contain public age recipients and identity file paths.
 - Commands operate on the same plaintext data model only after decrypt/load and before validate/encrypt/save.
 - Users should not manually edit the encrypted vault; `secret edit` is the supported edit path.
-- `shelf migrate --from <plaintext.json>` is the supported plaintext-to-vault conversion path. It preserves the plaintext source, writes an encrypted target, then decrypts and validates the target before reporting success.
+- `shelf vault migrate --from <plaintext.json>` is the supported plaintext-to-vault conversion path. It preserves the plaintext source, writes an encrypted target, then decrypts and validates the target before reporting success.
 
 ## Runtime config boundary
 
@@ -467,10 +467,10 @@ PROVIDERS_OPENROUTER_ACCOUNTS_PERSONAL_API_KEY
 
 ## Shell quoting
 
-`shelf export --format shell` must be safe for:
+`shelf secret export --format shell` must be safe for:
 
 ```bash
-eval "$(shelf export providers/openrouter/accounts/personal:api_key --format shell)"
+eval "$(shelf secret export providers/openrouter/accounts/personal:api_key --format shell)"
 ```
 
 Format:

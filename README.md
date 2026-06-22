@@ -1,11 +1,11 @@
 # Shelf Go
 
-Shelf Go is a fast local secret manager for solo developers. It stores secrets in a portable age-encrypted vault file, keeps project manifests value-free, and preserves scriptable CLI workflows for direct export and `shelf run`.
+Shelf Go is a local-first encrypted secret environment manager for solo developers. It stores secrets in a portable age-encrypted vault file, keeps project manifests value-free, and preserves scriptable CLI workflows for direct secret export and `shelf project run`.
 
 Core workflow:
 
 ```text
-Encrypted local vault + value-free project manifests + fast CLI export/run.
+Encrypted local vault + value-free project manifests + scoped CLI export/run.
 ```
 
 ## Specs
@@ -17,8 +17,10 @@ Encrypted local vault + value-free project manifests + fast CLI export/run.
 ## Current command surface
 
 ```bash
-shelf init [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
-shelf migrate --from <plaintext.json> [--to <vault.age>] [--force]
+shelf setup [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
+shelf vault init [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
+shelf vault migrate --from <plaintext.json> [--to <vault.age>] [--force]
+shelf vault status
 shelf doctor
 
 shelf secret add [path-or-group]
@@ -29,7 +31,7 @@ shelf secret info <path>
 shelf secret edit <path>
 shelf secret rm <path>
 
-shelf export <path-or-prefix> --format shell|env|json [--all]
+shelf secret export <path-or-prefix> --format shell|env|json [--all]
 
 shelf project id
 shelf project init [--force]
@@ -39,10 +41,10 @@ shelf project rm <path-or-prefix>
 shelf project list
 shelf project export --format env|shell|json
 
-shelf run -- command args...
-shelf run --dry-run -- command args...
+shelf project run -- command args...
+shelf project run --dry-run -- command args...
 
-shelf manager [--addr 127.0.0.1:0]
+shelf vault open [--addr 127.0.0.1:0]
 shelf completion zsh
 ```
 
@@ -63,11 +65,11 @@ Global flags:
 
 ## Safety notes
 
-- `shelf secret get`, `shelf export`, `shelf project export`, and `shelf manager` reveal actions intentionally materialize plaintext values.
+- `shelf secret get`, `shelf secret export`, `shelf project export`, and `shelf vault open` reveal actions intentionally materialize plaintext values.
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
-- `shelf migrate` preserves the old plaintext JSON source after successful encrypted migration; delete, move, or archive it manually after verifying the new vault.
+- `shelf vault migrate` preserves the old plaintext JSON source after successful encrypted migration; delete, move, or archive it manually after verifying the new vault.
 - `shelf doctor` reports plaintext-vs-encrypted store format and flags tracked plaintext secret files as unsafe.
-- `shelf manager` binds to loopback by default and uses a random token plus Host/Origin checks, but browser reveal actions still show plaintext values locally.
+- `shelf vault open` binds to loopback by default and uses a random token plus Host/Origin checks, but browser reveal actions still show plaintext values locally.
 
 ## Status
 
@@ -79,5 +81,5 @@ Implemented:
 - Git/chezmoi safety checks in `shelf doctor`.
 - Direct export in shell/env/JSON formats.
 - Project manifests and project export.
-- `shelf run` runtime injection and value-free dry-run.
+- `shelf project run` runtime injection and value-free dry-run.
 - Localhost-only vault manager for metadata search, explicit reveal, create/update, and delete.

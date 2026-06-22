@@ -49,6 +49,7 @@ func newSecretCmd() *cobra.Command {
 	cmd.AddCommand(newSecretListCmd())
 	cmd.AddCommand(newSecretInfoCmd())
 	cmd.AddCommand(newSecretEditCmd())
+	cmd.AddCommand(newExportCmd())
 	cmd.AddCommand(newSecretRmCmd())
 	return cmd
 }

@@ -13,14 +13,22 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 )
 
-func newInitCmd() *cobra.Command {
+func newSetupCmd() *cobra.Command {
+	return newInitFilesCmd("setup", "Set up Shelf config and encrypted vault")
+}
+
+func newVaultInitCmd() *cobra.Command {
+	return newInitFilesCmd("init", "Initialize config and encrypted vault")
+}
+
+func newInitFilesCmd(use, short string) *cobra.Command {
 	var force bool
 	var vaultPath string
 	var recipients []string
 	var identityPaths []string
 	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "Initialize config and encrypted vault",
+		Use:   use,
+		Short: short,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPathFlag, _ := cmd.Flags().GetString("config")

@@ -1,162 +1,75 @@
-# Roadmap: Shelf Go Encrypted Vault
-
-**Created:** 2026-06-16
-**Mode:** Vertical MVP
-**Granularity:** Standard
+# Roadmap: Shelf Go Command Hierarchy and Vault UX
 
 ## Overview
 
-This roadmap turns the existing Shelf Go CLI into a git-safe, age-encrypted, portable secret manager for solo developers. Each phase should leave the product more usable while preserving the existing CLI workflows.
-
-| Phase | Name | Goal | Requirements | UI Hint |
-|-------|------|------|--------------|---------|
-| 1 | Encrypted Vault Core | Existing secret commands can use an age-encrypted vault as durable storage. | VAULT-01, VAULT-02, VAULT-03, VAULT-04, VAULT-05, VAULT-06, CLI-01 | no |
-| 2 | Migration and Git Safety | Users can safely migrate plaintext stores and verify git/chezmoi-safe state. | MIGR-01, MIGR-02, MIGR-03, MIGR-04, MIGR-05, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05 | no |
-| 3 | Project Workflow Compatibility | Existing export, project, and run workflows work unchanged over encrypted storage. | CLI-02, CLI-03, CLI-04, CLI-05, TEST-01 | no |
-| 4 | Localhost Vault Manager | Users can search, reveal, and edit secrets through a local manager safely. | WEB-01, WEB-02, WEB-03, WEB-04, WEB-05, WEB-06, WEB-07, TEST-02 | yes |
-| 5 | Documentation and Release Hardening | The encrypted-vault workflow is documented, verified, and ready for real use. | DOCS-01, DOCS-02, DOCS-03 | no |
+Shelf already has the encrypted-vault baseline: age-encrypted storage, migration, project manifests, runtime injection, direct export, doctor checks, and a localhost vault manager. The next pre-release milestone simplifies the CLI before any public compatibility burden exists: command names must expose scope, project-dependent workflows must live under `shelf project`, vault lifecycle must live under `shelf vault`, and future activate/deactivate work must be planned before implementation.
 
 ## Phases
 
-### Phase 1: Encrypted Vault Core
+- [ ] Phase 6: Command Hierarchy Cutover
+- [ ] Phase 7: Vault UX Hardening
+- [ ] Phase 8: Project Session Design
 
-**Goal:** Existing `shelf secret` workflows can read and write an age-encrypted vault file without changing command semantics.
-**Mode:** mvp
-**Status:** Complete (verified 2026-06-18)
+## Phase Details
 
-**Requirements:** VAULT-01, VAULT-02, VAULT-03, VAULT-04, VAULT-05, VAULT-06, CLI-01
+### Phase 6: Command Hierarchy Cutover
 
-**Success Criteria:**
-1. A user can configure Shelf to store secrets in an age-encrypted vault file.
-2. Shelf config supports vault path, recipients, and identity locations without embedding private identity material.
-3. `shelf secret set/get/list/info/edit/rm` can operate on the encrypted vault.
-4. Wrong identity, missing identity, corrupt vault, and unsupported format errors are actionable.
-5. The plaintext store model remains internal to load/decrypt and save/encrypt boundaries.
+**Goal:** Replace ambiguous top-level commands with scoped command namespaces before release.
 
-**Key Risks:**
-- Plaintext backups or temp files can accidentally bypass the encrypted boundary.
-- Recipient and identity configuration can become confusing if errors are too generic.
+**Depends on:** Completed encrypted-vault milestone.
 
-### Phase 2: Migration and Git Safety
-
-**Goal:** Users can convert existing plaintext Shelf data into an encrypted portable vault and verify that git/chezmoi workflows are safe.
-**Mode:** mvp
-**Status:** Complete (verified 2026-06-20)
-
-**Requirements:** MIGR-01, MIGR-02, MIGR-03, MIGR-04, MIGR-05, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05
+**Requirements:** CMD-01, CMD-02, CMD-03, CMD-04, CMD-05, CMD-06, CMD-07, CMD-08
 
 **Success Criteria:**
-1. A migration flow encrypts an existing plaintext JSON store and verifies the new vault by decrypting and validating it.
-2. The source plaintext store remains untouched until the encrypted target is proven readable.
-3. Backup and recovery artifacts containing secret values are encrypted.
-4. `shelf doctor` distinguishes plaintext stores from encrypted vaults.
-5. `shelf doctor` warns on tracked plaintext secret files and confirms encrypted/value-free states where possible.
+1. `shelf setup` performs the current global config/vault onboarding behavior.
+2. `shelf vault init`, `shelf vault migrate`, and `shelf vault open` perform the current vault init, migration, and local manager behavior.
+3. `shelf secret export` performs current direct path/prefix export behavior.
+4. `shelf project run -- ...` performs current `.shelf.json` runtime injection and dry-run behavior.
+5. Old top-level `init`, `migrate`, `export`, `run`, and `manager` commands are absent from the root command list.
+6. README and usage docs present only the new canonical command hierarchy.
 
-**Key Risks:**
-- Migration can create data-loss risk if it overwrites source files too early.
-- Git safety checks can produce false confidence if they only inspect path names, not tracked state and format.
+**Plans:** TBD
 
-### Phase 3: Project Workflow Compatibility
+### Phase 7: Vault UX Hardening
 
-**Goal:** The developer workflows that make Shelf useful for projects continue to work over encrypted storage.
-**Mode:** mvp
-**Status:** Complete (verified 2026-06-22)
+**Goal:** Improve vault-specific usability and diagnostics without changing the encrypted storage contract.
 
-**Requirements:** CLI-02, CLI-03, CLI-04, CLI-05, TEST-01
+**Depends on:** Phase 6 complete.
 
-**Success Criteria:**
-1. `shelf export` exact-path and prefix flows render env, shell, and JSON output from encrypted storage.
-2. `shelf project` manifest commands continue to resolve paths and prefixes without storing values in `.shelf.json`.
-3. `shelf run -- ...` injects resolved secrets into child processes from encrypted storage.
-4. `shelf run --dry-run` preserves current no-secret-value output behavior.
-5. Regression coverage proves current command semantics survive the storage change.
-
-**Key Risks:**
-- Project resolution can regress if encrypted load errors are not surfaced consistently.
-- Value-printing rules can drift while commands are being reworked.
-
-### Phase 4: Localhost Vault Manager
-
-**Goal:** Users can search, reveal, copy, create, update, and delete secrets through a localhost-only manager without introducing unsafe write paths.
-**Mode:** mvp
-**Status:** Complete (verified 2026-06-22)
-
-**Requirements:** WEB-01, WEB-02, WEB-03, WEB-04, WEB-05, WEB-06, WEB-07, TEST-02
-
-**UI hint:** yes
+**Requirements:** VUX-01, VUX-02, VUX-03, VUX-04
 
 **Success Criteria:**
-1. A CLI command starts a loopback-only local vault manager without requiring a permanent daemon.
-2. The manager supports search and browsing of paths and non-secret metadata.
-3. Secret values are revealed or copied only through intentional user actions.
-4. Create, update, and delete actions reuse existing validation, locking, and encrypted-save behavior.
-5. State-changing routes use session/write-safety controls such as tokenized access, CSRF protection, and Origin/Host validation.
+1. A vault-scoped status/check command reports config path, vault path, file format, loadability, and safe next steps without revealing values.
+2. Missing recipients, missing identities, plaintext legacy stores, unsupported vault formats, and undecryptable vaults produce concise recovery guidance.
+3. Docs explain first-run setup, vault init, vault migrate, vault status/check, vault open, and plaintext cleanup.
+4. Verification covers encrypted load/save, migration, status/check behavior, doctor behavior, and manager write safety under the new command hierarchy.
 
-**Key Risks:**
-- Localhost browser requests can still be forged by malicious pages if write controls are weak.
-- UI edit paths can duplicate validation logic and diverge from CLI behavior.
+**Plans:** TBD
 
-### Phase 5: Documentation and Release Hardening
+### Phase 8: Project Session Design
 
-**Goal:** The encrypted-vault workflow is clear enough to use safely and has final verification evidence for release.
-**Mode:** mvp
-**Status:** Complete (verified 2026-06-22)
+**Goal:** Plan venv-like project session workflows without implementing activate/deactivate/shell yet.
 
-**Requirements:** DOCS-01, DOCS-02, DOCS-03
+**Depends on:** Phase 6 complete.
+
+**Requirements:** SES-01, SES-02, SES-03, SES-04
 
 **Success Criteria:**
-1. Documentation explains the encrypted vault model, age recipients, identity configuration, and chezmoi-friendly usage.
-2. Documentation clearly separates config, `.shelf.json`, encrypted vault data, and generated/exported env files.
-3. Documentation warns about plaintext exports, terminal output, browser reveal/copy actions, and old plaintext store cleanup.
-4. Release verification confirms every v1 requirement is implemented or explicitly deferred through a documented decision.
+1. A design artifact defines `shelf project activate`, `shelf project deactivate`, and `shelf project shell` semantics.
+2. The design records why activation requires a shell hook/function to mutate the current shell environment.
+3. The design specifies reversible env restore behavior for variables that existed before activation.
+4. The design defines no-value dry-run/preview output and conflict handling for repeated activation or project switching.
+5. Implementation remains explicitly out of scope for this phase.
 
-**Key Risks:**
-- Users can still misuse the tool if migration cleanup and plaintext export risks are under-documented.
-- Docs can drift from the final CLI flags and config fields if written before implementation settles.
+**Plans:** TBD
 
-## Coverage
+## Progress
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| VAULT-01 | Phase 1 | Complete |
-| VAULT-02 | Phase 1 | Complete |
-| VAULT-03 | Phase 1 | Complete |
-| VAULT-04 | Phase 1 | Complete |
-| VAULT-05 | Phase 1 | Complete |
-| VAULT-06 | Phase 1 | Complete |
-| CLI-01 | Phase 1 | Complete |
-| MIGR-01 | Phase 2 | Complete |
-| MIGR-02 | Phase 2 | Complete |
-| MIGR-03 | Phase 2 | Complete |
-| MIGR-04 | Phase 2 | Complete |
-| MIGR-05 | Phase 2 | Complete |
-| SAFE-01 | Phase 2 | Complete |
-| SAFE-02 | Phase 2 | Complete |
-| SAFE-03 | Phase 2 | Complete |
-| SAFE-04 | Phase 2 | Complete |
-| SAFE-05 | Phase 2 | Complete |
-| CLI-02 | Phase 3 | Complete |
-| CLI-03 | Phase 3 | Complete |
-| CLI-04 | Phase 3 | Complete |
-| CLI-05 | Phase 3 | Complete |
-| TEST-01 | Phase 3 | Complete |
-| WEB-01 | Phase 4 | Complete |
-| WEB-02 | Phase 4 | Complete |
-| WEB-03 | Phase 4 | Complete |
-| WEB-04 | Phase 4 | Complete |
-| WEB-05 | Phase 4 | Complete |
-| WEB-06 | Phase 4 | Complete |
-| WEB-07 | Phase 4 | Complete |
-| TEST-02 | Phase 4 | Complete |
-| DOCS-01 | Phase 5 | Complete |
-| DOCS-02 | Phase 5 | Complete |
-| DOCS-03 | Phase 5 | Complete |
-
-**Coverage Summary:**
-- v1 requirements: 33 total
-- Mapped to phases: 33
-- Unmapped: 0
-- Completed: 33
+| Phase | Status | Requirements | Plans | Completion Date |
+|-------|--------|--------------|-------|-----------------|
+| Phase 6: Command Hierarchy Cutover | Not Started | CMD-01..CMD-08 | TBD | - |
+| Phase 7: Vault UX Hardening | Not Started | VUX-01..VUX-04 | TBD | - |
+| Phase 8: Project Session Design | Not Started | SES-01..SES-04 | TBD | - |
 
 ---
-*Last updated: 2026-06-22 after Phase 5 verification*
+*Last updated: 2026-06-22 for command hierarchy and vault UX planning*

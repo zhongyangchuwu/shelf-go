@@ -20,14 +20,11 @@ func NewRootCmd() *cobra.Command {
 	root.PersistentFlags().String("vault", "", "Path to encrypted vault")
 
 	root.AddCommand(newCompletionCmd())
-	root.AddCommand(newInitCmd())
-	root.AddCommand(newMigrateCmd())
+	root.AddCommand(newSetupCmd())
+	root.AddCommand(newVaultCmd())
 	root.AddCommand(newSecretCmd())
-	root.AddCommand(newExportCmd())
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newProjectCmd())
-	root.AddCommand(newRunCmd())
-	root.AddCommand(newManagerCmd())
 	return root
 }
 

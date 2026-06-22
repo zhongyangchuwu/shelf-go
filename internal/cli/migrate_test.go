@@ -17,7 +17,7 @@ func TestMigratePlaintextStoreToEncryptedVault(t *testing.T) {
 	if err := os.WriteFile(sourcePath, plaintext, 0o600); err != nil {
 		t.Fatalf("write source: %v", err)
 	}
-	out, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "migrate", "--from", sourcePath)
+	out, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "vault", "migrate", "--from", sourcePath)
 	if err != nil {
 		t.Fatalf("migrate: %v\n%s", err, out)
 	}
@@ -63,7 +63,7 @@ func TestMigrateRefusesExistingTargetWithoutForce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read vault: %v", err)
 	}
-	out, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "migrate", "--from", sourcePath)
+	out, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "vault", "migrate", "--from", sourcePath)
 	if err == nil {
 		t.Fatalf("expected migration to refuse existing target")
 	}
@@ -91,7 +91,7 @@ func TestMigrateForceCreatesEncryptedBackup(t *testing.T) {
 	if _, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "secret", "set", "app:token", "old-secret"); err != nil {
 		t.Fatalf("seed vault: %v", err)
 	}
-	if _, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "migrate", "--from", sourcePath, "--force"); err != nil {
+	if _, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "vault", "migrate", "--from", sourcePath, "--force"); err != nil {
 		t.Fatalf("force migrate: %v", err)
 	}
 	backup, err := os.ReadFile(vaultPath + ".bak")
