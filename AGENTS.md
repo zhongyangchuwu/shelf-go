@@ -26,7 +26,7 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 ## Languages
 
 - Go 1.26.4 - CLI application and all production code in `cmd/shelf/main.go` and `internal/**`.
-- JSON - Local secret store format in `internal/store/model.go`, project manifest format in `internal/manifest/manifest.go`, and examples in `docs/data-spec.md`.
+- JSON - Local secret store format in `internal/store/model.go`, project manifest format in `internal/manifest/manifest.go`, and examples in `docs/reference.md`.
 - YAML - Optional user config file parsed by `internal/config/config.go`.
 - Just - Developer task runner commands in `justfile`.
 
@@ -58,9 +58,9 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 
 - Runtime config resolution is implemented in `internal/config/config.go`.
 - Default config path: `~/.config/shelf/config.yaml` from `internal/config/config.go`.
-- Default data path: `~/.local/share/shelf/secrets.json` from `internal/config/config.go`.
+- Default vault path: `~/.local/share/shelf/vault.age` from `internal/config/config.go`.
 - `SHELF_CONFIG` overrides the config file path in `internal/config/config.go`.
-- `SHELF_DATA` overrides the data file path in `internal/config/config.go`.
+- `SHELF_VAULT` overrides the encrypted vault path in `internal/config/config.go`.
 - `EDITOR` supplies the default editor when config has no editor value in `internal/config/config.go`.
 - `FPATH` / `fpath` are inspected by `shelf doctor` for zsh completion installation in `internal/cli/doctor.go`.
 - `go.mod` declares module `github.com/zhongyangchuwu/shelf-go`, Go version `1.26.4`, and all module dependencies.
@@ -233,7 +233,7 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 - Examples: `internal/store/model.go`, `internal/store/io.go`.
 - Pattern: Use `store.Load(path)` for reads; use `loadRuntimeForWrite` plus `Store.Save` for writes.
 - Purpose: Enforce the `group_path:key` identity format.
-- Examples: `internal/store/path.go`, `docs/data-spec.md`.
+- Examples: `internal/store/path.go`, `docs/reference.md`.
 - Pattern: Validate every externally supplied secret path with `store.ValidatePath` or `store.ParseSecretID`.
 - Purpose: Represent either an exact secret path or a prefix binding in `.shelf.json`.
 - Examples: `internal/manifest/manifest.go`, `internal/manifest/validate.go`.
@@ -260,10 +260,10 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 - Triggers: `manifest.Load`, `manifest.Save`.
 - Responsibilities: Parse strict JSON, reject unknown/trailing content, validate schema, persist atomically.
 - Location: `internal/cli/project.go`
-- Triggers: `project explain`, `project export`, and `run`.
+- Triggers: `project explain`, `project export`, and `project run`.
 - Responsibilities: Resolve manifest entries into env bindings and diagnostics.
 - Location: `internal/cli/run.go`
-- Triggers: `shelf run -- ...`.
+- Triggers: `shelf project run -- ...`.
 - Responsibilities: Build the child environment, execute the requested command, and propagate child exit codes.
 
 ## Architectural Constraints

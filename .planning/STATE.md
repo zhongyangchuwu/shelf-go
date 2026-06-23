@@ -19,6 +19,7 @@
 - `go test ./internal/cli -run 'Test(Vault|Doctor|Manager|Migrate|Setup)'` passed.
 - `go test ./internal/store -run 'TestVault'` passed.
 - `go test ./...` passed.
+- Replaced stale public docs with a minimal open-source documentation set: README plus getting started, security, reference, troubleshooting, and contributing docs. Planning documents remain under `.planning/`.
 
 ## Updated
 - 2026-06-23
