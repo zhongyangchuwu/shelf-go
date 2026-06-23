@@ -27,12 +27,13 @@ A developer can safely manage project secrets in an encrypted local vault and in
 - [x] Git safety checks exist through `shelf doctor`, distinguishing plaintext JSON from encrypted vault files and flagging tracked plaintext stores as unsafe.
 - [x] A localhost-only on-demand vault manager exists for browsing/searching metadata, intentional reveal, and create/update/delete over encrypted storage.
 - [x] User-facing documentation explains encrypted vault setup, age recipients and identity paths, chezmoi-safe storage, value-free manifests, plaintext exports, migration cleanup, and manager reveal risks.
+- [x] Pre-release command hierarchy is scoped and canonical: global onboarding is `shelf setup`, vault lifecycle is `shelf vault`, direct export is `shelf secret export`, and project runtime injection is `shelf project run`.
+- [x] Vault status/check diagnostics report config, vault path, recipient configuration, format, loadability, and recovery guidance without revealing values.
+- [x] Project session activation/deactivation/shell semantics are designed under `shelf project` without implementation.
 
 ### Active
 
-- [ ] Redesign the command hierarchy before release so command names expose their scope: global setup, vault lifecycle, secret object operations, and project manifest/session operations.
-- [ ] Improve vault user experience through clear vault-scoped commands for initialization, migration, status/diagnostics, and opening the local manager.
-- [ ] Plan but do not yet implement project session activation/deactivation and project shell workflows that depend on `.shelf.json`.
+- [ ] Select the next release or implementation milestone.
 
 ### Out of Scope
 
@@ -71,10 +72,10 @@ The current command ambiguity is concrete: top-level `shelf init` initializes gl
 | Keep the vault as a portable file | A normal encrypted file can be managed by git and chezmoi without building sync infrastructure. | Implemented as `shelf-vault/v1` age-encrypted file; doctor confirms tracked encrypted vaults and fails tracked plaintext stores. |
 | Preserve plaintext sources during migration | Deleting or rewriting the old store before validating the new vault creates data-loss risk. | Migration leaves the plaintext source unchanged and reports manual cleanup guidance after encrypted target verification. |
 | Keep Shelf CLI-first but not CLI-only | The core audience needs fast terminal workflows, but raw JSON editing is a poor UX for full secret objects. | CLI commands remain scriptable; the local manager is a valid usability feature, not scope creep. |
-| Move project-dependent workflows under `project` | Commands that read `.shelf.json` have project scope and should not look like global operations. | Planned for the command hierarchy phase: `project run` now owns runtime injection; future `project activate/deactivate/shell` stays here. |
-| Use `setup` for app/global onboarding | Top-level `init` conflicts with project initialization semantics. | Planned: replace top-level `init` with `setup`; use `vault init` for explicit vault lifecycle initialization. |
-| Use `vault` for vault lifecycle and local manager entrypoints | Initializing, migrating, inspecting, and opening the vault are vault operations, not secret-record operations. | Planned: `vault init`, `vault migrate`, `vault status`, and `vault open`. |
-| Use `secret export` for direct path/prefix export | Direct export operates on vault secret paths, while `project export` operates on `.shelf.json` bindings. | Planned: move top-level `export` under `secret`. |
+| Move project-dependent workflows under `project` | Commands that read `.shelf.json` have project scope and should not look like global operations. | Implemented for `project run`; future `project activate/deactivate/shell` is designed here. |
+| Use `setup` for app/global onboarding | Top-level `init` conflicts with project initialization semantics. | Implemented as `shelf setup`; `shelf vault init` owns explicit vault lifecycle initialization. |
+| Use `vault` for vault lifecycle and local manager entrypoints | Initializing, migrating, inspecting, and opening the vault are vault operations, not secret-record operations. | Implemented as `vault init`, `vault migrate`, `vault status`/`check`, and `vault open`. |
+| Use `secret export` for direct path/prefix export | Direct export operates on vault secret paths, while `project export` operates on `.shelf.json` bindings. | Implemented under `shelf secret export`. |
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, revocation, audit, and conflict handling before the solo workflow is solid. | Kept out of scope. |
 
 ## Evolution
@@ -89,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-22 for command hierarchy and vault UX planning*
+*Last updated: 2026-06-23 after completing command hierarchy, vault UX, and project-session design phases*

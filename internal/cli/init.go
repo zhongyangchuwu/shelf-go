@@ -40,6 +40,9 @@ func newInitFilesCmd(use, short string) *cobra.Command {
 			if vaultPath == "" {
 				vaultPath = vaultFlag
 			}
+			if !force && initConfigExists(configPath) && initFlagsWereProvided(cmd) {
+				return fmt.Errorf("config already exists; rerun with --force to update vault config")
+			}
 			cfg := initConfig{VaultPath: vaultPath, Recipients: recipients, IdentityPaths: identityPaths}
 			if err := cfg.fill(cmd, configPath); err != nil {
 				return err
@@ -67,6 +70,16 @@ func newInitFilesCmd(use, short string) *cobra.Command {
 	cmd.Flags().StringArrayVar(&recipients, "recipient", nil, "Age recipient")
 	cmd.Flags().StringArrayVar(&identityPaths, "identity", nil, "Age identity path")
 	return cmd
+}
+
+func initConfigExists(configPath string) bool {
+	_, err := os.Stat(configPath)
+	return err == nil
+}
+
+func initFlagsWereProvided(cmd *cobra.Command) bool {
+	flags := cmd.Flags()
+	return flags.Changed("vault-path") || flags.Changed("recipient") || flags.Changed("identity")
 }
 
 type initConfig struct {

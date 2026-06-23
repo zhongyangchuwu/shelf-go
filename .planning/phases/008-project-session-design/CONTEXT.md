@@ -23,6 +23,13 @@ shelf project shell
 - Activation must not leak secret values in preview/dry-run output.
 - Repeated activation or project switching must be explicit to avoid mixed secret environments.
 
+## Preview and Conflict Semantics
+
+- `shelf project activate --dry-run` should print the project id, manifest path, affected env names, override warnings, and hook actions without printing values.
+- `shelf project shell --dry-run` should reuse `project run --dry-run` value-free output shape for the shell environment it would spawn.
+- Repeated activation of the same project should be a no-op unless bindings changed; changed bindings require an explicit replace/refresh path.
+- Switching from one active project to another must fail by default and explain how to deactivate first or use a future explicit replace flag.
+
 ## Proposed Semantics
 
 ### `shelf project activate`

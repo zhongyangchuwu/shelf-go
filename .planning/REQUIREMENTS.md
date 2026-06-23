@@ -10,28 +10,28 @@ Requirements for the pre-release command hierarchy and vault UX milestone. Prior
 
 ### Command Hierarchy
 
-- [ ] **CMD-01**: User can run global onboarding through `shelf setup` instead of ambiguous top-level `shelf init`.
-- [ ] **CMD-02**: User can initialize/configure vault storage through `shelf vault init` using the existing config, recipient, identity, and vault-path behavior.
-- [ ] **CMD-03**: User can migrate plaintext stores through `shelf vault migrate` so migration is clearly a vault lifecycle operation.
-- [ ] **CMD-04**: User can open the local vault manager through `shelf vault open` so the UI entrypoint is clearly vault-scoped.
-- [ ] **CMD-05**: User can directly export path/prefix secrets through `shelf secret export` so direct export is distinct from project manifest export.
-- [ ] **CMD-06**: User can run project-bound commands through `shelf project run -- ...` so runtime injection is clearly tied to `.shelf.json`.
-- [ ] **CMD-07**: The pre-release CLI removes old top-level commands whose names now obscure scope: `init`, `migrate`, `export`, `run`, and `manager`.
-- [ ] **CMD-08**: User-facing docs and command tests describe the new hierarchy as the canonical command surface.
+- [x] **CMD-01**: User can run global onboarding through `shelf setup` instead of ambiguous top-level `shelf init`.
+- [x] **CMD-02**: User can initialize/configure vault storage through `shelf vault init` using the existing config, recipient, identity, and vault-path behavior.
+- [x] **CMD-03**: User can migrate plaintext stores through `shelf vault migrate` so migration is clearly a vault lifecycle operation.
+- [x] **CMD-04**: User can open the local vault manager through `shelf vault open` so the UI entrypoint is clearly vault-scoped.
+- [x] **CMD-05**: User can directly export path/prefix secrets through `shelf secret export` so direct export is distinct from project manifest export.
+- [x] **CMD-06**: User can run project-bound commands through `shelf project run -- ...` so runtime injection is clearly tied to `.shelf.json`.
+- [x] **CMD-07**: The pre-release CLI removes old top-level commands whose names now obscure scope: `init`, `migrate`, `export`, `run`, and `manager`.
+- [x] **CMD-08**: User-facing docs and command tests describe the new hierarchy as the canonical command surface.
 
 ### Vault UX
 
-- [ ] **VUX-01**: User can inspect vault configuration and loadability through a vault-scoped status/check command without revealing secret values.
-- [ ] **VUX-02**: Vault commands provide concise next steps for missing recipients, missing identities, plaintext legacy stores, unsupported formats, and undecryptable vaults.
-- [ ] **VUX-03**: Vault docs explain the recommended first-run flow, age identity/recipient setup, migration cleanup, and local manager opening flow.
-- [ ] **VUX-04**: Vault UX verification covers encrypted save/load, migration, doctor/status behavior, and manager write safety after the command hierarchy change.
+- [x] **VUX-01**: User can inspect vault configuration and loadability through a vault-scoped status/check command without revealing secret values.
+- [x] **VUX-02**: Vault commands provide concise next steps for missing recipients, missing identities, plaintext legacy stores, unsupported formats, and undecryptable vaults.
+- [x] **VUX-03**: Vault docs explain the recommended first-run flow, age identity/recipient setup, migration cleanup, and local manager opening flow.
+- [x] **VUX-04**: Vault UX verification covers encrypted save/load, migration, doctor/status behavior, and manager write safety after the command hierarchy change.
 
 ### Future Project Sessions
 
-- [ ] **SES-01**: Project activation/deactivation is planned under `shelf project activate` and `shelf project deactivate`, not top-level commands.
-- [ ] **SES-02**: Project shell entry is planned under `shelf project shell`, not as a top-level command.
-- [ ] **SES-03**: Activation/deactivation design records how previous env values are restored rather than simply unset.
-- [ ] **SES-04**: Activation design records the need for a shell hook/function because a child CLI process cannot mutate the parent shell environment directly.
+- [x] **SES-01**: Project activation/deactivation is planned under `shelf project activate` and `shelf project deactivate`, not top-level commands.
+- [x] **SES-02**: Project shell entry is planned under `shelf project shell`, not as a top-level command.
+- [x] **SES-03**: Activation/deactivation design records how previous env values are restored rather than simply unset.
+- [x] **SES-04**: Activation design records the need for a shell hook/function because a child CLI process cannot mutate the parent shell environment directly.
 
 ## Baseline Implemented Requirements
 
@@ -109,22 +109,22 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CMD-01 | Phase 6 | Planned |
-| CMD-02 | Phase 6 | Planned |
-| CMD-03 | Phase 6 | Planned |
-| CMD-04 | Phase 6 | Planned |
-| CMD-05 | Phase 6 | Planned |
-| CMD-06 | Phase 6 | Planned |
-| CMD-07 | Phase 6 | Planned |
-| CMD-08 | Phase 6 | Planned |
-| VUX-01 | Phase 7 | Planned |
-| VUX-02 | Phase 7 | Planned |
-| VUX-03 | Phase 7 | Planned |
-| VUX-04 | Phase 7 | Planned |
-| SES-01 | Phase 8 | Planned |
-| SES-02 | Phase 8 | Planned |
-| SES-03 | Phase 8 | Planned |
-| SES-04 | Phase 8 | Planned |
+| CMD-01 | Phase 6 | Complete |
+| CMD-02 | Phase 6 | Complete |
+| CMD-03 | Phase 6 | Complete |
+| CMD-04 | Phase 6 | Complete |
+| CMD-05 | Phase 6 | Complete |
+| CMD-06 | Phase 6 | Complete |
+| CMD-07 | Phase 6 | Complete |
+| CMD-08 | Phase 6 | Complete |
+| VUX-01 | Phase 7 | Complete |
+| VUX-02 | Phase 7 | Complete |
+| VUX-03 | Phase 7 | Complete |
+| VUX-04 | Phase 7 | Complete |
+| SES-01 | Phase 8 | Complete |
+| SES-02 | Phase 8 | Complete |
+| SES-03 | Phase 8 | Complete |
+| SES-04 | Phase 8 | Complete |
 | BASE-VAULT-01..09 | Completed encrypted-vault milestone | Complete |
 | BASE-CLI-01..05 | Completed encrypted-vault milestone | Complete |
 | BASE-SAFE-01..07 | Completed encrypted-vault milestone | Complete |
@@ -135,4 +135,4 @@ Explicitly excluded. Documented to prevent scope creep.
 - Unmapped: 0
 
 ---
-*Last updated: 2026-06-22 for command hierarchy and vault UX planning*
+*Last updated: 2026-06-23 after completing current command hierarchy, vault UX, and project-session design requirements*

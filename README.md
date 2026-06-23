@@ -20,7 +20,7 @@ Encrypted local vault + value-free project manifests + scoped CLI export/run.
 shelf setup [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
 shelf vault init [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
 shelf vault migrate --from <plaintext.json> [--to <vault.age>] [--force]
-shelf vault status
+shelf vault status|check
 shelf doctor
 
 shelf secret add [path-or-group]
@@ -54,6 +54,24 @@ Global flags:
 --config PATH   Path to config.yaml
 --vault PATH    Path to encrypted vault
 ```
+
+First-run flow:
+
+```bash
+shelf setup --recipient age1... --identity ~/.config/shelf/identity.txt
+shelf vault status
+```
+
+Use `shelf vault init` for first-time vault initialization. Use `shelf vault init --force ...` to rewrite an existing config during repair. Use `shelf vault status` or `shelf vault check` before committing/syncing a vault file; both report config path, vault path, format, recipient count, and decrypt/load status without revealing values.
+
+Plaintext migration flow:
+
+```bash
+shelf vault migrate --from ~/.local/share/shelf/secrets.json --to ~/.local/share/shelf/vault.age
+shelf vault status
+```
+
+After migration succeeds, update config to the encrypted vault path if needed, then move, delete, or securely archive the old plaintext JSON source.
 
 ## Storage model
 

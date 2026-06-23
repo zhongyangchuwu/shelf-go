@@ -76,7 +76,16 @@ shelf vault status
 shelf vault check
 ```
 
-`vault status` and `vault check` report config path, vault path, encrypted/plaintext format, and decrypt/load status without revealing secret values.
+`vault status` and `vault check` report config path, vault path, recipient count, encrypted/plaintext/unsupported format, and decrypt/load status without revealing secret values. Missing recipients, missing identity paths, wrong identities, plaintext legacy stores, unsupported vault formats, and undecryptable vaults include recovery guidance.
+
+Recommended first-run flow:
+
+```bash
+shelf setup --recipient age1... --identity ~/.config/shelf/identity.txt
+shelf vault status
+```
+
+Use `shelf vault init` for explicit first-time vault lifecycle initialization. Use `shelf vault init --force ...` when repairing an existing config. Use `shelf vault status` / `shelf vault check` before syncing or committing the vault file.
 
 ## Secret paths
 
@@ -143,7 +152,8 @@ Behavior:
 
 Cleanup requirement:
 
-- After confirming the new vault and config, move, delete, or securely archive the old plaintext source.
+- After confirming `shelf vault status` reports an encrypted loadable vault, update config to the encrypted vault path if needed.
+- Move, delete, or securely archive the old plaintext source.
 - Plaintext migration sources are not safe to commit or sync.
 
 ## Direct export
@@ -278,6 +288,7 @@ Behavior:
 - Provides metadata search/browse, explicit reveal, create/update, and delete.
 - Uses the same encrypted vault load/update path as CLI writes.
 - Requires no hosted backend and no permanent daemon.
+- Use `shelf vault status` before opening the manager if config, recipient, or identity paths were just changed.
 
 Safety controls:
 

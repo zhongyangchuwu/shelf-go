@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,68 +12,35 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/version"
 )
 
-type doctorReport struct {
-	out    *cobra.Command
-	failed bool
-}
-
 func newDoctorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Check local Shelf configuration and data health",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			report := doctorReport{out: cmd}
+			report := newDiagnosticReport(cmd.OutOrStdout())
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
 			runtime, err := config.Resolve(configPath, vaultPath)
 			if err != nil {
 				report.fail("config resolves", err.Error())
-				return fmt.Errorf("doctor found failures")
+				return report.err("doctor")
 			}
 			report.ok("config resolves", runtime.ConfigPath)
 			report.ok("version", version.String())
 
-			checkVaultFile(&report, runtime.VaultPath)
-			checkVaultLoads(&report, runtime)
-			checkVaultTracking(&report, runtime.VaultPath)
-			checkCompletion(&report)
+			checkVaultFile(report, runtime.VaultPath)
+			checkVaultLoads(report, runtime)
+			checkVaultTracking(report, runtime.VaultPath)
+			checkCompletion(report)
 
-			if report.failed {
-				return fmt.Errorf("doctor found failures")
-			}
-			return nil
+			return report.err("doctor")
 		},
 	}
 	return cmd
 }
 
-func (r *doctorReport) ok(check, detail string) {
-	fmt.Fprintf(r.out.OutOrStdout(), "ok   %s", check)
-	if detail != "" {
-		fmt.Fprintf(r.out.OutOrStdout(), " (%s)", detail)
-	}
-	fmt.Fprintln(r.out.OutOrStdout())
-}
-
-func (r *doctorReport) warn(check, detail string) {
-	fmt.Fprintf(r.out.OutOrStdout(), "warn %s", check)
-	if detail != "" {
-		fmt.Fprintf(r.out.OutOrStdout(), " (%s)", detail)
-	}
-	fmt.Fprintln(r.out.OutOrStdout())
-}
-
-func (r *doctorReport) fail(check, detail string) {
-	r.failed = true
-	fmt.Fprintf(r.out.OutOrStdout(), "fail %s", check)
-	if detail != "" {
-		fmt.Fprintf(r.out.OutOrStdout(), " (%s)", detail)
-	}
-	fmt.Fprintln(r.out.OutOrStdout())
-}
-
-func checkVaultFile(report *doctorReport, vaultPath string) {
+func checkVaultFile(report *diagnosticReport, vaultPath string) {
 	info, err := os.Stat(vaultPath)
 	if os.IsNotExist(err) {
 		report.warn("vault file exists", vaultPath+" will be created on first write")
@@ -96,7 +62,7 @@ func checkVaultFile(report *doctorReport, vaultPath string) {
 		report.warn("vault file mode", mode.String()+" is broader than 0600")
 	}
 }
-func checkVaultLoads(report *doctorReport, runtime config.Runtime) {
+func checkVaultLoads(report *diagnosticReport, runtime config.Runtime) {
 	format, err := store.DetectFileFormat(runtime.VaultPath)
 	if err != nil {
 		report.fail("vault format", err.Error())
@@ -104,34 +70,34 @@ func checkVaultLoads(report *doctorReport, runtime config.Runtime) {
 	}
 	switch format {
 	case store.FileFormatMissing:
-		report.warn("vault format", runtime.VaultPath+" is missing and will be encrypted on first write")
+		report.warn("vault format", vaultFormatDetail(format, runtime.VaultPath))
 	case store.FileFormatEmpty:
-		report.warn("vault format", runtime.VaultPath+" is empty and will be encrypted on first write")
+		report.warn("vault format", vaultFormatDetail(format, runtime.VaultPath))
 	case store.FileFormatEncryptedVault:
 		report.ok("vault format", "encrypted shelf-vault/v1")
 	case store.FileFormatPlaintextStore:
-		report.fail("vault format", "plaintext JSON store; run shelf vault migrate before using encrypted vault mode")
+		report.fail("vault format", vaultFormatDetail(format, runtime.VaultPath))
 		return
 	case store.FileFormatUnsupportedVault:
-		report.fail("vault format", "unsupported shelf vault format")
+		report.fail("vault format", vaultFormatDetail(format, runtime.VaultPath))
 		return
 	default:
-		report.fail("vault format", "unsupported file content")
+		report.fail("vault format", vaultFormatDetail(format, runtime.VaultPath))
 		return
 	}
 	vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 	if err != nil {
-		report.fail("vault loads", err.Error())
+		report.fail("vault loads", vaultLoadErrorDetail(err))
 		return
 	}
 	if _, err := vault.Load(); err != nil {
-		report.fail("vault loads", err.Error())
+		report.fail("vault loads", vaultLoadErrorDetail(err))
 		return
 	}
 	report.ok("vault loads", runtime.VaultPath)
 }
 
-func checkVaultTracking(report *doctorReport, vaultPath string) {
+func checkVaultTracking(report *diagnosticReport, vaultPath string) {
 	format, formatErr := store.DetectFileFormat(vaultPath)
 	abs, err := filepath.Abs(vaultPath)
 	if err != nil {
@@ -169,7 +135,7 @@ func checkVaultTracking(report *doctorReport, vaultPath string) {
 	report.ok("git tracking", "vault file is not tracked by ordinary git")
 }
 
-func checkCompletion(report *doctorReport) {
+func checkCompletion(report *diagnosticReport) {
 	paths := completionSearchPaths()
 	if len(paths) == 0 {
 		report.warn("completion installed", "FPATH/fpath is not set")

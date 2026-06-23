@@ -39,6 +39,27 @@ func TestDoctorFailsInvalidStore(t *testing.T) {
 		t.Fatalf("doctor output missing format failure:\n%s", out)
 	}
 }
+
+func TestDoctorGuidesMissingVaultIdentity(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	vaultPath := filepath.Join(dir, "vault.age")
+	if _, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "setup"); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := os.WriteFile(configPath, []byte("version: 1\nvault_path: "+vaultPath+"\nrecipients:\n  - age1example\n"), 0o600); err != nil {
+		t.Fatalf("rewrite config: %v", err)
+	}
+	out, err := runShelf(t, "--config", configPath, "doctor")
+	if err == nil {
+		t.Fatalf("expected doctor to fail missing identity")
+	}
+	for _, want := range []string{"fail vault loads", "identity_paths", "shelf vault init --identity"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("doctor output missing %q:\n%s", want, out)
+		}
+	}
+}
 func TestDoctorChecksCompletionFromFpath(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yaml")

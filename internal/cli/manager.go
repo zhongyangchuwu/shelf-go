@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -32,56 +33,68 @@ func newVaultStatusCmd() *cobra.Command {
 		Short:   "Check encrypted vault status",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			report := newDiagnosticReport(cmd.OutOrStdout())
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
 			runtime, err := config.Resolve(configPath, vaultPath)
 			if err != nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "fail config (%s)\n", err)
-				return fmt.Errorf("vault status found failures")
+				report.fail("config", err.Error())
+				return report.err("vault status")
 			}
 
-			failed := false
-			fmt.Fprintf(cmd.OutOrStdout(), "ok   config (%s)\n", runtime.ConfigPath)
-			fmt.Fprintf(cmd.OutOrStdout(), "ok   vault path (%s)\n", runtime.VaultPath)
-			format, err := store.DetectFileFormat(runtime.VaultPath)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "fail vault format (%s)\n", err)
-				return fmt.Errorf("vault status found failures")
-			}
-			switch format {
-			case store.FileFormatMissing:
-				fmt.Fprintf(cmd.OutOrStdout(), "warn vault format (missing; run shelf vault init or write a secret to create it)\n")
-				return nil
-			case store.FileFormatEmpty:
-				fmt.Fprintf(cmd.OutOrStdout(), "warn vault format (empty; run shelf vault init or write a secret to encrypt it)\n")
-				return nil
-			case store.FileFormatEncryptedVault:
-				fmt.Fprintf(cmd.OutOrStdout(), "ok   vault format (encrypted shelf-vault/v1)\n")
-			case store.FileFormatPlaintextStore:
-				fmt.Fprintf(cmd.OutOrStdout(), "fail vault format (plaintext JSON store; run shelf vault migrate before using encrypted vault mode)\n")
-				failed = true
-			case store.FileFormatUnsupportedVault:
-				fmt.Fprintf(cmd.OutOrStdout(), "fail vault format (unsupported shelf vault format)\n")
-				failed = true
-			default:
-				fmt.Fprintf(cmd.OutOrStdout(), "fail vault format (unsupported file content)\n")
-				failed = true
-			}
-			if failed {
-				return fmt.Errorf("vault status found failures")
-			}
-			vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "fail vault loads (%s)\n", err)
-				return fmt.Errorf("vault status found failures")
-			}
-			if _, err := vault.Load(); err != nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "fail vault loads (%s; check identity_paths or run shelf vault init)\n", err)
-				return fmt.Errorf("vault status found failures")
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "ok   vault loads (%s)\n", runtime.VaultPath)
-			return nil
+			report.ok("config", runtime.ConfigPath)
+			report.ok("vault path", runtime.VaultPath)
+			checkVaultRecipients(report, runtime)
+			checkVaultLoads(report, runtime)
+			return report.err("vault status")
 		},
+	}
+}
+
+func checkVaultRecipients(report *diagnosticReport, runtime config.Runtime) {
+	if len(runtime.Recipients) == 0 {
+		report.fail("vault recipients", vaultMissingRecipientsDetail())
+		return
+	}
+	report.ok("vault recipients", fmt.Sprintf("%d configured", len(runtime.Recipients)))
+}
+
+func vaultMissingRecipientsDetail() string {
+	return "no age recipients configured; run shelf vault init --force --recipient AGE_RECIPIENT --identity PATH before creating or updating secrets"
+}
+
+func vaultFormatDetail(format store.FileFormat, path string) string {
+	switch format {
+	case store.FileFormatMissing:
+		return path + " is missing; run shelf vault init or write a secret after configuring recipients"
+	case store.FileFormatEmpty:
+		return path + " is empty; run shelf vault init or write a secret after configuring recipients"
+	case store.FileFormatPlaintextStore:
+		return "plaintext JSON store; run shelf vault migrate --from " + path + " --to <vault.age>, update config, then move/delete/archive the plaintext source"
+	case store.FileFormatUnsupportedVault:
+		return "unsupported shelf vault format; upgrade Shelf if this vault came from a newer version, or restore a compatible encrypted backup"
+	default:
+		return "unsupported file content; choose a valid vault path or restore a compatible encrypted backup"
+	}
+}
+
+func vaultLoadErrorDetail(err error) string {
+	message := err.Error()
+	switch {
+	case strings.Contains(message, "no age identity paths"):
+		return message + "; add identity_paths in config or run shelf vault init --identity PATH"
+	case strings.Contains(message, "read age identity"):
+		return message + "; fix identity_paths or identity file permissions"
+	case strings.Contains(message, "parse age identity") || strings.Contains(message, "no age identities loaded"):
+		return message + "; fix the identity file contents or run shelf vault init --identity PATH"
+	case strings.Contains(message, "no configured age identity matched"):
+		return message + "; configure the age identity that matches this vault recipient"
+	case strings.Contains(message, "could not decrypt vault"):
+		return message + "; verify identity_paths match the vault recipient or restore a known-good encrypted backup"
+	case strings.Contains(message, "invalid decrypted store"):
+		return message + "; restore a known-good encrypted backup"
+	default:
+		return message
 	}
 }
 

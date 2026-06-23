@@ -6,9 +6,9 @@ Shelf already has the encrypted-vault baseline: age-encrypted storage, migration
 
 ## Phases
 
-- [ ] Phase 6: Command Hierarchy Cutover
-- [ ] Phase 7: Vault UX Hardening
-- [ ] Phase 8: Project Session Design
+- [x] Phase 6: Command Hierarchy Cutover
+- [x] Phase 7: Vault UX Hardening
+- [x] Phase 8: Project Session Design
 
 ## Phase Details
 
@@ -28,7 +28,7 @@ Shelf already has the encrypted-vault baseline: age-encrypted storage, migration
 5. Old top-level `init`, `migrate`, `export`, `run`, and `manager` commands are absent from the root command list.
 6. README and usage docs present only the new canonical command hierarchy.
 
-**Plans:** TBD
+**Plans:** `.planning/phases/006-command-hierarchy-cutover/PLAN.md`
 
 ### Phase 7: Vault UX Hardening
 
@@ -44,7 +44,7 @@ Shelf already has the encrypted-vault baseline: age-encrypted storage, migration
 3. Docs explain first-run setup, vault init, vault migrate, vault status/check, vault open, and plaintext cleanup.
 4. Verification covers encrypted load/save, migration, status/check behavior, doctor behavior, and manager write safety under the new command hierarchy.
 
-**Plans:** TBD
+**Plans:** `.planning/phases/007-vault-ux-hardening/PLAN.md`
 
 ### Phase 8: Project Session Design
 
@@ -61,15 +61,15 @@ Shelf already has the encrypted-vault baseline: age-encrypted storage, migration
 4. The design defines no-value dry-run/preview output and conflict handling for repeated activation or project switching.
 5. Implementation remains explicitly out of scope for this phase.
 
-**Plans:** TBD
+**Plans:** `.planning/phases/008-project-session-design/PLAN.md`
 
 ## Progress
 
 | Phase | Status | Requirements | Plans | Completion Date |
 |-------|--------|--------------|-------|-----------------|
-| Phase 6: Command Hierarchy Cutover | Not Started | CMD-01..CMD-08 | TBD | - |
-| Phase 7: Vault UX Hardening | Not Started | VUX-01..VUX-04 | TBD | - |
-| Phase 8: Project Session Design | Not Started | SES-01..SES-04 | TBD | - |
+| Phase 6: Command Hierarchy Cutover | Complete | CMD-01..CMD-08 | `.planning/phases/006-command-hierarchy-cutover/PLAN.md` | 2026-06-22 |
+| Phase 7: Vault UX Hardening | Complete | VUX-01..VUX-04 | `.planning/phases/007-vault-ux-hardening/PLAN.md` | 2026-06-23 |
+| Phase 8: Project Session Design | Complete | SES-01..SES-04 | `.planning/phases/008-project-session-design/PLAN.md` | 2026-06-23 |
 
 ---
-*Last updated: 2026-06-22 for command hierarchy and vault UX planning*
+*Last updated: 2026-06-23 after completing command hierarchy, vault UX, and project session design phases*
