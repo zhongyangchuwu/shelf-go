@@ -113,6 +113,16 @@ shelf vault migrate --from <plaintext.json> [--to <vault.age>] [--force]
 
 The source is preserved after successful migration.
 
+### `shelf vault restore`
+
+Restores an encrypted Shelf vault backup to the active vault path or an explicit target.
+
+```bash
+shelf vault restore --from <backup.age> [--to <vault.age>] [--force]
+```
+
+Restore decrypts and validates the source before writing the target. Existing targets require `--force`. Plaintext JSON sources must use `shelf vault migrate` instead.
+
 ### `shelf vault status` / `shelf vault check`
 
 Reports config path, vault path, recipient configuration, vault format, and loadability without revealing values.

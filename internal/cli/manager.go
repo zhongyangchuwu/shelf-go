@@ -21,6 +21,7 @@ func newVaultCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "vault", Short: "Manage encrypted vault"}
 	cmd.AddCommand(newVaultInitCmd())
 	cmd.AddCommand(newMigrateCmd())
+	cmd.AddCommand(newRestoreCmd())
 	cmd.AddCommand(newVaultStatusCmd())
 	cmd.AddCommand(newVaultOpenCmd())
 	return cmd

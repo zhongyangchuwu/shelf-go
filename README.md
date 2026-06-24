@@ -40,6 +40,7 @@ For a fuller walkthrough, see [Getting started](docs/getting-started.md).
 shelf setup [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
 shelf vault init [--vault-path PATH] [--recipient AGE_RECIPIENT] [--identity PATH] [--force]
 shelf vault migrate --from <plaintext.json> [--to <vault.age>] [--force]
+shelf vault restore --from <backup.age> [--to <vault.age>] [--force]
 shelf vault status|check
 shelf vault open [--addr 127.0.0.1:0]
 shelf doctor
@@ -87,6 +88,7 @@ Global flags:
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
 - `config.yaml` may contain public age recipients and identity file paths. It must not contain private identity contents or secret values.
 - `shelf vault migrate` preserves the old plaintext JSON source after successful encrypted migration; delete, move, or securely archive it after verifying the new vault.
+- `shelf vault restore` only restores encrypted Shelf vault files and validates them before replacing the target. It requires a configured identity that can decrypt the backup.
 
 ## Development
 

@@ -2,9 +2,9 @@
 
 ## Current Position
 - Phase: safety and minimal project env UX milestone
-- Status: phase 9 complete; phase 10 planned
+- Status: phase 10 complete; phase 11 planned
 - Active Artifact: .planning/ROADMAP.md
-- Next Action: Start Phase 10 vault restore and recovery docs.
+- Next Action: Start Phase 11 secret edit and manager safety hardening.
 
 ## Blockers
 - None
@@ -25,6 +25,10 @@
 - Phase 9 project export shell default completed on 2026-06-24.
 - `shelf project export` now defaults to sourceable shell output; explicit `env`, `shell`, and `json` formats remain available.
 - `go test ./internal/cli -run TestProjectExport` passed.
+- `go test ./...` passed.
+- Phase 10 vault restore and recovery completed on 2026-06-24.
+- Implemented `shelf vault restore --from <backup.age> [--to <vault.age>] [--force]` for encrypted backups.
+- `go test ./internal/cli -run TestVaultRestore` passed.
 - `go test ./...` passed.
 
 ## Updated

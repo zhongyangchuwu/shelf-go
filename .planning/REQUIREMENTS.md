@@ -16,9 +16,9 @@ Requirements for the safety and minimal project env UX milestone. Prior encrypte
 
 ### Vault Recovery
 
-- [ ] **VREC-01**: User can restore from an encrypted vault backup through a vault-scoped command or documented manual workflow.
-- [ ] **VREC-02**: Restore behavior validates decrypted store contents and refuses unsafe overwrite by default.
-- [ ] **VREC-03**: Recovery docs explain identity loss, backup restore, and post-restore `shelf vault status` verification.
+- [x] **VREC-01**: User can restore from an encrypted vault backup through a vault-scoped command or documented manual workflow.
+- [x] **VREC-02**: Restore behavior validates decrypted store contents and refuses unsafe overwrite by default.
+- [x] **VREC-03**: Recovery docs explain identity loss, backup restore, and post-restore `shelf vault status` verification.
 
 ### Safety Hardening
 
@@ -128,7 +128,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PUX-01..PUX-03 | Phase 9 | Complete |
-| VREC-01..VREC-03 | Phase 10 | Planned |
+| VREC-01..VREC-03 | Phase 10 | Complete |
 | SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Planned |
 | CMD-01..CMD-08 | Phase 6 | Complete |
 | VUX-01..VUX-04 | Phase 7 | Complete |

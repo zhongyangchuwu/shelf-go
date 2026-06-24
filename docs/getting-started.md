@@ -118,6 +118,21 @@ shelf vault status
 
 After verifying the encrypted vault, move, delete, or securely archive the old plaintext source.
 
+## Restore an encrypted backup
+
+When an existing encrypted vault backup such as `vault.age.bak` should become the active vault again:
+
+```bash
+shelf vault restore \
+  --from ~/.local/share/shelf/vault.age.bak \
+  --to ~/.local/share/shelf/vault.age \
+  --force
+
+shelf vault status
+```
+
+Restore requires an identity that can decrypt the backup. It validates the decrypted store before replacing the target vault.
+
 ## Open the local manager
 
 ```bash

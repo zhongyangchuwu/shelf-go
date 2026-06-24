@@ -82,6 +82,17 @@ shelf vault status
 
 Shelf preserves the plaintext source. After verification, move, delete, or securely archive it yourself.
 
+## Backup restore safety
+
+Shelf replacement writes preserve the previous encrypted vault as `<vault>.bak`. Restore only accepts encrypted Shelf vault files:
+
+```bash
+shelf vault restore --from vault.age.bak --to vault.age --force
+shelf vault status
+```
+
+Restore decrypts and validates the backup before replacing the target, then re-encrypts the restored store to the configured recipients. A configured identity must be able to decrypt the backup. If all matching private identities are lost, the encrypted vault and backups cannot be recovered by Shelf.
+
 ## Localhost manager safety
 
 `shelf vault open` starts an on-demand local HTTP manager. It is not a hosted service and not a permanent daemon.
