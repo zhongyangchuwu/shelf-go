@@ -69,6 +69,51 @@ func TestManagerRequiresTokenAndValidHost(t *testing.T) {
 	}
 }
 
+func TestManagerAcceptsLocalhostAndAlternateTokenTransports(t *testing.T) {
+	server, _ := newTestServer(t)
+
+	localhost := managerRequest(http.MethodGet, "/api/secrets?token="+testToken, "")
+	localhost.Host = "localhost:4321"
+	if rr := serveManager(server, localhost); rr.Code != http.StatusOK {
+		t.Fatalf("localhost status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	headerToken := managerRequest(http.MethodGet, "/api/secrets", "")
+	headerToken.Header.Set("X-Shelf-Token", testToken)
+	if rr := serveManager(server, headerToken); rr.Code != http.StatusOK {
+		t.Fatalf("header token status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	cookieToken := managerRequest(http.MethodGet, "/api/secrets", "")
+	cookieToken.AddCookie(&http.Cookie{Name: sessionCookie, Value: testToken})
+	if rr := serveManager(server, cookieToken); rr.Code != http.StatusOK {
+		t.Fatalf("cookie token status = %d, want %d", rr.Code, http.StatusOK)
+	}
+}
+
+func TestManagerQueryTokenSetsStrictCookie(t *testing.T) {
+	server, _ := newTestServer(t)
+	req := managerRequest(http.MethodGet, "/?token="+testToken, "")
+	rr := serveManager(server, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("index status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	cookies := rr.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("cookies = %d, want 1", len(cookies))
+	}
+	cookie := cookies[0]
+	if cookie.Name != sessionCookie || cookie.Value != testToken {
+		t.Fatalf("unexpected cookie: %#v", cookie)
+	}
+	if !cookie.HttpOnly {
+		t.Fatalf("cookie is not HttpOnly")
+	}
+	if cookie.SameSite != http.SameSiteStrictMode {
+		t.Fatalf("cookie SameSite = %v, want Strict", cookie.SameSite)
+	}
+}
+
 func TestManagerListSearchExcludesSecretValues(t *testing.T) {
 	server, _ := newTestServer(t)
 	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN","description":"primary api token","tags":["api"]}`

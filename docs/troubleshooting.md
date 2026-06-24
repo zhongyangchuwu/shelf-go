@@ -135,6 +135,8 @@ Or provide an explicit loopback address:
 shelf vault open --addr 127.0.0.1:8080
 ```
 
+The printed URL contains a local access token and can remain in browser history. Treat it as sensitive local plaintext and stop the manager with Ctrl-C when finished.
+
 ## Shell completion is not installed
 
 Generate completion for your shell:

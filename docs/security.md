@@ -66,8 +66,8 @@ These operations intentionally handle plaintext values:
 - `shelf secret export` prints values in shell/env/JSON form.
 - `shelf project export` prints resolved project values. Its default `shell` output is intended for explicit workflows such as `shelf project export > .env.local` followed by `source .env.local`.
 - `shelf project run` puts values in a child process environment.
-- `shelf secret edit` writes a temporary editor buffer containing the secret object.
-- `shelf vault open` can reveal values in the local browser and can update the encrypted vault.
+- `shelf secret edit` writes a temporary editor buffer containing the secret object. Shelf creates that file with restrictive permissions and removes it on normal command exit, including editor and JSON validation errors; a crash or forced kill can still leave local plaintext behind.
+- `shelf vault open` can reveal values in the local browser and can update the encrypted vault. Its tokenized local URL may remain visible in browser history or local process/UI surfaces.
 
 Generated `.env` and `.env.local` files are plaintext artifacts. Add them to `.gitignore`, do not commit them, and delete them when they are no longer needed.
 
@@ -105,6 +105,7 @@ Current safety boundaries:
 - list/search responses show metadata, not values;
 - reveal actions are explicit and return plaintext locally;
 - create/update/delete reuse the same vault validation, locking, encrypted-save, and backup rules as CLI writes.
+- the manager has no TLS because it is loopback-only; close it with Ctrl-C when finished.
 
 ## Non-goals
 

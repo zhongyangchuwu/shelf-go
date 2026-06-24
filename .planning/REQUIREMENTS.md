@@ -22,9 +22,9 @@ Requirements for the safety and minimal project env UX milestone. Prior encrypte
 
 ### Safety Hardening
 
-- [ ] **SAFE-EDIT-01**: `shelf secret edit` limits plaintext temporary-file exposure with restrictive permissions and cleanup behavior.
-- [ ] **SAFE-MGR-01**: Local manager plaintext and token boundaries are either cheaply hardened or documented explicitly without adding a permanent daemon.
-- [ ] **SAFE-DOC-01**: User-facing docs name remaining plaintext boundaries and recommended cleanup behavior.
+- [x] **SAFE-EDIT-01**: `shelf secret edit` limits plaintext temporary-file exposure with restrictive permissions and cleanup behavior.
+- [x] **SAFE-MGR-01**: Local manager plaintext and token boundaries are either cheaply hardened or documented explicitly without adding a permanent daemon.
+- [x] **SAFE-DOC-01**: User-facing docs name remaining plaintext boundaries and recommended cleanup behavior.
 
 ## Baseline Implemented Requirements
 
@@ -129,7 +129,7 @@ Explicitly excluded. Documented to prevent scope creep.
 |-------------|-------|--------|
 | PUX-01..PUX-03 | Phase 9 | Complete |
 | VREC-01..VREC-03 | Phase 10 | Complete |
-| SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Planned |
+| SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Complete |
 | CMD-01..CMD-08 | Phase 6 | Complete |
 | VUX-01..VUX-04 | Phase 7 | Complete |
 | SES-01..SES-04 | Phase 8 | Complete |

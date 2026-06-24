@@ -243,6 +243,10 @@ func ensureConfigFile(configPath string, cfg initConfig, force bool) (bool, erro
 	if err != nil {
 		return false, err
 	}
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return false, err
+	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
 	if _, err := tmp.WriteString(b.String()); err != nil {

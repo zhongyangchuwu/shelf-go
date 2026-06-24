@@ -369,6 +369,10 @@ func newSecretEditCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				if err := tmp.Chmod(0o600); err != nil {
+					tmp.Close()
+					return err
+				}
 				tmpName := tmp.Name()
 				defer os.Remove(tmpName)
 				if _, err := tmp.Write(append(bytes, '\n')); err != nil {

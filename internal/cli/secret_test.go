@@ -340,6 +340,64 @@ func TestSecretEditUsesEditorAndValidatesJSON(t *testing.T) {
 		t.Fatalf("unexpected edited export: %q", out)
 	}
 }
+
+func TestSecretEditTempFileIsRestrictedAndCleanedOnEditorError(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "one"); err != nil {
+		t.Fatalf("initial set: %v", err)
+	}
+	dir := t.TempDir()
+	editor := filepath.Join(dir, "editor.sh")
+	pathFile := filepath.Join(dir, "edit-path")
+	modeFile := filepath.Join(dir, "edit-mode")
+	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$1\" > %q\nstat -c '%%a' \"$1\" > %q\nexit 42\n", pathFile, modeFile)
+	if err := os.WriteFile(editor, []byte(script), 0o700); err != nil {
+		t.Fatalf("write editor: %v", err)
+	}
+	t.Setenv("EDITOR", editor)
+	if _, err := runShelf(t, "--vault", data, "secret", "edit", "app:token"); err == nil {
+		t.Fatalf("expected editor failure")
+	}
+	mode, err := os.ReadFile(modeFile)
+	if err != nil {
+		t.Fatalf("read mode: %v", err)
+	}
+	if strings.TrimSpace(string(mode)) != "600" {
+		t.Fatalf("temp mode = %q, want 600", strings.TrimSpace(string(mode)))
+	}
+	tmpPath, err := os.ReadFile(pathFile)
+	if err != nil {
+		t.Fatalf("read temp path: %v", err)
+	}
+	if _, err := os.Stat(string(tmpPath)); !os.IsNotExist(err) {
+		t.Fatalf("temp file was not cleaned up: %v", err)
+	}
+}
+
+func TestSecretEditTempFileCleanedAfterInvalidJSON(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "secrets.json")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "one"); err != nil {
+		t.Fatalf("initial set: %v", err)
+	}
+	dir := t.TempDir()
+	editor := filepath.Join(dir, "editor.sh")
+	pathFile := filepath.Join(dir, "edit-path")
+	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$1\" > %q\nprintf '{' > \"$1\"\n", pathFile)
+	if err := os.WriteFile(editor, []byte(script), 0o700); err != nil {
+		t.Fatalf("write editor: %v", err)
+	}
+	t.Setenv("EDITOR", editor)
+	if _, err := runShelf(t, "--vault", data, "secret", "edit", "app:token"); err == nil {
+		t.Fatalf("expected invalid JSON failure")
+	}
+	tmpPath, err := os.ReadFile(pathFile)
+	if err != nil {
+		t.Fatalf("read temp path: %v", err)
+	}
+	if _, err := os.Stat(string(tmpPath)); !os.IsNotExist(err) {
+		t.Fatalf("temp file was not cleaned up: %v", err)
+	}
+}
 func TestSecretEditCanRenamePath(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "secrets.json")
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "one"); err != nil {

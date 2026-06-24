@@ -2,9 +2,9 @@
 
 ## Current Position
 - Phase: safety and minimal project env UX milestone
-- Status: phase 10 complete; phase 11 planned
+- Status: complete
 - Active Artifact: .planning/ROADMAP.md
-- Next Action: Start Phase 11 secret edit and manager safety hardening.
+- Next Action: Select the next release or implementation milestone.
 
 ## Blockers
 - None
@@ -29,6 +29,12 @@
 - Phase 10 vault restore and recovery completed on 2026-06-24.
 - Implemented `shelf vault restore --from <backup.age> [--to <vault.age>] [--force]` for encrypted backups.
 - `go test ./internal/cli -run TestVaultRestore` passed.
+- `go test ./...` passed.
+- Phase 11 secret edit and manager safety hardening completed on 2026-06-24.
+- `shelf secret edit` temp files are explicitly `0600` and covered by cleanup tests.
+- Manager localhost/token/cookie boundaries are covered by focused tests.
+- `go test ./internal/cli -run TestSecretEdit` passed.
+- `go test ./internal/manager -run TestManager` passed.
 - `go test ./...` passed.
 
 ## Updated

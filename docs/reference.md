@@ -140,6 +140,8 @@ Starts the on-demand localhost vault manager.
 shelf vault open [--addr 127.0.0.1:0]
 ```
 
+The manager prints a tokenized loopback URL. Treat the URL as sensitive local plaintext, and stop the process with Ctrl-C when finished.
+
 ### `shelf doctor`
 
 Checks config resolution, version, vault existence/mode/format/loadability, Git tracking safety, and zsh completion state.
@@ -196,7 +198,7 @@ Opens the full secret object as JSON in `$EDITOR` or configured editor.
 shelf secret edit <path>
 ```
 
-The editor buffer contains plaintext while editing.
+The editor buffer contains plaintext while editing. Shelf creates the temporary file with restrictive permissions and removes it on normal command exit where possible.
 
 ### `shelf secret rm`
 

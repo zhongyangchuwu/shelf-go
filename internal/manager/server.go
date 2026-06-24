@@ -214,7 +214,10 @@ func (s *Server) validHost(host string) bool {
 	if err != nil {
 		allowedHost = s.host
 	}
-	return requestHost == allowedHost && (requestHost == "localhost" || net.ParseIP(requestHost).IsLoopback())
+	if requestHost == allowedHost {
+		return requestHost == "localhost" || net.ParseIP(requestHost).IsLoopback()
+	}
+	return (requestHost == "localhost" && net.ParseIP(allowedHost).IsLoopback()) || (allowedHost == "localhost" && net.ParseIP(requestHost).IsLoopback())
 }
 
 func (s *Server) validToken(r *http.Request) bool {
