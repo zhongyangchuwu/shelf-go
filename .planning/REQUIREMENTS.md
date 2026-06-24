@@ -1,41 +1,52 @@
 # Requirements: Shelf Go
 
 **Defined:** 2026-06-16
-**Revised:** 2026-06-22
-**Core Value:** A developer can safely manage project secrets in an encrypted local vault and inject them into commands, projects, and shell workflows with predictable, reversible behavior.
+**Revised:** 2026-06-24
+**Core Value:** A developer can safely manage project secrets in an encrypted local vault and use them through explicit CLI, file, and child-process workflows without treating plaintext `.env` files as the source of truth.
 
 ## Current Requirements
 
-Requirements for the pre-release command hierarchy and vault UX milestone. Prior encrypted-vault implementation is treated as existing baseline behavior that must remain passing while command names are simplified.
+Requirements for the safety and minimal project env UX milestone. Prior encrypted-vault, command-hierarchy, vault-UX, and project-session design work is treated as baseline behavior that must remain passing.
+
+### Project Export UX
+
+- [x] **PUX-01**: `shelf project export` defaults to existing `shell` output so redirected files are directly sourceable.
+- [x] **PUX-02**: Explicit `--format env|shell|json` behavior remains supported, and no new `dotenv` format is introduced.
+- [x] **PUX-03**: User docs recommend explicit source workflows such as `shelf project export > .env.local` and warn that generated env files are plaintext and must not be committed.
+
+### Vault Recovery
+
+- [ ] **VREC-01**: User can restore from an encrypted vault backup through a vault-scoped command or documented manual workflow.
+- [ ] **VREC-02**: Restore behavior validates decrypted store contents and refuses unsafe overwrite by default.
+- [ ] **VREC-03**: Recovery docs explain identity loss, backup restore, and post-restore `shelf vault status` verification.
+
+### Safety Hardening
+
+- [ ] **SAFE-EDIT-01**: `shelf secret edit` limits plaintext temporary-file exposure with restrictive permissions and cleanup behavior.
+- [ ] **SAFE-MGR-01**: Local manager plaintext and token boundaries are either cheaply hardened or documented explicitly without adding a permanent daemon.
+- [ ] **SAFE-DOC-01**: User-facing docs name remaining plaintext boundaries and recommended cleanup behavior.
+
+## Baseline Implemented Requirements
+
+Already implemented and must remain working unless explicitly redesigned by the current milestone.
 
 ### Command Hierarchy
 
 - [x] **CMD-01**: User can run global onboarding through `shelf setup` instead of ambiguous top-level `shelf init`.
-- [x] **CMD-02**: User can initialize/configure vault storage through `shelf vault init` using the existing config, recipient, identity, and vault-path behavior.
-- [x] **CMD-03**: User can migrate plaintext stores through `shelf vault migrate` so migration is clearly a vault lifecycle operation.
-- [x] **CMD-04**: User can open the local vault manager through `shelf vault open` so the UI entrypoint is clearly vault-scoped.
-- [x] **CMD-05**: User can directly export path/prefix secrets through `shelf secret export` so direct export is distinct from project manifest export.
-- [x] **CMD-06**: User can run project-bound commands through `shelf project run -- ...` so runtime injection is clearly tied to `.shelf.json`.
-- [x] **CMD-07**: The pre-release CLI removes old top-level commands whose names now obscure scope: `init`, `migrate`, `export`, `run`, and `manager`.
-- [x] **CMD-08**: User-facing docs and command tests describe the new hierarchy as the canonical command surface.
+- [x] **CMD-02**: User can initialize/configure vault storage through `shelf vault init`.
+- [x] **CMD-03**: User can migrate plaintext stores through `shelf vault migrate`.
+- [x] **CMD-04**: User can open the local vault manager through `shelf vault open`.
+- [x] **CMD-05**: User can directly export path/prefix secrets through `shelf secret export`.
+- [x] **CMD-06**: User can run project-bound commands through `shelf project run -- ...`.
+- [x] **CMD-07**: The pre-release CLI removes old top-level `init`, `migrate`, `export`, `run`, and `manager` commands.
+- [x] **CMD-08**: User-facing docs and command tests describe the scoped hierarchy as canonical.
 
 ### Vault UX
 
 - [x] **VUX-01**: User can inspect vault configuration and loadability through a vault-scoped status/check command without revealing secret values.
 - [x] **VUX-02**: Vault commands provide concise next steps for missing recipients, missing identities, plaintext legacy stores, unsupported formats, and undecryptable vaults.
-- [x] **VUX-03**: Vault docs explain the recommended first-run flow, age identity/recipient setup, migration cleanup, and local manager opening flow.
+- [x] **VUX-03**: Vault docs explain first-run flow, age identity/recipient setup, migration cleanup, and local manager opening flow.
 - [x] **VUX-04**: Vault UX verification covers encrypted save/load, migration, doctor/status behavior, and manager write safety after the command hierarchy change.
-
-### Future Project Sessions
-
-- [x] **SES-01**: Project activation/deactivation is planned under `shelf project activate` and `shelf project deactivate`, not top-level commands.
-- [x] **SES-02**: Project shell entry is planned under `shelf project shell`, not as a top-level command.
-- [x] **SES-03**: Activation/deactivation design records how previous env values are restored rather than simply unset.
-- [x] **SES-04**: Activation design records the need for a shell hook/function because a child CLI process cannot mutate the parent shell environment directly.
-
-## Baseline Implemented Requirements
-
-Already implemented and must remain working unless explicitly redesigned by the current milestone.
 
 ### Encrypted Vault Baseline
 
@@ -67,23 +78,29 @@ Already implemented and must remain working unless explicitly redesigned by the 
 - [x] **BASE-SAFE-06**: Vault-manager writes use the same validation, locking, encrypted-save, and backup rules as CLI writes.
 - [x] **BASE-SAFE-07**: Vault manager binds to loopback by default and uses session/write-safety controls for state-changing requests.
 
+### Project Session Design Baseline
+
+- [x] **SES-01**: Project activation/deactivation was analyzed under `shelf project` and intentionally left unimplemented for now.
+- [x] **SES-02**: Project shell entry was analyzed under `shelf project` and intentionally left unimplemented for now.
+- [x] **SES-03**: Activation/deactivation design records restore semantics if hooks are ever implemented later.
+- [x] **SES-04**: Activation design records that current-shell mutation requires a shell hook/function.
+
 ## Deferred Requirements
 
 Tracked for future releases. These are not current implementation commitments.
 
 ### Project Sessions
 
-- **V2-SES-01**: User can activate the current project environment in the current shell through `shelf project activate` after installing a shell hook.
-- **V2-SES-02**: User can restore the previous shell environment through `shelf project deactivate` without losing pre-existing env values.
-- **V2-SES-03**: User can enter an isolated project environment through `shelf project shell` without installing shell hooks.
+- **V2-SES-01**: User can activate the current project environment in the current shell through `shelf project activate` after installing a shell hook, if future UX evidence justifies hook complexity.
+- **V2-SES-02**: User can restore the previous shell environment through `shelf project deactivate` without losing pre-existing env values, if activation is implemented.
+- **V2-SES-03**: User can enter an isolated project environment through `shelf project shell` only if it proves clearer than `shelf project run -- $SHELL`.
 
 ### Vault Expansion
 
 - **V2-VAULT-01**: User can use password-only encryption if they do not use age keys.
 - **V2-VAULT-02**: User can manage multiple vaults or profiles.
 - **V2-VAULT-03**: User can inspect non-secret age recipient metadata from a vault.
-- **V2-VAULT-04**: User can restore encrypted backups through a dedicated command.
-- **V2-VAULT-05**: User gets better merge/conflict handling for git-managed encrypted vault updates.
+- **V2-VAULT-04**: User gets better merge/conflict handling for git-managed encrypted vault updates.
 
 ### Integrations and Editing
 
@@ -101,38 +118,29 @@ Explicitly excluded. Documented to prevent scope creep.
 | Hosted sync service | Shelf should stay local-first and portable instead of requiring a backend account. |
 | Permanent daemon | Core CLI workflows should not depend on a long-running process; the vault manager should be short-lived/on-demand. |
 | Browser extension or autofill | Shelf is focused on developer secrets and env workflows, not general password-manager replacement. |
-| Plain `.env` as source of truth | `.env` cannot reliably encode Shelf secret identity and invites plaintext secrets into repos. |
-| Direct chezmoi control in current scope | Chezmoi can manage the encrypted vault file; Shelf should not couple to chezmoi commands before the vault format and command hierarchy are stable. |
+| Plain `.env` as source of truth | `.env` files may be generated/exported, but Shelf's source of truth is the encrypted vault plus project manifests. |
+| New dotenv export format | Existing `shell` output is already sourceable; adding another format increases surface area without enough value. |
+| Hook-based project activation in current scope | Shell hooks mutate parent-shell state implicitly and add complexity; explicit export/source workflows are preferred for now. |
 | Backward-compatible pre-release aliases | The project has not been published; simpler command cutover is more valuable than compatibility shims. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CMD-01 | Phase 6 | Complete |
-| CMD-02 | Phase 6 | Complete |
-| CMD-03 | Phase 6 | Complete |
-| CMD-04 | Phase 6 | Complete |
-| CMD-05 | Phase 6 | Complete |
-| CMD-06 | Phase 6 | Complete |
-| CMD-07 | Phase 6 | Complete |
-| CMD-08 | Phase 6 | Complete |
-| VUX-01 | Phase 7 | Complete |
-| VUX-02 | Phase 7 | Complete |
-| VUX-03 | Phase 7 | Complete |
-| VUX-04 | Phase 7 | Complete |
-| SES-01 | Phase 8 | Complete |
-| SES-02 | Phase 8 | Complete |
-| SES-03 | Phase 8 | Complete |
-| SES-04 | Phase 8 | Complete |
+| PUX-01..PUX-03 | Phase 9 | Complete |
+| VREC-01..VREC-03 | Phase 10 | Planned |
+| SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Planned |
+| CMD-01..CMD-08 | Phase 6 | Complete |
+| VUX-01..VUX-04 | Phase 7 | Complete |
+| SES-01..SES-04 | Phase 8 | Complete |
 | BASE-VAULT-01..09 | Completed encrypted-vault milestone | Complete |
 | BASE-CLI-01..05 | Completed encrypted-vault milestone | Complete |
 | BASE-SAFE-01..07 | Completed encrypted-vault milestone | Complete |
 
 **Coverage:**
-- Current requirements: 16 total
-- Mapped to phases: 16
+- Current requirements: 9 total
+- Mapped to phases: 9
 - Unmapped: 0
 
 ---
-*Last updated: 2026-06-23 after completing current command hierarchy, vault UX, and project-session design requirements*
+*Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*

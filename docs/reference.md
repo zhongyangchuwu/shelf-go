@@ -258,11 +258,13 @@ shelf project explain
 
 ### `shelf project export`
 
-Prints resolved project env bindings with plaintext values.
+Prints resolved project env bindings with plaintext values. The default format is `shell`, which prints sourceable `export NAME=value` lines.
 
 ```bash
-shelf project export --format env|shell|json
+shelf project export [--format shell|env|json]
 ```
+
+Use `--format env` for bare `NAME=value` lines and `--format json` for machine-readable output. Redirected files contain plaintext values and must not be committed.
 
 ### `shelf project run`
 

@@ -27,6 +27,8 @@ In a Git project:
 ```bash
 shelf project init
 shelf project add app:token
+shelf project export > .env.local
+source .env.local
 shelf project run -- sh -c 'printf "%s\n" "$APP_TOKEN"'
 ```
 
@@ -57,7 +59,7 @@ shelf project add <path-or-prefix> [--env NAME] [--optional]
 shelf project rm <path-or-prefix>
 shelf project list
 shelf project explain
-shelf project export --format env|shell|json
+shelf project export [--format shell|env|json]
 shelf project run [--dry-run] -- command args...
 
 shelf completion [bash|zsh|fish|powershell]

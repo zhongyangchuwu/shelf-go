@@ -1,75 +1,79 @@
-# Roadmap: Shelf Go Command Hierarchy and Vault UX
+# Roadmap: Safety and Minimal Project Env UX
 
 ## Overview
 
-Shelf already has the encrypted-vault baseline: age-encrypted storage, migration, project manifests, runtime injection, direct export, doctor checks, and a localhost vault manager. The next pre-release milestone simplifies the CLI before any public compatibility burden exists: command names must expose scope, project-dependent workflows must live under `shelf project`, vault lifecycle must live under `shelf vault`, and future activate/deactivate work must be planned before implementation.
+Shelf already has the encrypted vault baseline, scoped command hierarchy, project manifests, project runtime injection, direct export, doctor/status diagnostics, and localhost vault manager. The next pre-release milestone keeps the product small: avoid shell hooks and session wrappers, prefer explicit file/source workflows, and prioritize safety hardening plus recoverability before release infrastructure.
 
 ## Phases
 
-- [x] Phase 6: Command Hierarchy Cutover
-- [x] Phase 7: Vault UX Hardening
-- [x] Phase 8: Project Session Design
+- [x] Phase 9: Project Export Shell Default
+- [ ] Phase 10: Vault Restore and Recovery Docs
+- [ ] Phase 11: Secret Edit and Manager Safety Hardening
 
 ## Phase Details
 
-### Phase 6: Command Hierarchy Cutover
+### Phase 9: Project Export Shell Default
 
-**Goal:** Replace ambiguous top-level commands with scoped command namespaces before release.
+**Goal:** Make the default project export output directly sourceable without adding a new dotenv format or shell hook workflow.
 
-**Depends on:** Completed encrypted-vault milestone.
+**Depends on:** Completed command hierarchy and project workflow compatibility.
 
-**Requirements:** CMD-01, CMD-02, CMD-03, CMD-04, CMD-05, CMD-06, CMD-07, CMD-08
-
-**Success Criteria:**
-1. `shelf setup` performs the current global config/vault onboarding behavior.
-2. `shelf vault init`, `shelf vault migrate`, and `shelf vault open` perform the current vault init, migration, and local manager behavior.
-3. `shelf secret export` performs current direct path/prefix export behavior.
-4. `shelf project run -- ...` performs current `.shelf.json` runtime injection and dry-run behavior.
-5. Old top-level `init`, `migrate`, `export`, `run`, and `manager` commands are absent from the root command list.
-6. README and usage docs present only the new canonical command hierarchy.
-
-**Plans:** `.planning/phases/006-command-hierarchy-cutover/PLAN.md`
-
-### Phase 7: Vault UX Hardening
-
-**Goal:** Improve vault-specific usability and diagnostics without changing the encrypted storage contract.
-
-**Depends on:** Phase 6 complete.
-
-**Requirements:** VUX-01, VUX-02, VUX-03, VUX-04
+**Requirements:** PUX-01, PUX-02, PUX-03
 
 **Success Criteria:**
-1. A vault-scoped status/check command reports config path, vault path, file format, loadability, and safe next steps without revealing values.
-2. Missing recipients, missing identities, plaintext legacy stores, unsupported vault formats, and undecryptable vaults produce concise recovery guidance.
-3. Docs explain first-run setup, vault init, vault migrate, vault status/check, vault open, and plaintext cleanup.
-4. Verification covers encrypted load/save, migration, status/check behavior, doctor behavior, and manager write safety under the new command hierarchy.
+1. `shelf project export` defaults to the existing `shell` format, matching `shelf secret export`.
+2. `--format env|shell|json` remains available; no `dotenv` format is added.
+3. User docs recommend explicit workflows such as `shelf project export > .env.local` and `source .env.local`, with plaintext and git-ignore warnings.
+4. Tests cover the default format and preserve explicit format behavior.
 
-**Plans:** `.planning/phases/007-vault-ux-hardening/PLAN.md`
+**Plans:** `.planning/phases/009-project-export-shell-default/PLAN.md`
 
-### Phase 8: Project Session Design
+### Phase 10: Vault Restore and Recovery Docs
 
-**Goal:** Plan venv-like project session workflows without implementing activate/deactivate/shell yet.
+**Goal:** Make encrypted backup recovery explicit and testable.
 
-**Depends on:** Phase 6 complete.
+**Depends on:** Phase 9 complete.
 
-**Requirements:** SES-01, SES-02, SES-03, SES-04
+**Requirements:** VREC-01, VREC-02, VREC-03
 
 **Success Criteria:**
-1. A design artifact defines `shelf project activate`, `shelf project deactivate`, and `shelf project shell` semantics.
-2. The design records why activation requires a shell hook/function to mutate the current shell environment.
-3. The design specifies reversible env restore behavior for variables that existed before activation.
-4. The design defines no-value dry-run/preview output and conflict handling for repeated activation or project switching.
-5. Implementation remains explicitly out of scope for this phase.
+1. User can restore a validated encrypted vault backup through a vault-scoped command or documented manual flow.
+2. Restore refuses unsafe overwrite by default and validates decrypted store contents before replacing a vault.
+3. Troubleshooting and security docs explain identity loss, backup restore, and post-restore `shelf vault status` verification.
+4. Tests cover restore success, overwrite refusal, invalid backup rejection, and value-free diagnostics.
 
-**Plans:** `.planning/phases/008-project-session-design/PLAN.md`
+**Plans:** `.planning/phases/010-vault-restore-recovery/PLAN.md`
+
+### Phase 11: Secret Edit and Manager Safety Hardening
+
+**Goal:** Reduce plaintext exposure in interactive editing and local manager workflows without adding a daemon or complex UI.
+
+**Depends on:** Phase 10 complete.
+
+**Requirements:** SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01
+
+**Success Criteria:**
+1. `shelf secret edit` temporary files use restrictive permissions and are cleaned on success and failure paths where possible.
+2. Local manager safety gaps are either cheaply hardened or documented explicitly; no permanent daemon is introduced.
+3. Docs name remaining plaintext boundaries and recommended close/cleanup behavior.
+4. Focused tests cover temp-file permissions/cleanup and any manager behavior changes.
+
+**Plans:** `.planning/phases/011-edit-manager-safety/PLAN.md`
+
+## Explicit Non-Goals for This Milestone
+
+- No `project activate` / `project deactivate` shell hook implementation.
+- No `project shell` wrapper unless a later phase shows clear value over `project run -- $SHELL`.
+- No new `dotenv` format; use existing `shell` output for sourceable files.
+- No team sharing, hosted sync, permanent daemon, or release packaging work in this milestone.
 
 ## Progress
 
 | Phase | Status | Requirements | Plans | Completion Date |
 |-------|--------|--------------|-------|-----------------|
-| Phase 6: Command Hierarchy Cutover | Complete | CMD-01..CMD-08 | `.planning/phases/006-command-hierarchy-cutover/PLAN.md` | 2026-06-22 |
-| Phase 7: Vault UX Hardening | Complete | VUX-01..VUX-04 | `.planning/phases/007-vault-ux-hardening/PLAN.md` | 2026-06-23 |
-| Phase 8: Project Session Design | Complete | SES-01..SES-04 | `.planning/phases/008-project-session-design/PLAN.md` | 2026-06-23 |
+| Phase 9: Project Export Shell Default | Complete | PUX-01..PUX-03 | `.planning/phases/009-project-export-shell-default/PLAN.md` | 2026-06-24 |
+| Phase 10: Vault Restore and Recovery Docs | Planned | VREC-01..VREC-03 | `.planning/phases/010-vault-restore-recovery/PLAN.md` | - |
+| Phase 11: Secret Edit and Manager Safety Hardening | Planned | SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | `.planning/phases/011-edit-manager-safety/PLAN.md` | - |
 
 ---
-*Last updated: 2026-06-23 after completing command hierarchy, vault UX, and project session design phases*
+*Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*

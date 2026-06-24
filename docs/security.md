@@ -64,12 +64,12 @@ These operations intentionally handle plaintext values:
 
 - `shelf secret get` prints a value.
 - `shelf secret export` prints values in shell/env/JSON form.
-- `shelf project export` prints resolved project values.
+- `shelf project export` prints resolved project values. Its default `shell` output is intended for explicit workflows such as `shelf project export > .env.local` followed by `source .env.local`.
 - `shelf project run` puts values in a child process environment.
 - `shelf secret edit` writes a temporary editor buffer containing the secret object.
 - `shelf vault open` can reveal values in the local browser and can update the encrypted vault.
 
-Generated `.env` and `.env.local` files are plaintext artifacts. Do not commit them.
+Generated `.env` and `.env.local` files are plaintext artifacts. Add them to `.gitignore`, do not commit them, and delete them when they are no longer needed.
 
 ## Migration safety
 

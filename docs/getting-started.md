@@ -83,6 +83,15 @@ shelf project explain
 
 Shelf writes `<git-root>/.shelf.json`. The manifest stores paths, prefixes, env overrides, and required/optional flags; it does not store values.
 
+Export sourceable shell lines when you want to update your current shell manually:
+
+```bash
+shelf project export > .env.local
+source .env.local
+```
+
+The generated file contains plaintext values. Add it to `.gitignore` and delete it when it is no longer needed.
+
 Inject secrets into a child process:
 
 ```bash

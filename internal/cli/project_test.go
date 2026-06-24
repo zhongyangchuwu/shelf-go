@@ -436,6 +436,23 @@ func TestProjectListShowsEntries(t *testing.T) {
 		t.Fatalf("project list should not print secret values:\n%s", out)
 	}
 }
+func TestProjectExportDefaultsToShell(t *testing.T) {
+	_, data := setupProjectTest(t)
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai/accounts/personal:api_key"); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "export")
+	if err != nil {
+		t.Fatalf("project export default: %v", err)
+	}
+	if out != "export OPENAI_API_KEY=sk-test\n" {
+		t.Fatalf("unexpected default output:\n%s", out)
+	}
+}
+
 func TestProjectExportEnv(t *testing.T) {
 	_, data := setupProjectTest(t)
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai/accounts/personal:api_key", "sk-test", "--env", "OPENAI_API_KEY"); err != nil {

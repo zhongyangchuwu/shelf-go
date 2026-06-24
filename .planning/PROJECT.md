@@ -8,7 +8,7 @@ Shelf optimizes for correctness first and usability second: secret values must n
 
 ## Core Value
 
-A developer can safely manage project secrets in an encrypted local vault and inject them into commands, projects, and shell workflows with predictable, reversible behavior.
+A developer can safely manage project secrets in an encrypted local vault and use them through explicit CLI, file, and child-process workflows without treating plaintext `.env` files as the source of truth.
 
 ## Requirements
 
@@ -29,11 +29,12 @@ A developer can safely manage project secrets in an encrypted local vault and in
 - [x] User-facing documentation explains encrypted vault setup, age recipients and identity paths, chezmoi-safe storage, value-free manifests, plaintext exports, migration cleanup, and manager reveal risks.
 - [x] Pre-release command hierarchy is scoped and canonical: global onboarding is `shelf setup`, vault lifecycle is `shelf vault`, direct export is `shelf secret export`, and project runtime injection is `shelf project run`.
 - [x] Vault status/check diagnostics report config, vault path, recipient configuration, format, loadability, and recovery guidance without revealing values.
-- [x] Project session activation/deactivation/shell semantics are designed under `shelf project` without implementation.
+- [x] Project session activation/deactivation/shell semantics were designed under `shelf project` and intentionally left unimplemented for now because hook-based shell mutation is not the minimal default workflow.
+- [x] Project export defaults to sourceable shell output, while explicit env and JSON formats remain available and no dotenv format is added.
 
 ### Active
 
-- [ ] Select the next release or implementation milestone.
+- [ ] Continue safety and minimal project env UX milestone: add vault recovery and harden plaintext boundaries.
 
 ### Out of Scope
 
@@ -42,7 +43,7 @@ A developer can safely manage project secrets in an encrypted local vault and in
 - Replacing chezmoi - Shelf should produce and manage a portable encrypted vault file; chezmoi can continue managing dotfiles.
 - General password-manager replacement - Shelf is focused on developer secrets, env bindings, project runtime workflows, and local editing, not browser autofill, credit cards, identities, or family vaults.
 - Plain `.env` as the source of truth - `.env` files may be generated/exported, but Shelf's source of truth is the encrypted vault plus project manifests.
-- Top-level project/session commands - commands that read `.shelf.json` belong under `shelf project`.
+- Hook-based project activation in current scope - explicit export/source and child-process workflows are preferred until hook complexity is clearly justified.
 
 ## Context
 
@@ -77,6 +78,7 @@ The current command ambiguity is concrete: top-level `shelf init` initializes gl
 | Use `vault` for vault lifecycle and local manager entrypoints | Initializing, migrating, inspecting, and opening the vault are vault operations, not secret-record operations. | Implemented as `vault init`, `vault migrate`, `vault status`/`check`, and `vault open`. |
 | Use `secret export` for direct path/prefix export | Direct export operates on vault secret paths, while `project export` operates on `.shelf.json` bindings. | Implemented under `shelf secret export`. |
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, revocation, audit, and conflict handling before the solo workflow is solid. | Kept out of scope. |
+| Prefer explicit export/source over shell hooks | Hook-based activation mutates parent-shell state implicitly and adds restore complexity; sourceable shell output keeps behavior visible and easy to audit. | Current milestone changes `project export` default to shell output and keeps activate/deactivate/shell deferred. |
 
 ## Evolution
 
@@ -90,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-23 after completing command hierarchy, vault UX, and project-session design phases*
+*Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*
