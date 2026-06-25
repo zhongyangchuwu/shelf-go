@@ -62,7 +62,8 @@ internal/version/   version string
 - Keep user-facing docs current with implemented behavior.
 - Keep planning artifacts in `.planning/`, not `docs/`.
 - Do not publish stale generated codebase maps or agent plans as public docs.
-- Security-sensitive docs must state plaintext boundaries explicitly.
+- Security-sensitive docs must state plaintext boundaries explicitly in `SECURITY.md`.
+- Portable vault and chezmoi workflow guidance belongs in `docs/portable-vault.md`.
 
 ## Code style
 

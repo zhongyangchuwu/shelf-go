@@ -140,6 +140,7 @@ The manager binds to loopback, prints a tokenized local URL, and supports metada
 
 ## Next steps
 
-- Read the [security model](security.md) before syncing a vault with Git or chezmoi.
+- Read the [security policy](../SECURITY.md) before syncing a vault, opening the local manager, or exporting plaintext values.
+- Use the [portable vault guide](portable-vault.md) for Git, chezmoi, second-machine setup, and `.bak` recovery.
 - Use [reference](reference.md) for command, config, and manifest details.
 - Use [troubleshooting](troubleshooting.md) for common setup and decrypt errors.

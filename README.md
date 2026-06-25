@@ -75,10 +75,12 @@ Global flags:
 ## Documentation
 
 - [Getting started](docs/getting-started.md)
-- [Security model](docs/security.md)
+- [Security policy](SECURITY.md)
+- [Portable vault guide](docs/portable-vault.md)
 - [Reference](docs/reference.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Contributing](docs/contributing.md)
+- [Changelog](CHANGELOG.md)
 
 ## Safety notes
 

@@ -1,6 +1,21 @@
-# Security model
+# Security Policy
 
 Shelf is a local secret manager. Its main safety guarantee is that the durable vault file is encrypted at rest with age before it is suitable for backup, Git, or chezmoi sync.
+
+## Reporting vulnerabilities
+
+Shelf is pre-release software. Please report suspected security issues privately to the project maintainer before opening a public issue. Include:
+
+- affected command or workflow;
+- local platform and Shelf version or commit;
+- whether plaintext secret values may have been exposed;
+- reproduction steps that avoid including real secrets.
+
+Do not include real secret values, private age identities, vault files, or generated `.env` files in reports.
+
+## Supported versions
+
+Security support currently tracks the latest commit on the main development branch until the first public release is tagged.
 
 ## Protected data
 
@@ -107,7 +122,7 @@ Current safety boundaries:
 - validates expected Host and Origin for browser requests;
 - list/search responses show metadata, not values;
 - reveal actions are explicit and return plaintext locally;
-- create/update/delete reuse the same vault validation, locking, encrypted-save, and backup rules as CLI writes.
+- create/update/delete reuse the same vault validation, locking, encrypted-save, and backup rules as CLI writes;
 - the manager has no TLS because it is loopback-only; close it with Ctrl-C when finished.
 
 ## Non-goals

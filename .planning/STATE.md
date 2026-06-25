@@ -37,6 +37,9 @@
 - `go test ./...` passed.
 - Phase 12 restore simplification removed `shelf vault restore`; the command was unnecessary for single-slot `.bak` recovery.
 - SQLite recorded as a deferred storage spike candidate; Dolt is not a current vault-storage candidate.
+- Release readiness docs/infra added on 2026-06-25: LICENSE, SECURITY.md, CHANGELOG.md, CI workflow, and portable vault guide.
+- `go test ./...` passed after release readiness updates.
+- `go build ./cmd/shelf` passed after release readiness updates.
 
 ## Updated
 - 2026-06-25
