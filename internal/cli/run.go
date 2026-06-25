@@ -45,6 +45,9 @@ func newRunCmd() *cobra.Command {
 		Use:   "run -- command args...",
 		Short: "Run a command with project secrets injected",
 		Args:  cobra.MinimumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := projectsvc.Root()
 			if err != nil {

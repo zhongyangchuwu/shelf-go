@@ -738,3 +738,65 @@ func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 		t.Fatalf("explain leaked env value:\n%s", out)
 	}
 }
+
+func TestProjectAddCompletionSuggestsVaultSecrets(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "vault.age")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret"); err != nil {
+		t.Fatalf("set app token: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai:api_key", "sk"); err != nil {
+		t.Fatalf("set provider key: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "init"); err != nil {
+		t.Fatalf("project init: %v", err)
+	}
+
+	out, err := runShelf(t, "--vault", data, "__complete", "project", "add", "")
+	if err != nil {
+		t.Fatalf("complete project add: %v\n%s", err, out)
+	}
+	for _, want := range []string{"app:", "providers/openai:", ":6"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing completion %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestProjectRmCompletionSuggestsManifestEntries(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "vault.age")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret"); err != nil {
+		t.Fatalf("set app token: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai:api_key", "sk"); err != nil {
+		t.Fatalf("set provider key: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "init"); err != nil {
+		t.Fatalf("project init: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "add", "app:token"); err != nil {
+		t.Fatalf("project add path: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "add", "providers/openai"); err != nil {
+		t.Fatalf("project add prefix: %v", err)
+	}
+
+	out, err := runShelf(t, "--vault", data, "__complete", "project", "rm", "")
+	if err != nil {
+		t.Fatalf("complete project rm: %v\n%s", err, out)
+	}
+	for _, want := range []string{"app:token", "providers/openai", ":4"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing completion %q in:\n%s", want, out)
+		}
+	}
+}

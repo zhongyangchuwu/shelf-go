@@ -273,9 +273,10 @@ func newSecretGetCmd() *cobra.Command {
 
 func newSecretListCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list [prefix]",
-		Short: "List secret paths",
-		Args:  cobra.MaximumNArgs(1),
+		Use:               "list [prefix]",
+		Short:             "List secret paths",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completeSecretPathPrefixes,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, st, err := loadRuntime(cmd)
 			if err != nil {
@@ -361,6 +362,17 @@ func completeSecretPaths(cmd *cobra.Command, args []string, toComplete string) (
 		}
 	}
 	return comps, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeSecretPathPrefixes(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	_, st, err := loadRuntime(cmd)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return completeSecretSetPath(st.List(""), toComplete)
 }
 
 func completeSecretSetPathArg(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {

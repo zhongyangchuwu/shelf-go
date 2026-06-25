@@ -1,6 +1,10 @@
 package cli
 
-import "github.com/spf13/cobra"
+import (
+	"strings"
+
+	"github.com/spf13/cobra"
+)
 
 func newCompletionCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -8,6 +12,7 @@ func newCompletionCmd() *cobra.Command {
 		Short:                 "Generate shell completion script",
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		ValidArgsFunction:     completeFixedArgs([]cobra.Completion{"bash", "zsh", "fish", "powershell"}),
 		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
@@ -24,4 +29,19 @@ func newCompletionCmd() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+func completeFixedArgs(values []cobra.Completion) func(*cobra.Command, []string, string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		if len(args) > 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		comps := make([]cobra.Completion, 0, len(values))
+		for _, value := range values {
+			if strings.HasPrefix(string(value), toComplete) {
+				comps = append(comps, value)
+			}
+		}
+		return comps, cobra.ShellCompDirectiveNoFileComp
+	}
 }

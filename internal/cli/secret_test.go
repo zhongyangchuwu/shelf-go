@@ -568,3 +568,23 @@ func TestCompleteSecretSetPathForArgsSecondArgNoCompletion(t *testing.T) {
 		t.Fatalf("unexpected directive: %v", directive)
 	}
 }
+
+func TestCompleteSecretPathPrefixesSuggestsGroups(t *testing.T) {
+	dir := t.TempDir()
+	data := filepath.Join(dir, "vault.age")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret"); err != nil {
+		t.Fatalf("set app token: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai:api_key", "sk"); err != nil {
+		t.Fatalf("set provider key: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "__complete", "secret", "list", "")
+	if err != nil {
+		t.Fatalf("complete secret list: %v\n%s", err, out)
+	}
+	for _, want := range []string{"app:", "providers/openai:", ":6"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing completion %q in:\n%s", want, out)
+		}
+	}
+}

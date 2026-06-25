@@ -123,9 +123,10 @@ func newProjectAddCmd() *cobra.Command {
 	var envName string
 	var optional bool
 	cmd := &cobra.Command{
-		Use:   "add <path-or-prefix>",
-		Short: "Add a secret path or prefix to project manifest",
-		Args:  cobra.ExactArgs(1),
+		Use:               "add <path-or-prefix>",
+		Short:             "Add a secret path or prefix to project manifest",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completeProjectAddArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := projectsvc.Root()
 			if err != nil {
@@ -194,10 +195,11 @@ func newProjectAddCmd() *cobra.Command {
 }
 
 func newProjectRmCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "rm <path-or-prefix>",
-		Short: "Remove an entry from project manifest",
-		Args:  cobra.ExactArgs(1),
+	cmd := &cobra.Command{
+		Use:               "rm <path-or-prefix>",
+		Short:             "Remove an entry from project manifest",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completeProjectEntries,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := projectsvc.Root()
 			if err != nil {
@@ -221,6 +223,40 @@ func newProjectRmCmd() *cobra.Command {
 			return nil
 		},
 	}
+	return cmd
+}
+
+func completeProjectAddArg(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	_, st, err := loadRuntime(cmd)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return completeSecretSetPath(st.List(""), toComplete)
+}
+
+func completeProjectEntries(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	root, err := projectsvc.Root()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	m, err := manifest.Load(filepath.Join(root, manifest.FileName))
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	comps := make([]cobra.Completion, 0, len(m.Secrets))
+	for _, entry := range m.Secrets {
+		key := entry.Key()
+		if strings.HasPrefix(key, toComplete) {
+			comps = append(comps, cobra.Completion(key))
+		}
+	}
+	return comps, cobra.ShellCompDirectiveNoFileComp
 }
 
 func newProjectListCmd() *cobra.Command {
