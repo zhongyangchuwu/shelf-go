@@ -1,0 +1,44 @@
+version: 2
+
+project_name: shelf
+
+builds:
+  - id: shelf
+    main: ./cmd/shelf
+    binary: shelf
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -s -w -X github.com/zhongyangchuwu/shelf-go/internal/version.releaseVersion={{ .Version }}
+
+archives:
+  - id: shelf
+    ids:
+      - shelf
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+
+release:
+  github:
+    owner: zhongyangchuwu
+    name: shelf-go

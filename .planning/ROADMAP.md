@@ -27,6 +27,7 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 - [x] Phase 13: App Runtime and Project Package Extraction
 - [x] Phase 14: Vault Diagnostics and Secret Workflow Extraction
 - [x] Phase 15: Shared Persistence Primitives and Store File Layout
+- [ ] Phase 16: First Release Readiness
 
 ## Phase Details
 
@@ -79,11 +80,28 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 
 **Plan:** `.planning/phases/015-persistence-store-layout/PLAN.md`
 
+### Phase 16: First Release Readiness
+
+**Goal:** Prepare the first public release with repeatable artifacts, concise public docs, and release verification.
+
+**Depends on:** Phase 15 complete.
+
+**Requirements:** REL-01, REL-02, REL-03, REL-04
+
+**Success Criteria:**
+1. Minimal GoReleaser config produces multi-platform CLI archives and checksums in snapshot mode.
+2. GitHub Actions has separate CI and tag-triggered release workflows.
+3. README is usage-oriented instead of a command inventory.
+4. CHANGELOG has a `0.1.0` section and release verification is recorded.
+
+**Plan:** `.planning/phases/016-first-release-readiness/PLAN.md`
+
 ## Future Candidates
 
 - SQLite storage spike: investigate SQLite as an encrypted vault payload or metadata/search layer only if JSON schema/search/history pressure becomes real. Any design must preserve encrypted-at-rest safety and avoid plaintext SQLite WAL, journal, or temp files.
 - Dolt is not a current vault-storage candidate: it is powerful for versioned SQL data, but too heavy for Shelf's portable encrypted-file model and weakens useful diff/history unless secrets or metadata are exposed.
 - `internal/gitutil`: create only if both `internal/project` and future `internal/vault` need shared git subprocess helpers.
+- Manager UI redesign: improve `shelf vault open` visual design, information architecture, and edit/reveal UX in a post-0.1 phase; keep the current loopback manager documented as functional but not a release centerpiece.
 
 ## Explicit Non-Goals for This Milestone
 
@@ -102,6 +120,7 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 | Phase 13: App Runtime and Project Package Extraction | Complete | ARCH-01..ARCH-03 | `.planning/phases/013-architecture-package-boundaries/PLAN.md` | 2026-06-25 |
 | Phase 14: Vault Diagnostics and Secret Workflow Extraction | Complete | ARCH-04..ARCH-05 | `.planning/phases/014-vault-secret-extraction/PLAN.md` | 2026-06-25 |
 | Phase 15: Shared Persistence Primitives and Store File Layout | Complete | ARCH-06..ARCH-08 | `.planning/phases/015-persistence-store-layout/PLAN.md` | 2026-06-25 |
+| Phase 16: First Release Readiness | Complete | REL-01..REL-04 | `.planning/phases/016-first-release-readiness/PLAN.md` | 2026-06-25 |
 
 ---
-*Last updated: 2026-06-25 after completing Phase 15 shared persistence primitives and store layout*
+*Last updated: 2026-06-25 after completing Phase 16 first release readiness*

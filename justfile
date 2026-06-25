@@ -21,6 +21,15 @@ install:
 test:
     go test ./...
 
+vet:
+    go vet ./...
+
+release-check:
+    go run github.com/goreleaser/goreleaser/v2@latest check
+
+release-snapshot:
+    go run github.com/goreleaser/goreleaser/v2@latest release --clean --snapshot
+
 tag version:
     git tag v{{version}}
     @echo "tagged v{{version}} — reinstall (just install) to embed it"

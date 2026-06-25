@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 15 - Shared Persistence Primitives and Store File Layout
+- Phase: Phase 16 - First Release Readiness
 - Status: complete
-- Active Artifact: .planning/phases/015-persistence-store-layout/SUMMARY.md
-- Next Action: Review architecture refactor milestone and decide whether to proceed to release readiness or further refactor.
+- Active Artifact: .planning/phases/016-first-release-readiness/SUMMARY.md
+- Next Action: Commit Phase 16, then tag `v0.1.0` from a clean tree and confirm GitHub Release artifacts.
 
 ## Blockers
 - None
@@ -53,6 +53,11 @@
 - Phase 15 completed on 2026-06-25: added `internal/atomicfile`, canonicalized env/path validators, and split `internal/store` into clearer files.
 - `go test ./internal/store ./internal/manifest ./internal/render ./internal/cli -run 'Test(Vault|Setup|Manifest|Export)'` passed.
 - `go test ./...` passed after Phase 15 extraction.
+- Phase 16 started on 2026-06-25 to prepare the first public release with minimal GoReleaser automation, release docs, and UAT verification.
+- Manager UI redesign is intentionally deferred to a later post-0.1 phase; `shelf vault open` remains available but not release-highlighted.
+- Phase 16 completed on 2026-06-25: added minimal GoReleaser release automation, tag-triggered release workflow, CI vet, release-version injection, 0.1.0 changelog, and usage-oriented README.
+- GoReleaser snapshot passed for Linux/macOS amd64/arm64 archives and checksums; Windows artifacts are deferred because current file locking uses Unix `flock`.
+- `go vet ./...`, `go test ./...`, `go test -race ./...`, `go build -o ./bin/shelf ./cmd/shelf`, `go run github.com/goreleaser/goreleaser/v2@latest check`, and `go run github.com/goreleaser/goreleaser/v2@latest release --clean --snapshot` passed.
 
 ## Updated
 - 2026-06-25

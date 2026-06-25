@@ -6,7 +6,14 @@
 
 ## Current Requirements
 
-Requirements for the pre-release architecture refactor milestone. Prior encrypted-vault, command-hierarchy, vault-UX, project-session design, safety, and release-readiness work is treated as baseline behavior that must remain passing.
+Requirements for first public release readiness. Prior encrypted-vault, command-hierarchy, vault-UX, project-session design, safety, architecture, and release-readiness work is treated as baseline behavior that must remain passing.
+
+### Release Readiness
+
+- [x] **REL-01**: Release automation builds repeatable multi-platform CLI artifacts, archives, and checksums from version tags.
+- [x] **REL-02**: GitHub Actions runs CI checks and tag-triggered release publishing with least necessary permissions.
+- [x] **REL-03**: README explains the project motivation and primary initialization, secret, and project workflows without becoming a full command inventory.
+- [x] **REL-04**: First-release changelog, verification evidence, and deferred post-0.1 work are recorded before tagging.
 
 ### Architecture Boundaries
 
@@ -142,6 +149,7 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| REL-01..REL-04 | Phase 16 | Complete |
 | ARCH-01..ARCH-03 | Phase 13 | Complete |
 | ARCH-04..ARCH-05 | Phase 14 | Complete |
 | ARCH-06..ARCH-08 | Phase 15 | Complete |
@@ -156,10 +164,11 @@ Explicitly excluded. Documented to prevent scope creep.
 | BASE-SAFE-01..07 | Completed encrypted-vault milestone | Complete |
 
 **Coverage:**
-- Current requirements: 8 total
-- Mapped to phases: 8
+- Current requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0
 - Deferred storage spike: SQLite only; Dolt is not a current vault-storage candidate.
+- Deferred manager UI redesign: post-0.1 visual and UX improvement for `shelf vault open`.
 
 ---
-*Last updated: 2026-06-25 after completing Phase 15 shared persistence primitives and store layout*
+*Last updated: 2026-06-25 after completing Phase 16 first release readiness*

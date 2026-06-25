@@ -92,3 +92,10 @@ internal/version/    version string
 ## Release planning
 
 Use `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and phase directories for planning state. Public `docs/` should describe current behavior, not internal phase history.
+
+Release automation uses GoReleaser for GitHub Release binaries and checksums. For 0.1.x, package-manager distribution is intentionally deferred; validate release config locally before tagging:
+
+```bash
+goreleaser check
+goreleaser release --clean --snapshot
+```
