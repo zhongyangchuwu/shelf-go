@@ -26,9 +26,8 @@
 - `shelf project export` now defaults to sourceable shell output; explicit `env`, `shell`, and `json` formats remain available.
 - `go test ./internal/cli -run TestProjectExport` passed.
 - `go test ./...` passed.
-- Phase 10 vault restore and recovery completed on 2026-06-24.
-- Implemented `shelf vault restore --from <backup.age> [--to <vault.age>] [--force]` for encrypted backups.
-- `go test ./internal/cli -run TestVaultRestore` passed.
+- Phase 10 minimal vault backup recovery completed on 2026-06-24.
+- Shelf recovery is intentionally manual: copy the single last-write encrypted `.bak` over the active vault, then run `shelf vault status`.
 - `go test ./...` passed.
 - Phase 11 secret edit and manager safety hardening completed on 2026-06-24.
 - `shelf secret edit` temp files are explicitly `0600` and covered by cleanup tests.
@@ -36,6 +35,7 @@
 - `go test ./internal/cli -run TestSecretEdit` passed.
 - `go test ./internal/manager -run TestManager` passed.
 - `go test ./...` passed.
+- Phase 12 restore simplification removed `shelf vault restore`; the command was unnecessary for single-slot `.bak` recovery.
 
 ## Updated
 - 2026-06-24

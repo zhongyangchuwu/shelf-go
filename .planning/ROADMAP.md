@@ -28,19 +28,19 @@ Shelf already has the encrypted vault baseline, scoped command hierarchy, projec
 
 **Plans:** `.planning/phases/009-project-export-shell-default/PLAN.md`
 
-### Phase 10: Vault Restore and Recovery Docs
+### Phase 10: Minimal Vault Backup Recovery Docs
 
-**Goal:** Make encrypted backup recovery explicit and testable.
+**Goal:** Make encrypted backup recovery explicit and testable without adding a dedicated restore command.
 
 **Depends on:** Phase 9 complete.
 
 **Requirements:** VREC-01, VREC-02, VREC-03
 
 **Success Criteria:**
-1. User can restore a validated encrypted vault backup through a vault-scoped command or documented manual flow.
-2. Restore refuses unsafe overwrite by default and validates decrypted store contents before replacing a vault.
-3. Troubleshooting and security docs explain identity loss, backup restore, and post-restore `shelf vault status` verification.
-4. Tests cover restore success, overwrite refusal, invalid backup rejection, and value-free diagnostics.
+1. User-facing docs explain that `<vault>.bak` is a single last-write encrypted backup.
+2. Recovery uses ordinary file copy/rename followed by `shelf vault status` verification.
+3. Troubleshooting and security docs explain identity loss, backup recovery, and post-recovery verification.
+4. Tests continue to prove `.bak` files are encrypted and loadable.
 
 **Plans:** `.planning/phases/010-vault-restore-recovery/PLAN.md`
 
@@ -72,7 +72,7 @@ Shelf already has the encrypted vault baseline, scoped command hierarchy, projec
 | Phase | Status | Requirements | Plans | Completion Date |
 |-------|--------|--------------|-------|-----------------|
 | Phase 9: Project Export Shell Default | Complete | PUX-01..PUX-03 | `.planning/phases/009-project-export-shell-default/PLAN.md` | 2026-06-24 |
-| Phase 10: Vault Restore and Recovery Docs | Complete | VREC-01..VREC-03 | `.planning/phases/010-vault-restore-recovery/PLAN.md` | 2026-06-24 |
+| Phase 10: Minimal Vault Backup Recovery Docs | Complete | VREC-01..VREC-03 | `.planning/phases/010-vault-restore-recovery/PLAN.md` | 2026-06-24 |
 | Phase 11: Secret Edit and Manager Safety Hardening | Complete | SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | `.planning/phases/011-edit-manager-safety/PLAN.md` | 2026-06-24 |
 
 ---

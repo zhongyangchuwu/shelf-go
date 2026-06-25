@@ -16,9 +16,9 @@ Requirements for the safety and minimal project env UX milestone. Prior encrypte
 
 ### Vault Recovery
 
-- [x] **VREC-01**: User can restore from an encrypted vault backup through a vault-scoped command or documented manual workflow.
-- [x] **VREC-02**: Restore behavior validates decrypted store contents and refuses unsafe overwrite by default.
-- [x] **VREC-03**: Recovery docs explain identity loss, backup restore, and post-restore `shelf vault status` verification.
+- [x] **VREC-01**: User can recover from a single last-write encrypted `.bak` using ordinary file copy and `shelf vault status` verification.
+- [x] **VREC-02**: Recovery docs explain that `.bak` is overwritten on each later vault replacement and is not a history system.
+- [x] **VREC-03**: Recovery docs explain identity loss, backup recovery, and post-recovery `shelf vault status` verification.
 
 ### Safety Hardening
 
@@ -122,6 +122,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | New dotenv export format | Existing `shell` output is already sourceable; adding another format increases surface area without enough value. |
 | Hook-based project activation in current scope | Shell hooks mutate parent-shell state implicitly and add complexity; explicit export/source workflows are preferred for now. |
 | Backward-compatible pre-release aliases | The project has not been published; simpler command cutover is more valuable than compatibility shims. |
+| Dedicated vault restore command | Current backups are ordinary encrypted vault files and single-slot only; a command adds surface area without enough value. Manual copy plus `shelf vault status` is simpler. |
 
 ## Traceability
 

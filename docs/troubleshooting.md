@@ -47,14 +47,15 @@ shelf vault status
 shelf doctor
 ```
 
-Restore the matching identity or restore from a known-good encrypted vault backup:
+Restore the matching identity or recover manually from the last-write encrypted backup:
 
 ```bash
-shelf vault restore --from ~/.local/share/shelf/vault.age.bak --to ~/.local/share/shelf/vault.age --force
+cp ~/.local/share/shelf/vault.age ~/.local/share/shelf/vault.age.bad
+cp ~/.local/share/shelf/vault.age.bak ~/.local/share/shelf/vault.age
 shelf vault status
 ```
 
-If the identity that can decrypt both the active vault and backups is lost, Shelf cannot recover the encrypted contents. Keep private age identities backed up outside Shelf.
+The `.bak` file is a single last-write backup and is overwritten on each later vault replacement. If the identity that can decrypt both the active vault and backup is lost, Shelf cannot recover the encrypted contents. Keep private age identities backed up outside Shelf.
 
 ## Plaintext JSON store detected
 

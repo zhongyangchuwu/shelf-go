@@ -31,7 +31,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] Vault status/check diagnostics report config, vault path, recipient configuration, format, loadability, and recovery guidance without revealing values.
 - [x] Project session activation/deactivation/shell semantics were designed under `shelf project` and intentionally left unimplemented for now because hook-based shell mutation is not the minimal default workflow.
 - [x] Project export defaults to sourceable shell output, while explicit env and JSON formats remain available and no dotenv format is added.
-- [x] Vault restore exists for encrypted backups, validates restored contents before replacement, and documents identity-loss recovery limits.
+- [x] Vault recovery is intentionally minimal: Shelf creates a single last-write encrypted `.bak`, and users recover with ordinary file copy plus `shelf vault status` verification.
 - [x] Secret edit plaintext temp files are explicitly permission-hardened and covered by cleanup tests; local manager token and host boundaries are pinned by tests and documented.
 
 ### Active
