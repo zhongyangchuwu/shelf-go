@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"io"
+
+	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 type diagnosticReport struct {
@@ -25,6 +27,19 @@ func (r *diagnosticReport) warn(check, detail string) {
 func (r *diagnosticReport) fail(check, detail string) {
 	r.failed = true
 	r.line("fail", check, detail)
+}
+
+func (r *diagnosticReport) write(report vaultsvc.Report) {
+	for _, check := range report {
+		switch check.Level {
+		case vaultsvc.LevelOK:
+			r.ok(check.Name, check.Detail)
+		case vaultsvc.LevelWarn:
+			r.warn(check.Name, check.Detail)
+		case vaultsvc.LevelFail:
+			r.fail(check.Name, check.Detail)
+		}
+	}
 }
 
 func (r *diagnosticReport) err(scope string) error {

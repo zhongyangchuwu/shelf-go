@@ -8,13 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/manager"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newVaultCmd() *cobra.Command {
@@ -42,59 +41,9 @@ func newVaultStatusCmd() *cobra.Command {
 				return report.err("vault status")
 			}
 
-			report.ok("config", runtime.ConfigPath)
-			report.ok("vault path", runtime.VaultPath)
-			checkVaultRecipients(report, runtime)
-			checkVaultLoads(report, runtime)
+			report.write(vaultsvc.Status(runtime))
 			return report.err("vault status")
 		},
-	}
-}
-
-func checkVaultRecipients(report *diagnosticReport, runtime config.Runtime) {
-	if len(runtime.Recipients) == 0 {
-		report.fail("vault recipients", vaultMissingRecipientsDetail())
-		return
-	}
-	report.ok("vault recipients", fmt.Sprintf("%d configured", len(runtime.Recipients)))
-}
-
-func vaultMissingRecipientsDetail() string {
-	return "no age recipients configured; run shelf vault init --force --recipient AGE_RECIPIENT --identity PATH before creating or updating secrets"
-}
-
-func vaultFormatDetail(format store.FileFormat, path string) string {
-	switch format {
-	case store.FileFormatMissing:
-		return path + " is missing; run shelf vault init or write a secret after configuring recipients"
-	case store.FileFormatEmpty:
-		return path + " is empty; run shelf vault init or write a secret after configuring recipients"
-	case store.FileFormatPlaintextStore:
-		return "plaintext JSON store; run shelf vault migrate --from " + path + " --to <vault.age>, update config, then move/delete/archive the plaintext source"
-	case store.FileFormatUnsupportedVault:
-		return "unsupported shelf vault format; upgrade Shelf if this vault came from a newer version, or restore a compatible encrypted backup"
-	default:
-		return "unsupported file content; choose a valid vault path or restore a compatible encrypted backup"
-	}
-}
-
-func vaultLoadErrorDetail(err error) string {
-	message := err.Error()
-	switch {
-	case strings.Contains(message, "no age identity paths"):
-		return message + "; add identity_paths in config or run shelf vault init --identity PATH"
-	case strings.Contains(message, "read age identity"):
-		return message + "; fix identity_paths or identity file permissions"
-	case strings.Contains(message, "parse age identity") || strings.Contains(message, "no age identities loaded"):
-		return message + "; fix the identity file contents or run shelf vault init --identity PATH"
-	case strings.Contains(message, "no configured age identity matched"):
-		return message + "; configure the age identity that matches this vault recipient"
-	case strings.Contains(message, "could not decrypt vault"):
-		return message + "; verify identity_paths match the vault recipient or restore a known-good encrypted backup"
-	case strings.Contains(message, "invalid decrypted store"):
-		return message + "; restore a known-good encrypted backup"
-	default:
-		return message
 	}
 }
 

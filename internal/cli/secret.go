@@ -7,39 +7,18 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/render"
+	secretsvc "github.com/zhongyangchuwu/shelf-go/internal/secret"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 	"golang.org/x/term"
 )
 
 var secretAddIsTerminal = term.IsTerminal
 var secretAddReadPassword = term.ReadPassword
-
-type editableSecret struct {
-	GroupPath   string          `json:"group_path"`
-	Key         string          `json:"key"`
-	Value       json.RawMessage `json:"value"`
-	Env         string          `json:"env,omitempty"`
-	Description string          `json:"description,omitempty"`
-	Tags        []string        `json:"tags,omitempty"`
-}
-
-func newEditableSecret(path string, secret store.Secret) (editableSecret, error) {
-	id, err := store.ParseSecretID(path)
-	if err != nil {
-		return editableSecret{}, err
-	}
-	return editableSecret{GroupPath: id.GroupPath, Key: id.Key, Value: secret.Value, Env: secret.Env, Description: secret.Description, Tags: secret.Tags}, nil
-}
-
-func (e editableSecret) secret() (store.SecretID, store.Secret) {
-	return store.SecretID{GroupPath: e.GroupPath, Key: e.Key}, store.Secret{Value: e.Value, Env: e.Env, Description: e.Description, Tags: e.Tags}
-}
 
 func newSecretCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "secret", Short: "Manage secrets"}
@@ -353,54 +332,13 @@ func newSecretEditCmd() *cobra.Command {
 				return err
 			}
 			return vault.Update(func(st *store.Store) error {
-				secret, ok := st.Get(args[0])
-				if !ok {
-					return fmt.Errorf("secret not found: %s", args[0])
-				}
-				editable, err := newEditableSecret(args[0], secret)
-				if err != nil {
-					return err
-				}
-				bytes, err := json.MarshalIndent(editable, "", "  ")
-				if err != nil {
-					return err
-				}
-				tmp, err := os.CreateTemp("", "shelf-secret-*.json")
-				if err != nil {
-					return err
-				}
-				if err := tmp.Chmod(0o600); err != nil {
-					tmp.Close()
-					return err
-				}
-				tmpName := tmp.Name()
-				defer os.Remove(tmpName)
-				if _, err := tmp.Write(append(bytes, '\n')); err != nil {
-					tmp.Close()
-					return err
-				}
-				if err := tmp.Close(); err != nil {
-					return err
-				}
-				editor := runtime.Editor
-				editorCmd := exec.Command("sh", "-c", "$SHELF_EDITOR \"$SHELF_EDIT_FILE\"")
-				editorCmd.Env = append(os.Environ(), "SHELF_EDITOR="+editor, "SHELF_EDIT_FILE="+tmpName)
-				editorCmd.Stdin = os.Stdin
-				editorCmd.Stdout = os.Stdout
-				editorCmd.Stderr = os.Stderr
-				if err := editorCmd.Run(); err != nil {
-					return err
-				}
-				edited, err := os.ReadFile(tmpName)
-				if err != nil {
-					return err
-				}
-				var updated editableSecret
-				if err := json.Unmarshal(edited, &updated); err != nil {
-					return err
-				}
-				id, secret := updated.secret()
-				return st.Update(args[0], id, secret)
+				return secretsvc.Edit(st, secretsvc.EditRequest{
+					Path:   args[0],
+					Editor: runtime.Editor,
+					Stdin:  os.Stdin,
+					Stdout: os.Stdout,
+					Stderr: os.Stderr,
+				})
 			})
 		},
 	}

@@ -25,7 +25,7 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 ## Phases
 
 - [x] Phase 13: App Runtime and Project Package Extraction
-- [ ] Phase 14: Vault Diagnostics and Secret Workflow Extraction
+- [x] Phase 14: Vault Diagnostics and Secret Workflow Extraction
 - [ ] Phase 15: Shared Persistence Primitives and Store File Layout
 
 ## Phase Details
@@ -59,6 +59,8 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 2. `internal/secret` owns `secret edit` editable JSON and temp-file/editor lifecycle.
 3. `internal/cli/vault.go`, `internal/cli/doctor.go`, and `internal/cli/secret.go` remain thin command-family files.
 4. Vault, doctor, manager, and secret edit tests pass.
+
+**Plan:** `.planning/phases/014-vault-secret-extraction/PLAN.md`
 
 ### Phase 15: Shared Persistence Primitives and Store File Layout
 
@@ -95,8 +97,8 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 | Phase | Status | Requirements | Plan | Completion Date |
 |-------|--------|--------------|------|-----------------|
 | Phase 13: App Runtime and Project Package Extraction | Complete | ARCH-01..ARCH-03 | `.planning/phases/013-architecture-package-boundaries/PLAN.md` | 2026-06-25 |
-| Phase 14: Vault Diagnostics and Secret Workflow Extraction | Planned | ARCH-04..ARCH-05 | - | - |
+| Phase 14: Vault Diagnostics and Secret Workflow Extraction | Complete | ARCH-04..ARCH-05 | `.planning/phases/014-vault-secret-extraction/PLAN.md` | 2026-06-25 |
 | Phase 15: Shared Persistence Primitives and Store File Layout | Planned | ARCH-06..ARCH-08 | - | - |
 
 ---
-*Last updated: 2026-06-25 after completing Phase 13 app/runtime and project package extraction*
+*Last updated: 2026-06-25 after completing Phase 14 vault diagnostics and secret workflow extraction*

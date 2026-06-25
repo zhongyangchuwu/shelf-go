@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 13 - App Runtime and Project Package Extraction
+- Phase: Phase 14 - Vault Diagnostics and Secret Workflow Extraction
 - Status: complete
-- Active Artifact: .planning/phases/013-architecture-package-boundaries/SUMMARY.md
-- Next Action: Start Phase 14 vault diagnostics and secret workflow extraction.
+- Active Artifact: .planning/phases/014-vault-secret-extraction/SUMMARY.md
+- Next Action: Start Phase 15 shared persistence primitives and store file layout.
 
 ## Blockers
 - None
@@ -45,6 +45,10 @@
 - Phase 13 completed on 2026-06-25: added `internal/app`, added `internal/project`, updated CLI project/run commands, and kept `internal/gitutil` deferred.
 - `go test ./internal/project ./internal/cli -run 'TestProject|TestRun'` passed.
 - `go test ./...` passed after Phase 13 extraction.
+- Phase 14 plan created on 2026-06-25 to extract vault diagnostics and `secret edit` workflow without command behavior changes.
+- Phase 14 completed on 2026-06-25: added `internal/vault`, added `internal/secret`, updated `vault status`, `doctor`, and `secret edit` to call feature packages.
+- `go test ./internal/vault ./internal/secret ./internal/cli -run 'Test(Vault|Doctor|SecretEdit)'` passed.
+- `go test ./...` passed after Phase 14 extraction.
 
 ## Updated
 - 2026-06-25
