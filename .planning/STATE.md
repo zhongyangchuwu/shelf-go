@@ -36,6 +36,7 @@
 - `go test ./internal/manager -run TestManager` passed.
 - `go test ./...` passed.
 - Phase 12 restore simplification removed `shelf vault restore`; the command was unnecessary for single-slot `.bak` recovery.
+- SQLite recorded as a deferred storage spike candidate; Dolt is not a current vault-storage candidate.
 
 ## Updated
-- 2026-06-24
+- 2026-06-25

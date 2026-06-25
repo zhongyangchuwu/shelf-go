@@ -81,6 +81,7 @@ The current command ambiguity is concrete: top-level `shelf init` initializes gl
 | Use `secret export` for direct path/prefix export | Direct export operates on vault secret paths, while `project export` operates on `.shelf.json` bindings. | Implemented under `shelf secret export`. |
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, revocation, audit, and conflict handling before the solo workflow is solid. | Kept out of scope. |
 | Prefer explicit export/source over shell hooks | Hook-based activation mutates parent-shell state implicitly and adds restore complexity; sourceable shell output keeps behavior visible and easy to audit. | Current milestone changes `project export` default to shell output and keeps activate/deactivate/shell deferred. |
+| Defer storage-engine changes | JSON inside an age-encrypted vault keeps the security and portability model simple. SQLite is worth a future spike only when schema/search/history pressure appears; Dolt is too heavy for vault storage and conflicts with encrypted-at-rest secret semantics. | Current storage remains age-encrypted JSON; SQLite is recorded as a deferred candidate, Dolt is not. |
 
 ## Evolution
 
@@ -94,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*
+*Last updated: 2026-06-25 after recording SQLite as a deferred storage spike candidate*

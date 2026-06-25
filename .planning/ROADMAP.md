@@ -60,6 +60,11 @@ Shelf already has the encrypted vault baseline, scoped command hierarchy, projec
 
 **Plans:** `.planning/phases/011-edit-manager-safety/PLAN.md`
 
+## Future Candidates
+
+- SQLite storage spike: investigate SQLite as an encrypted vault payload or metadata/search layer only if JSON schema/search/history pressure becomes real. Any design must preserve encrypted-at-rest safety and avoid plaintext SQLite WAL, journal, or temp files.
+- Dolt is not a current vault-storage candidate: it is powerful for versioned SQL data, but too heavy for Shelf's portable encrypted-file model and weakens useful diff/history unless secrets or metadata are exposed.
+
 ## Explicit Non-Goals for This Milestone
 
 - No `project activate` / `project deactivate` shell hook implementation.

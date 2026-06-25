@@ -101,6 +101,7 @@ Tracked for future releases. These are not current implementation commitments.
 - **V2-VAULT-02**: User can manage multiple vaults or profiles.
 - **V2-VAULT-03**: User can inspect non-secret age recipient metadata from a vault.
 - **V2-VAULT-04**: User gets better merge/conflict handling for git-managed encrypted vault updates.
+- **V2-VAULT-05**: Shelf can spike SQLite as a future encrypted vault payload or metadata/search storage option when schema/query pressure justifies it; any design must preserve encrypted-at-rest vault safety and avoid plaintext WAL/journal/temp files.
 
 ### Integrations and Editing
 
@@ -142,6 +143,7 @@ Explicitly excluded. Documented to prevent scope creep.
 - Current requirements: 9 total
 - Mapped to phases: 9
 - Unmapped: 0
+- Deferred storage spike: SQLite only; Dolt is not a current vault-storage candidate.
 
 ---
 *Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*
