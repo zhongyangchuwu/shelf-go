@@ -75,6 +75,7 @@ Global flags:
 ## Documentation
 
 - [Getting started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
 - [Security policy](SECURITY.md)
 - [Portable vault guide](docs/portable-vault.md)
 - [Reference](docs/reference.md)

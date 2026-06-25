@@ -47,14 +47,22 @@ just install
 ## Project layout
 
 ```text
-cmd/shelf/          process entry point
-internal/cli/       Cobra commands and CLI orchestration
-internal/config/    runtime config resolution
-internal/store/     secret model, path grammar, vault persistence, locking
-internal/manifest/  .shelf.json model, validation, and IO
-internal/render/    env/shell/JSON rendering
-internal/manager/   localhost vault manager
-internal/version/   version string
+cmd/shelf/           process entry point
+
+internal/cli/        Cobra commands and CLI orchestration
+internal/manager/    localhost vault manager UI
+
+internal/app/        runtime and vault construction helpers
+internal/project/    project identity and manifest binding resolution
+internal/secret/     reusable secret workflows such as editor-based updates
+internal/vault/      vault status/check/doctor diagnostics
+
+internal/atomicfile/ atomic write primitive
+internal/config/     runtime config resolution
+internal/store/      secret model, path grammar, JSON codec, age vault persistence, locking
+internal/manifest/   .shelf.json model, validation, and IO
+internal/render/     env/shell/JSON rendering
+internal/version/    version string
 ```
 
 ## Documentation policy
@@ -64,6 +72,7 @@ internal/version/   version string
 - Do not publish stale generated codebase maps or agent plans as public docs.
 - Security-sensitive docs must state plaintext boundaries explicitly in `SECURITY.md`.
 - Portable vault and chezmoi workflow guidance belongs in `docs/portable-vault.md`.
+- Architecture package boundaries belong in `docs/architecture.md`; implementation phase history stays in `.planning/`.
 
 ## Code style
 
