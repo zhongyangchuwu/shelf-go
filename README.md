@@ -27,7 +27,7 @@ From a checkout:
 ```bash
 go build -o ./bin/shelf ./cmd/shelf
 ```
-GitHub release binaries for Linux and macOS are published with checksums starting in `v0.1.0`. Windows builds are deferred until file locking is portable beyond Unix `flock`.
+GitHub release binaries for Linux, macOS, and Windows are published with checksums starting in `v0.1.0`.
 
 ## Initialize an encrypted vault
 

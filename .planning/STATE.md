@@ -56,8 +56,8 @@
 - Phase 16 started on 2026-06-25 to prepare the first public release with minimal GoReleaser automation, release docs, and UAT verification.
 - Manager UI redesign is intentionally deferred to a later post-0.1 phase; `shelf vault open` remains available but not release-highlighted.
 - Phase 16 completed on 2026-06-25: added minimal GoReleaser release automation, tag-triggered release workflow, CI vet, release-version injection, 0.1.0 changelog, and usage-oriented README.
-- GoReleaser snapshot passed for Linux/macOS amd64/arm64 archives and checksums; Windows artifacts are deferred because current file locking uses Unix `flock`.
-- `go vet ./...`, `go test ./...`, `go test -race ./...`, `go build -o ./bin/shelf ./cmd/shelf`, `go run github.com/goreleaser/goreleaser/v2@latest check`, and `go run github.com/goreleaser/goreleaser/v2@latest release --clean --snapshot` passed.
+- GoReleaser snapshot passed for Linux/macOS tarballs, Windows zip archives, and checksums after replacing Unix-only `syscall.Flock` with `github.com/gofrs/flock`.
+- `go vet ./...`, `go test ./...`, `go test -race ./...`, `go test ./internal/store`, `GOOS=windows GOARCH=amd64 go test ./internal/store ./internal/manager ./internal/manifest ./internal/config`, `GOOS=windows GOARCH=amd64 go build ./cmd/shelf`, `go build -o ./bin/shelf ./cmd/shelf`, `go run github.com/goreleaser/goreleaser/v2@latest check`, and `go run github.com/goreleaser/goreleaser/v2@latest release --clean --snapshot` passed.
 
 ## Updated
 - 2026-06-25
