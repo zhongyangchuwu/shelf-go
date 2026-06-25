@@ -26,7 +26,7 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 
 - [x] Phase 13: App Runtime and Project Package Extraction
 - [x] Phase 14: Vault Diagnostics and Secret Workflow Extraction
-- [ ] Phase 15: Shared Persistence Primitives and Store File Layout
+- [x] Phase 15: Shared Persistence Primitives and Store File Layout
 
 ## Phase Details
 
@@ -73,8 +73,11 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 **Success Criteria:**
 1. Atomic write behavior is centralized in a small shared helper with explicit mode, sync, and backup options.
 2. Env name and path token validation have one canonical implementation.
+
 3. `internal/store` separates store model/methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files within the same package.
 4. Store, manifest, render, setup, and full test suites pass.
+
+**Plan:** `.planning/phases/015-persistence-store-layout/PLAN.md`
 
 ## Future Candidates
 
@@ -98,7 +101,7 @@ Base support:     internal/config, internal/store, internal/manifest, internal/r
 |-------|--------|--------------|------|-----------------|
 | Phase 13: App Runtime and Project Package Extraction | Complete | ARCH-01..ARCH-03 | `.planning/phases/013-architecture-package-boundaries/PLAN.md` | 2026-06-25 |
 | Phase 14: Vault Diagnostics and Secret Workflow Extraction | Complete | ARCH-04..ARCH-05 | `.planning/phases/014-vault-secret-extraction/PLAN.md` | 2026-06-25 |
-| Phase 15: Shared Persistence Primitives and Store File Layout | Planned | ARCH-06..ARCH-08 | - | - |
+| Phase 15: Shared Persistence Primitives and Store File Layout | Complete | ARCH-06..ARCH-08 | `.planning/phases/015-persistence-store-layout/PLAN.md` | 2026-06-25 |
 
 ---
-*Last updated: 2026-06-25 after completing Phase 14 vault diagnostics and secret workflow extraction*
+*Last updated: 2026-06-25 after completing Phase 15 shared persistence primitives and store layout*

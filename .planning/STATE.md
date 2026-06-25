@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 14 - Vault Diagnostics and Secret Workflow Extraction
+- Phase: Phase 15 - Shared Persistence Primitives and Store File Layout
 - Status: complete
-- Active Artifact: .planning/phases/014-vault-secret-extraction/SUMMARY.md
-- Next Action: Start Phase 15 shared persistence primitives and store file layout.
+- Active Artifact: .planning/phases/015-persistence-store-layout/SUMMARY.md
+- Next Action: Review architecture refactor milestone and decide whether to proceed to release readiness or further refactor.
 
 ## Blockers
 - None
@@ -49,6 +49,10 @@
 - Phase 14 completed on 2026-06-25: added `internal/vault`, added `internal/secret`, updated `vault status`, `doctor`, and `secret edit` to call feature packages.
 - `go test ./internal/vault ./internal/secret ./internal/cli -run 'Test(Vault|Doctor|SecretEdit)'` passed.
 - `go test ./...` passed after Phase 14 extraction.
+- Phase 15 plan created on 2026-06-25 to centralize atomic writes, canonicalize validators, and split store file responsibilities without backend interfaces.
+- Phase 15 completed on 2026-06-25: added `internal/atomicfile`, canonicalized env/path validators, and split `internal/store` into clearer files.
+- `go test ./internal/store ./internal/manifest ./internal/render ./internal/cli -run 'Test(Vault|Setup|Manifest|Export)'` passed.
+- `go test ./...` passed after Phase 15 extraction.
 
 ## Updated
 - 2026-06-25

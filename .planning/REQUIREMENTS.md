@@ -15,9 +15,9 @@ Requirements for the pre-release architecture refactor milestone. Prior encrypte
 - [x] **ARCH-03**: `internal/cli` remains compact and command-family oriented, targeting roughly 3-6 files instead of one file per subcommand.
 - [x] **ARCH-04**: Vault status/check/doctor diagnostic rules are reusable outside CLI through an `internal/vault` feature package.
 - [x] **ARCH-05**: `secret edit` editable JSON and temp-file/editor workflow are reusable outside CLI through an `internal/secret` feature package while preserving plaintext cleanup behavior.
-- [ ] **ARCH-06**: Atomic file write behavior is centralized with explicit permission, sync, and backup options for vault, manifest, and config writes.
-- [ ] **ARCH-07**: Env name and path token validation have a single canonical implementation used by store, manifest, and render.
-- [ ] **ARCH-08**: `internal/store` keeps one package but separates model, store methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files.
+- [x] **ARCH-06**: Atomic file write behavior is centralized with explicit permission, sync, and backup options for vault, manifest, and config writes.
+- [x] **ARCH-07**: Env name and path token validation have a single canonical implementation used by store, manifest, and render.
+- [x] **ARCH-08**: `internal/store` keeps one package but separates model, store methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files.
 
 ## Baseline Implemented Requirements
 
@@ -144,7 +144,7 @@ Explicitly excluded. Documented to prevent scope creep.
 |-------------|-------|--------|
 | ARCH-01..ARCH-03 | Phase 13 | Complete |
 | ARCH-04..ARCH-05 | Phase 14 | Complete |
-| ARCH-06..ARCH-08 | Phase 15 | Planned |
+| ARCH-06..ARCH-08 | Phase 15 | Complete |
 | PUX-01..PUX-03 | Phase 9 | Complete |
 | VREC-01..VREC-03 | Phase 10 | Complete |
 | SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Complete |
@@ -162,4 +162,4 @@ Explicitly excluded. Documented to prevent scope creep.
 - Deferred storage spike: SQLite only; Dolt is not a current vault-storage candidate.
 
 ---
-*Last updated: 2026-06-25 after completing Phase 14 vault diagnostics and secret workflow extraction*
+*Last updated: 2026-06-25 after completing Phase 15 shared persistence primitives and store layout*

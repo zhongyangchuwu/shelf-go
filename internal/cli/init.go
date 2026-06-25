@@ -9,6 +9,7 @@ import (
 
 	"filippo.io/age"
 	"github.com/spf13/cobra"
+	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 )
@@ -235,28 +236,7 @@ func ensureConfigFile(configPath string, cfg initConfig, force bool) (bool, erro
 	for _, path := range identityPaths {
 		fmt.Fprintf(&b, "  - %s\n", path)
 	}
-	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return false, err
-	}
-	tmp, err := os.CreateTemp(dir, filepath.Base(configPath)+".tmp-*")
-	if err != nil {
-		return false, err
-	}
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
-		return false, err
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
-	if _, err := tmp.WriteString(b.String()); err != nil {
-		tmp.Close()
-		return false, err
-	}
-	if err := tmp.Close(); err != nil {
-		return false, err
-	}
-	return true, os.Rename(tmpName, configPath)
+	return true, atomicfile.Write(configPath, []byte(b.String()), atomicfile.Options{FileMode: 0o600, DirMode: 0o700})
 }
 
 func expandInitPath(path string) (string, error) {

@@ -2,13 +2,10 @@ package manifest
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 )
-
-var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 func Validate(manifest Manifest) error {
 	if manifest.Version != CurrentVersion {
@@ -45,7 +42,7 @@ func Validate(manifest Manifest) error {
 				if segment == "" {
 					return fmt.Errorf("invalid secrets[%d].prefix: empty segment", i)
 				}
-				if !isPathToken(segment) {
+				if !store.IsPathToken(segment) {
 					return fmt.Errorf("invalid secrets[%d].prefix: unsupported characters in segment %q", i, segment)
 				}
 			}
@@ -57,22 +54,11 @@ func Validate(manifest Manifest) error {
 		if entry.Env != "" && hasPrefix {
 			return fmt.Errorf("secrets[%d]: prefix entries must not carry env", i)
 		}
-		if entry.Env != "" && !envNamePattern.MatchString(entry.Env) {
-			return fmt.Errorf("invalid secrets[%d].env: %s", i, entry.Env)
+		if entry.Env != "" {
+			if err := store.ValidateEnvName(entry.Env); err != nil {
+				return fmt.Errorf("invalid secrets[%d].env: %s", i, entry.Env)
+			}
 		}
 	}
 	return nil
-}
-
-func isPathToken(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-' || r == '.' {
-			continue
-		}
-		return false
-	}
-	return true
 }

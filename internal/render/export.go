@@ -13,8 +13,6 @@ import (
 
 var nonEnvChar = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
-var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
-
 func EnvName(path string, secret store.Secret) (string, error) {
 	if secret.Env != "" {
 		return secret.Env, nil
@@ -22,7 +20,7 @@ func EnvName(path string, secret store.Secret) (string, error) {
 	name := nonEnvChar.ReplaceAllString(path, "_")
 	name = strings.Trim(name, "_")
 	name = strings.ToUpper(name)
-	if !envNamePattern.MatchString(name) {
+	if !store.IsEnvName(name) {
 		return "", fmt.Errorf("derived env name for %s is invalid: %s", path, name)
 	}
 	return name, nil

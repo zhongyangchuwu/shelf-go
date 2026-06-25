@@ -8,6 +8,17 @@ import (
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+func IsEnvName(name string) bool {
+	return envNamePattern.MatchString(name)
+}
+
+func ValidateEnvName(name string) error {
+	if !IsEnvName(name) {
+		return fmt.Errorf("invalid env name: %s", name)
+	}
+	return nil
+}
+
 func ValidateSecret(secret Secret) error {
 	if len(secret.Value) == 0 {
 		return fmt.Errorf("secret value is required")
@@ -16,15 +27,17 @@ func ValidateSecret(secret Secret) error {
 	if err := json.Unmarshal(secret.Value, &value); err != nil {
 		return fmt.Errorf("secret value must be JSON-compatible: %w", err)
 	}
-	if secret.Env != "" && !envNamePattern.MatchString(secret.Env) {
-		return fmt.Errorf("invalid env name: %s", secret.Env)
+	if secret.Env != "" {
+		if err := ValidateEnvName(secret.Env); err != nil {
+			return err
+		}
 	}
 	seen := map[string]struct{}{}
 	for _, tag := range secret.Tags {
 		if tag == "" {
 			return fmt.Errorf("tag must not be empty")
 		}
-		if !isPathToken(tag) {
+		if !IsPathToken(tag) {
 			return fmt.Errorf("tag contains unsupported characters: %s", tag)
 		}
 		if _, ok := seen[tag]; ok {

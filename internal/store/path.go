@@ -48,17 +48,17 @@ func ValidateSecretID(id SecretID) error {
 		if segment == "" {
 			return fmt.Errorf("secret group path contains an empty segment: %s", id.GroupPath)
 		}
-		if !isPathToken(segment) {
+		if !IsPathToken(segment) {
 			return fmt.Errorf("secret group path segment contains unsupported characters: %s", segment)
 		}
 	}
-	if !isPathToken(id.Key) {
+	if !IsPathToken(id.Key) {
 		return fmt.Errorf("secret key contains unsupported characters: %s", id.Key)
 	}
 	return nil
 }
 
-func isPathToken(s string) bool {
+func IsPathToken(s string) bool {
 	if s == "" {
 		return false
 	}
