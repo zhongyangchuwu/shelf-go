@@ -3,29 +3,15 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/manifest"
+	projectsvc "github.com/zhongyangchuwu/shelf-go/internal/project"
 	"github.com/zhongyangchuwu/shelf-go/internal/render"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
 )
-
-type resolved struct {
-	path    string
-	envName string
-	value   string
-}
-
-type projectDiagnostic struct {
-	status  string
-	path    string
-	message string
-}
 
 func newProjectCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "project", Short: "Project utilities"}
@@ -46,7 +32,7 @@ func newProjectIDCmd() *cobra.Command {
 		Short: "Print current Git project identity",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := projectID()
+			id, err := projectsvc.ID()
 			if err != nil {
 				return err
 			}
@@ -63,7 +49,7 @@ func newProjectInitCmd() *cobra.Command {
 		Short: "Initialize project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -95,7 +81,7 @@ func newProjectExplainCmd() *cobra.Command {
 		Short: "Explain project manifest resolution",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -108,8 +94,8 @@ func newProjectExplainCmd() *cobra.Command {
 				return err
 			}
 
-			project := projectIDBestEffort(root)
-			fmt.Fprintf(cmd.OutOrStdout(), "project: %s\n", project)
+			projectID := projectsvc.IDBestEffort(root)
+			fmt.Fprintf(cmd.OutOrStdout(), "project: %s\n", projectID)
 			fmt.Fprintf(cmd.OutOrStdout(), "root:    %s\n", root)
 			fmt.Fprintf(cmd.OutOrStdout(), "config:  %s\n\n", manifest.FileName)
 
@@ -117,21 +103,15 @@ func newProjectExplainCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resolvedEntries, diagnostics := resolveProjectEntries(m, st)
-			failed := false
-			for _, diagnostic := range diagnostics {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s %s %s\n", diagnostic.status, diagnostic.path, diagnostic.message)
-				if diagnostic.status == "fail" {
-					failed = true
-				}
-			}
+			resolvedEntries, diagnostics := projectsvc.ResolveEntries(m, st)
+			projectsvc.RenderDiagnostics(cmd.OutOrStdout(), diagnostics)
 			for _, entry := range resolvedEntries {
-				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.path, entry.envName)
+				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.Path, entry.EnvName)
 			}
 			for _, warning := range envOverrideWarnings(resolvedEntries, os.Environ()) {
 				fmt.Fprintln(cmd.OutOrStdout(), warning)
 			}
-			if failed {
+			if projectsvc.HasFailures(diagnostics) {
 				return fmt.Errorf("project manifest check failed")
 			}
 			return nil
@@ -147,7 +127,7 @@ func newProjectAddCmd() *cobra.Command {
 		Short: "Add a secret path or prefix to project manifest",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -219,7 +199,7 @@ func newProjectRmCmd() *cobra.Command {
 		Short: "Remove an entry from project manifest",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -249,7 +229,7 @@ func newProjectListCmd() *cobra.Command {
 		Short: "List project manifest entries",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -292,7 +272,7 @@ func newProjectExportCmd() *cobra.Command {
 		Short: "Export environment variables from project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -310,15 +290,9 @@ func newProjectExportCmd() *cobra.Command {
 				return err
 			}
 
-			resolvedEntries, diagnostics := resolveProjectEntries(m, st)
-			failed := false
-			for _, diagnostic := range diagnostics {
-				fmt.Fprintf(cmd.OutOrStderr(), "%s %s %s\n", diagnostic.status, diagnostic.path, diagnostic.message)
-				if diagnostic.status == "fail" {
-					failed = true
-				}
-			}
-			if failed {
+			resolvedEntries, diagnostics := projectsvc.ResolveEntries(m, st)
+			projectsvc.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
+			if projectsvc.HasFailures(diagnostics) {
 				return fmt.Errorf("project export failed")
 			}
 			if len(resolvedEntries) == 0 {
@@ -344,77 +318,8 @@ func newProjectExportCmd() *cobra.Command {
 	return cmd
 }
 
-func resolveProjectEntries(m manifest.Manifest, st *store.Store) ([]resolved, []projectDiagnostic) {
-	entries := make([]resolved, 0)
-	diagnostics := make([]projectDiagnostic, 0)
-	envOwners := map[string]string{}
-
-	for _, entry := range m.Secrets {
-		if entry.IsPrefix() {
-			matches := st.List(entry.Prefix)
-			if len(matches) == 0 {
-				path := entry.Prefix + " (prefix)"
-				if entry.IsRequired() {
-					diagnostics = append(diagnostics, projectDiagnostic{status: "fail", path: path, message: "no matches required"})
-				} else {
-					diagnostics = append(diagnostics, projectDiagnostic{status: "warn", path: path, message: "no matches optional"})
-				}
-				continue
-			}
-			for _, path := range matches {
-				secret, ok := st.Get(path)
-				if !ok {
-					continue
-				}
-				appendResolvedEntry(&entries, &diagnostics, envOwners, path, secret, "")
-			}
-			continue
-		}
-
-		secret, ok := st.Get(entry.Path)
-		if !ok {
-			if entry.IsRequired() {
-				diagnostics = append(diagnostics, projectDiagnostic{status: "fail", path: entry.Path, message: "missing required"})
-			} else {
-				diagnostics = append(diagnostics, projectDiagnostic{status: "warn", path: entry.Path, message: "missing optional"})
-			}
-			continue
-		}
-		appendResolvedEntry(&entries, &diagnostics, envOwners, entry.Path, secret, entry.Env)
-	}
-
-	return entries, diagnostics
-}
-
-func appendResolvedEntry(entries *[]resolved, diagnostics *[]projectDiagnostic, envOwners map[string]string, path string, secret store.Secret, envOverride string) {
-	envName := envOverride
-	if envName == "" {
-		var err error
-		envName, err = render.EnvName(path, secret)
-		if err != nil {
-			*diagnostics = append(*diagnostics, projectDiagnostic{status: "fail", path: path, message: err.Error()})
-			return
-		}
-	}
-	if owner, exists := envOwners[envName]; exists {
-		*diagnostics = append(*diagnostics, projectDiagnostic{status: "fail", path: path, message: fmt.Sprintf("env name %s conflicts with %s", envName, owner)})
-		return
-	}
-	envOwners[envName] = path
-	value, err := render.ValueString(secret.Value)
-	if err != nil {
-		*diagnostics = append(*diagnostics, projectDiagnostic{status: "fail", path: path, message: err.Error()})
-		return
-	}
-	*entries = append(*entries, resolved{path: path, envName: envName, value: value})
-}
-
-func renderProjectExportEnv(cmd *cobra.Command, entries []resolved) error {
-	bindings := make([]render.Binding, 0, len(entries))
-	for _, entry := range entries {
-		bindings = append(bindings, render.Binding{EnvName: entry.envName, Value: entry.value})
-	}
-	out, err := render.EnvBindings(bindings)
+func renderProjectExportEnv(cmd *cobra.Command, entries []projectsvc.Binding) error {
+	out, err := render.EnvBindings(projectsvc.BindingsForRender(entries))
 	if err != nil {
 		return err
 	}
@@ -422,12 +327,8 @@ func renderProjectExportEnv(cmd *cobra.Command, entries []resolved) error {
 	return nil
 }
 
-func renderProjectExportShell(cmd *cobra.Command, entries []resolved) error {
-	bindings := make([]render.Binding, 0, len(entries))
-	for _, entry := range entries {
-		bindings = append(bindings, render.Binding{EnvName: entry.envName, Value: entry.value})
-	}
-	out, err := render.ShellBindings(bindings)
+func renderProjectExportShell(cmd *cobra.Command, entries []projectsvc.Binding) error {
+	out, err := render.ShellBindings(projectsvc.BindingsForRender(entries))
 	if err != nil {
 		return err
 	}
@@ -435,83 +336,11 @@ func renderProjectExportShell(cmd *cobra.Command, entries []resolved) error {
 	return nil
 }
 
-func renderProjectExportJSON(cmd *cobra.Command, entries []resolved) error {
-	bindings := make([]render.Binding, 0, len(entries))
-	for _, entry := range entries {
-		bindings = append(bindings, render.Binding{EnvName: entry.envName, Value: entry.value})
-	}
-	out, err := render.JSONBindings(bindings)
+func renderProjectExportJSON(cmd *cobra.Command, entries []projectsvc.Binding) error {
+	out, err := render.JSONBindings(projectsvc.BindingsForRender(entries))
 	if err != nil {
 		return err
 	}
 	fmt.Fprint(cmd.OutOrStdout(), out)
 	return nil
-}
-
-func projectID() (string, error) {
-	root, err := gitRoot()
-	if err != nil {
-		return "", err
-	}
-	return projectIDFromRoot(root)
-}
-
-func projectIDBestEffort(root string) string {
-	id, err := projectIDFromRoot(root)
-	if err != nil {
-		return root
-	}
-	return id
-}
-
-func projectIDFromRoot(root string) (string, error) {
-	remoteBytes, err := exec.Command("git", "-C", root, "config", "--get", "remote.origin.url").Output()
-	if err != nil {
-		return "", fmt.Errorf("remote origin url not found")
-	}
-	return normalizeRemote(strings.TrimSpace(string(remoteBytes)))
-}
-
-func gitRoot() (string, error) {
-	rootBytes, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return "", fmt.Errorf("not inside a Git worktree")
-	}
-	root := strings.TrimSpace(string(rootBytes))
-	if root == "" {
-		return "", fmt.Errorf("not inside a Git worktree")
-	}
-	return root, nil
-}
-
-func normalizeRemote(remote string) (string, error) {
-	if remote == "" {
-		return "", fmt.Errorf("remote url is empty")
-	}
-	if strings.HasPrefix(remote, "git@") && strings.Contains(remote, ":") {
-		rest := strings.TrimPrefix(remote, "git@")
-		parts := strings.SplitN(rest, ":", 2)
-		return cleanRemotePath(parts[0], parts[1])
-	}
-	if strings.HasPrefix(remote, "ssh://") || strings.HasPrefix(remote, "https://") || strings.HasPrefix(remote, "http://") {
-		u, err := url.Parse(remote)
-		if err != nil {
-			return "", err
-		}
-		host := u.Hostname()
-		path := strings.TrimPrefix(u.Path, "/")
-		return cleanRemotePath(host, path)
-	}
-	return "", fmt.Errorf("unsupported remote url: %s", remote)
-}
-
-func cleanRemotePath(host, path string) (string, error) {
-	host = strings.ToLower(strings.TrimSpace(host))
-	path = strings.TrimSpace(path)
-	path = strings.TrimSuffix(path, ".git")
-	path = strings.Trim(path, "/")
-	if host == "" || path == "" {
-		return "", fmt.Errorf("invalid remote identity")
-	}
-	return host + "/" + path, nil
 }

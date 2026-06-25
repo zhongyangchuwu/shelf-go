@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: safety and minimal project env UX milestone
+- Phase: Phase 13 - App Runtime and Project Package Extraction
 - Status: complete
-- Active Artifact: .planning/ROADMAP.md
-- Next Action: Select the next release or implementation milestone.
+- Active Artifact: .planning/phases/013-architecture-package-boundaries/SUMMARY.md
+- Next Action: Start Phase 14 vault diagnostics and secret workflow extraction.
 
 ## Blockers
 - None
@@ -40,6 +40,11 @@
 - Release readiness docs/infra added on 2026-06-25: LICENSE, SECURITY.md, CHANGELOG.md, CI workflow, and portable vault guide.
 - `go test ./...` passed after release readiness updates.
 - `go build ./cmd/shelf` passed after release readiness updates.
+- Pre-release architecture refactor milestone selected on 2026-06-25.
+- Phase 13 plan created to move runtime/vault loading into `internal/app` and project resolution/identity into `internal/project` while keeping `internal/cli` command-family oriented.
+- Phase 13 completed on 2026-06-25: added `internal/app`, added `internal/project`, updated CLI project/run commands, and kept `internal/gitutil` deferred.
+- `go test ./internal/project ./internal/cli -run 'TestProject|TestRun'` passed.
+- `go test ./...` passed after Phase 13 extraction.
 
 ## Updated
 - 2026-06-25

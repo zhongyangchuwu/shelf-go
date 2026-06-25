@@ -1,84 +1,102 @@
-# Roadmap: Safety and Minimal Project Env UX
+# Roadmap: Pre-release Architecture Refactor
 
 ## Overview
 
-Shelf already has the encrypted vault baseline, scoped command hierarchy, project manifests, project runtime injection, direct export, doctor/status diagnostics, and localhost vault manager. The next pre-release milestone keeps the product small: avoid shell hooks and session wrappers, prefer explicit file/source workflows, and prioritize safety hardening plus recoverability before release infrastructure.
+Shelf has completed the encrypted vault baseline, command hierarchy cutover, project workflow compatibility, vault UX hardening, safety hardening, release-readiness docs, and minimal project env UX. The next pre-release milestone reduces architecture friction before the first public release by moving reusable behavior out of `internal/cli` while keeping the CLI package compact and command-family oriented.
+
+## Architecture Direction
+
+### Layers
+
+```text
+Top/display:      cmd/shelf, internal/cli, internal/manager
+Feature support:  internal/app, internal/project, later internal/vault and internal/secret
+Base support:     internal/config, internal/store, internal/manifest, internal/render, internal/version, later internal/atomicfile
+```
+
+### Decisions
+
+- Keep `internal/cli` at roughly 3-6 files, grouped by command family, not one file per command.
+- Move reusable application/runtime construction to `internal/app`.
+- Move project identity and manifest resolution to `internal/project`.
+- Do not create `internal/gitutil` in the first extraction. Project-owned git helpers live in `internal/project`; shared git utilities can be extracted later only if both project and vault diagnostics need them.
+- Defer storage backend interfaces until a real second backend spike begins.
 
 ## Phases
 
-- [x] Phase 9: Project Export Shell Default
-- [x] Phase 10: Vault Restore and Recovery Docs
-- [x] Phase 11: Secret Edit and Manager Safety Hardening
+- [x] Phase 13: App Runtime and Project Package Extraction
+- [ ] Phase 14: Vault Diagnostics and Secret Workflow Extraction
+- [ ] Phase 15: Shared Persistence Primitives and Store File Layout
 
 ## Phase Details
 
-### Phase 9: Project Export Shell Default
+### Phase 13: App Runtime and Project Package Extraction
 
-**Goal:** Make the default project export output directly sourceable without adding a new dotenv format or shell hook workflow.
+**Goal:** Move reusable runtime/vault loading and project resolution behavior out of `internal/cli` without changing command behavior.
 
-**Depends on:** Completed command hierarchy and project workflow compatibility.
+**Depends on:** Completed safety and minimal project env UX milestone.
 
-**Requirements:** PUX-01, PUX-02, PUX-03
-
-**Success Criteria:**
-1. `shelf project export` defaults to the existing `shell` format, matching `shelf secret export`.
-2. `--format env|shell|json` remains available; no `dotenv` format is added.
-3. User docs recommend explicit workflows such as `shelf project export > .env.local` and `source .env.local`, with plaintext and git-ignore warnings.
-4. Tests cover the default format and preserve explicit format behavior.
-
-**Plans:** `.planning/phases/009-project-export-shell-default/PLAN.md`
-
-### Phase 10: Minimal Vault Backup Recovery Docs
-
-**Goal:** Make encrypted backup recovery explicit and testable without adding a dedicated restore command.
-
-**Depends on:** Phase 9 complete.
-
-**Requirements:** VREC-01, VREC-02, VREC-03
+**Requirements:** ARCH-01, ARCH-02, ARCH-03
 
 **Success Criteria:**
-1. User-facing docs explain that `<vault>.bak` is a single last-write encrypted backup.
-2. Recovery uses ordinary file copy/rename followed by `shelf vault status` verification.
-3. Troubleshooting and security docs explain identity loss, backup recovery, and post-recovery verification.
-4. Tests continue to prove `.bak` files are encrypted and loadable.
+1. `internal/app` owns runtime/vault load, read, and update helpers currently in `internal/cli/root.go`.
+2. `internal/project` owns manifest resolution, project diagnostics, render binding conversion, project ID, git root lookup, and remote normalization currently in `internal/cli/project.go`.
+3. `internal/cli` remains command-family oriented and does not split into one file per subcommand.
+4. Existing project, run, and full test suites pass.
 
-**Plans:** `.planning/phases/010-vault-restore-recovery/PLAN.md`
+**Plan:** `.planning/phases/013-architecture-package-boundaries/PLAN.md`
 
-### Phase 11: Secret Edit and Manager Safety Hardening
+### Phase 14: Vault Diagnostics and Secret Workflow Extraction
 
-**Goal:** Reduce plaintext exposure in interactive editing and local manager workflows without adding a daemon or complex UI.
+**Goal:** Move reusable vault status/doctor diagnostics and plaintext edit workflow out of `internal/cli`.
 
-**Depends on:** Phase 10 complete.
+**Depends on:** Phase 13 complete.
 
-**Requirements:** SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01
+**Requirements:** ARCH-04, ARCH-05
 
 **Success Criteria:**
-1. `shelf secret edit` temporary files use restrictive permissions and are cleaned on success and failure paths where possible.
-2. Local manager safety gaps are either cheaply hardened or documented explicitly; no permanent daemon is introduced.
-3. Docs name remaining plaintext boundaries and recommended close/cleanup behavior.
-4. Focused tests cover temp-file permissions/cleanup and any manager behavior changes.
+1. `internal/vault` owns vault status/check/doctor diagnostic rules and returns typed diagnostic records for CLI rendering.
+2. `internal/secret` owns `secret edit` editable JSON and temp-file/editor lifecycle.
+3. `internal/cli/vault.go`, `internal/cli/doctor.go`, and `internal/cli/secret.go` remain thin command-family files.
+4. Vault, doctor, manager, and secret edit tests pass.
 
-**Plans:** `.planning/phases/011-edit-manager-safety/PLAN.md`
+### Phase 15: Shared Persistence Primitives and Store File Layout
+
+**Goal:** Remove duplicated persistence primitives and make `internal/store` easier to evolve without introducing speculative backend interfaces.
+
+**Depends on:** Phase 14 complete.
+
+**Requirements:** ARCH-06, ARCH-07, ARCH-08
+
+**Success Criteria:**
+1. Atomic write behavior is centralized in a small shared helper with explicit mode, sync, and backup options.
+2. Env name and path token validation have one canonical implementation.
+3. `internal/store` separates store model/methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files within the same package.
+4. Store, manifest, render, setup, and full test suites pass.
 
 ## Future Candidates
 
 - SQLite storage spike: investigate SQLite as an encrypted vault payload or metadata/search layer only if JSON schema/search/history pressure becomes real. Any design must preserve encrypted-at-rest safety and avoid plaintext SQLite WAL, journal, or temp files.
 - Dolt is not a current vault-storage candidate: it is powerful for versioned SQL data, but too heavy for Shelf's portable encrypted-file model and weakens useful diff/history unless secrets or metadata are exposed.
+- `internal/gitutil`: create only if both `internal/project` and future `internal/vault` need shared git subprocess helpers.
 
 ## Explicit Non-Goals for This Milestone
 
+- No command behavior changes.
 - No `project activate` / `project deactivate` shell hook implementation.
 - No `project shell` wrapper unless a later phase shows clear value over `project run -- $SHELL`.
 - No new `dotenv` format; use existing `shell` output for sourceable files.
 - No team sharing, hosted sync, permanent daemon, or release packaging work in this milestone.
+- No SQLite backend implementation.
+- No speculative repository/service abstraction beyond packages required by the current code.
 
 ## Progress
 
-| Phase | Status | Requirements | Plans | Completion Date |
-|-------|--------|--------------|-------|-----------------|
-| Phase 9: Project Export Shell Default | Complete | PUX-01..PUX-03 | `.planning/phases/009-project-export-shell-default/PLAN.md` | 2026-06-24 |
-| Phase 10: Minimal Vault Backup Recovery Docs | Complete | VREC-01..VREC-03 | `.planning/phases/010-vault-restore-recovery/PLAN.md` | 2026-06-24 |
-| Phase 11: Secret Edit and Manager Safety Hardening | Complete | SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | `.planning/phases/011-edit-manager-safety/PLAN.md` | 2026-06-24 |
+| Phase | Status | Requirements | Plan | Completion Date |
+|-------|--------|--------------|------|-----------------|
+| Phase 13: App Runtime and Project Package Extraction | Complete | ARCH-01..ARCH-03 | `.planning/phases/013-architecture-package-boundaries/PLAN.md` | 2026-06-25 |
+| Phase 14: Vault Diagnostics and Secret Workflow Extraction | Planned | ARCH-04..ARCH-05 | - | - |
+| Phase 15: Shared Persistence Primitives and Store File Layout | Planned | ARCH-06..ARCH-08 | - | - |
 
 ---
-*Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*
+*Last updated: 2026-06-25 after completing Phase 13 app/runtime and project package extraction*

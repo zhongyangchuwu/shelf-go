@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/store"
 	"github.com/zhongyangchuwu/shelf-go/internal/version"
@@ -31,41 +32,23 @@ func NewRootCmd() *cobra.Command {
 func loadVault(cmd *cobra.Command) (config.Runtime, *store.Vault, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	vaultPath, _ := cmd.Flags().GetString("vault")
-	runtime, err := config.Resolve(configPath, vaultPath)
-	if err != nil {
-		return config.Runtime{}, nil, err
-	}
-	vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
-	if err != nil {
-		return config.Runtime{}, nil, err
-	}
-	return runtime, vault, nil
+	return app.LoadVault(configPath, vaultPath)
 }
 
 func loadRuntime(cmd *cobra.Command) (config.Runtime, *store.Store, error) {
-	runtime, vault, err := loadVault(cmd)
-	if err != nil {
-		return config.Runtime{}, nil, err
-	}
-	st, err := vault.Load()
-	if err != nil {
-		return config.Runtime{}, nil, err
-	}
-	return runtime, st, nil
+	configPath, _ := cmd.Flags().GetString("config")
+	vaultPath, _ := cmd.Flags().GetString("vault")
+	return app.LoadRuntime(configPath, vaultPath)
 }
 
 func updateVault(cmd *cobra.Command, fn func(*store.Store) error) error {
-	_, vault, err := loadVault(cmd)
-	if err != nil {
-		return err
-	}
-	return vault.Update(fn)
+	configPath, _ := cmd.Flags().GetString("config")
+	vaultPath, _ := cmd.Flags().GetString("vault")
+	return app.UpdateVault(configPath, vaultPath, fn)
 }
 
 func readVault(cmd *cobra.Command, fn func(*store.Store) error) error {
-	_, vault, err := loadVault(cmd)
-	if err != nil {
-		return err
-	}
-	return vault.Read(fn)
+	configPath, _ := cmd.Flags().GetString("config")
+	vaultPath, _ := cmd.Flags().GetString("vault")
+	return app.ReadVault(configPath, vaultPath, fn)
 }

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	projectsvc "github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
@@ -52,7 +54,7 @@ func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
 	}
 }
 func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
-	entries := []resolved{{envName: "APP_TOKEN", value: "secret"}}
+	entries := []projectsvc.Binding{{EnvName: "APP_TOKEN", Value: "secret"}}
 	env := childEnv([]string{"APP_TOKEN", "OTHER=value"}, entries)
 	want := []string{"OTHER=value", "APP_TOKEN=secret"}
 	if strings.Join(env, "\n") != strings.Join(want, "\n") {

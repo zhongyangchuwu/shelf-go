@@ -1,12 +1,27 @@
 # Requirements: Shelf Go
 
 **Defined:** 2026-06-16
-**Revised:** 2026-06-24
+**Revised:** 2026-06-25
 **Core Value:** A developer can safely manage project secrets in an encrypted local vault and use them through explicit CLI, file, and child-process workflows without treating plaintext `.env` files as the source of truth.
 
 ## Current Requirements
 
-Requirements for the safety and minimal project env UX milestone. Prior encrypted-vault, command-hierarchy, vault-UX, and project-session design work is treated as baseline behavior that must remain passing.
+Requirements for the pre-release architecture refactor milestone. Prior encrypted-vault, command-hierarchy, vault-UX, project-session design, safety, and release-readiness work is treated as baseline behavior that must remain passing.
+
+### Architecture Boundaries
+
+- [x] **ARCH-01**: Runtime/vault construction helpers are owned outside `internal/cli` so future backend construction changes do not require editing every command file.
+- [x] **ARCH-02**: Project manifest resolution, project diagnostics, env conflict detection, render binding conversion, project identity, git root lookup, and remote normalization are owned by `internal/project`, not `internal/cli`.
+- [x] **ARCH-03**: `internal/cli` remains compact and command-family oriented, targeting roughly 3-6 files instead of one file per subcommand.
+- [ ] **ARCH-04**: Vault status/check/doctor diagnostic rules are reusable outside CLI through an `internal/vault` feature package.
+- [ ] **ARCH-05**: `secret edit` editable JSON and temp-file/editor workflow are reusable outside CLI through an `internal/secret` feature package while preserving plaintext cleanup behavior.
+- [ ] **ARCH-06**: Atomic file write behavior is centralized with explicit permission, sync, and backup options for vault, manifest, and config writes.
+- [ ] **ARCH-07**: Env name and path token validation have a single canonical implementation used by store, manifest, and render.
+- [ ] **ARCH-08**: `internal/store` keeps one package but separates model, store methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files.
+
+## Baseline Implemented Requirements
+
+Already implemented and must remain working unless explicitly redesigned by the current milestone.
 
 ### Project Export UX
 
@@ -25,10 +40,6 @@ Requirements for the safety and minimal project env UX milestone. Prior encrypte
 - [x] **SAFE-EDIT-01**: `shelf secret edit` limits plaintext temporary-file exposure with restrictive permissions and cleanup behavior.
 - [x] **SAFE-MGR-01**: Local manager plaintext and token boundaries are either cheaply hardened or documented explicitly without adding a permanent daemon.
 - [x] **SAFE-DOC-01**: User-facing docs name remaining plaintext boundaries and recommended cleanup behavior.
-
-## Baseline Implemented Requirements
-
-Already implemented and must remain working unless explicitly redesigned by the current milestone.
 
 ### Command Hierarchy
 
@@ -124,11 +135,16 @@ Explicitly excluded. Documented to prevent scope creep.
 | Hook-based project activation in current scope | Shell hooks mutate parent-shell state implicitly and add complexity; explicit export/source workflows are preferred for now. |
 | Backward-compatible pre-release aliases | The project has not been published; simpler command cutover is more valuable than compatibility shims. |
 | Dedicated vault restore command | Current backups are ordinary encrypted vault files and single-slot only; a command adds surface area without enough value. Manual copy plus `shelf vault status` is simpler. |
+| Immediate SQLite backend | SQLite remains a future spike candidate; this milestone only improves architecture boundaries needed for future evolution. |
+| Broad one-file-per-command CLI split | `internal/cli` should stay command-family oriented rather than becoming a large directory of tiny files. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| ARCH-01..ARCH-03 | Phase 13 | Complete |
+| ARCH-04..ARCH-05 | Phase 14 | Planned |
+| ARCH-06..ARCH-08 | Phase 15 | Planned |
 | PUX-01..PUX-03 | Phase 9 | Complete |
 | VREC-01..VREC-03 | Phase 10 | Complete |
 | SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Complete |
@@ -140,10 +156,10 @@ Explicitly excluded. Documented to prevent scope creep.
 | BASE-SAFE-01..07 | Completed encrypted-vault milestone | Complete |
 
 **Coverage:**
-- Current requirements: 9 total
-- Mapped to phases: 9
+- Current requirements: 8 total
+- Mapped to phases: 8
 - Unmapped: 0
 - Deferred storage spike: SQLite only; Dolt is not a current vault-storage candidate.
 
 ---
-*Last updated: 2026-06-24 after selecting the safety and minimal project env UX milestone*
+*Last updated: 2026-06-25 after completing Phase 13 app/runtime and project package extraction*

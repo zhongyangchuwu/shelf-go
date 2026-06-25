@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/manifest"
+	projectsvc "github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 type exitCoder interface {
@@ -45,7 +46,7 @@ func newRunCmd() *cobra.Command {
 		Short: "Run a command with project secrets injected",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := gitRoot()
+			root, err := projectsvc.Root()
 			if err != nil {
 				return err
 			}
@@ -61,15 +62,9 @@ func newRunCmd() *cobra.Command {
 				return err
 			}
 
-			resolvedEntries, diagnostics := resolveProjectEntries(m, st)
-			failed := false
-			for _, diagnostic := range diagnostics {
-				fmt.Fprintf(cmd.OutOrStderr(), "%s %s %s\n", diagnostic.status, diagnostic.path, diagnostic.message)
-				if diagnostic.status == "fail" {
-					failed = true
-				}
-			}
-			if failed {
+			resolvedEntries, diagnostics := projectsvc.ResolveEntries(m, st)
+			projectsvc.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
+			if projectsvc.HasFailures(diagnostics) {
 				return fmt.Errorf("project run failed")
 			}
 
@@ -78,7 +73,7 @@ func newRunCmd() *cobra.Command {
 					fmt.Fprintln(cmd.OutOrStderr(), warning)
 				}
 				for _, entry := range resolvedEntries {
-					fmt.Fprintf(cmd.OutOrStdout(), "inject %s\n", entry.envName)
+					fmt.Fprintf(cmd.OutOrStdout(), "inject %s\n", entry.EnvName)
 				}
 				return nil
 			}
@@ -102,10 +97,10 @@ func newRunCmd() *cobra.Command {
 	return cmd
 }
 
-func childEnv(parent []string, entries []resolved) []string {
+func childEnv(parent []string, entries []projectsvc.Binding) []string {
 	values := make(map[string]string, len(entries))
 	for _, entry := range entries {
-		values[entry.envName] = entry.value
+		values[entry.EnvName] = entry.Value
 	}
 
 	out := make([]string, 0, len(parent)+len(entries))
@@ -128,15 +123,15 @@ func childEnv(parent []string, entries []resolved) []string {
 		seen[key] = struct{}{}
 	}
 	for _, entry := range entries {
-		if _, exists := seen[entry.envName]; exists {
+		if _, exists := seen[entry.EnvName]; exists {
 			continue
 		}
-		out = append(out, entry.envName+"="+entry.value)
+		out = append(out, entry.EnvName+"="+entry.Value)
 	}
 	return out
 }
 
-func envOverrideWarnings(entries []resolved, parent []string) []string {
+func envOverrideWarnings(entries []projectsvc.Binding, parent []string) []string {
 	parentNames := make(map[string]struct{}, len(parent))
 	for _, item := range parent {
 		key, _, ok := splitEnv(item)
@@ -146,8 +141,8 @@ func envOverrideWarnings(entries []resolved, parent []string) []string {
 	}
 	warnings := make([]string, 0)
 	for _, entry := range entries {
-		if _, exists := parentNames[entry.envName]; exists {
-			warnings = append(warnings, fmt.Sprintf("warn %s overrides existing environment variable", entry.envName))
+		if _, exists := parentNames[entry.EnvName]; exists {
+			warnings = append(warnings, fmt.Sprintf("warn %s overrides existing environment variable", entry.EnvName))
 		}
 	}
 	return warnings
