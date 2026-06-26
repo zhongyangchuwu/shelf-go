@@ -6,11 +6,38 @@
 
 ## Current Requirements
 
-No v0.1.1 requirements are selected yet. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+Requirements for v0.1.1 editing experience and tag-based workflows. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+
+### Web Manager Editing
+
+- [ ] **WEB-01**: The local Web manager provides a searchable, understandable secret console with path, env, description, tag, and value-set metadata visible without revealing secret values.
+- [ ] **WEB-02**: The Web manager supports adding, editing, renaming, and deleting secret records, including value, env, description, and tags.
+- [ ] **WEB-03**: The Web manager supports explicit reveal, hide, and copy flows without returning secret values in list/search responses or storing them in browser-local persistent storage.
+- [ ] **WEB-04**: The Web manager preserves and strengthens local-only safety boundaries: loopback binding, token/cookie access, Host/Origin checks, token removal from the visible URL after first load, and no-store responses for secret-bearing endpoints.
+- [ ] **WEB-05**: The Web manager uses embedded local assets only; no CDN, hosted frontend, or permanent daemon dependency is required.
+- [ ] **WEB-06**: The Web manager adopts a polished console visual direction based on a reusable HTML/CSS design system or template reference, with the implementation kept compatible with Go's single-binary distribution.
+
+### Tag-Based CLI and Project Workflows
+
+- [ ] **TAG-01**: `shelf secret list` can filter secrets by one or more tags while keeping output value-free and deterministic.
+- [ ] **TAG-02**: `shelf secret export` can select secrets by one or more tags using the existing env, shell, and JSON formats and the existing `--all` behavior.
+- [ ] **TAG-03**: Project manifests can declare tag-selected secret sets without storing secret values.
+- [ ] **TAG-04**: `shelf project add`, `list`, `explain`, `export`, and `run` support tag-selected bindings with clear expansion, missing-secret, and env-conflict diagnostics.
+- [ ] **TAG-05**: Multiple tag selectors use AND semantics for v0.1.1 so exported/project-bound sets stay narrow and predictable.
+
+### Scope Boundary
+
+- [ ] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in WebUI and existing compact secret commands.
+- [ ] **BOUND-02**: v0.1.1 keeps the current age-encrypted JSON vault format and does not implement or spike SQLite; storage redesign is deferred to v0.2.0 planning.
 
 ## Deferred Requirements
 
 Tracked for future releases. These are not current implementation commitments.
+
+### Storage v0.2.0 Candidates
+
+- **V2-STORE-01**: Reconsider SQLite or another storage model only in v0.2.0 planning, after defining the threat model, artifact leakage checklist, migration path, and release-build impact.
+- **V2-STORE-02**: If SQLite is reconsidered, compare plaintext SQLite, SQLCipher/encrypted SQLite, and age-wrapped in-memory SQLite against portability, WAL/journal/temp leakage, and chezmoi sync constraints before implementation.
 
 ### Project Sessions
 
@@ -24,7 +51,6 @@ Tracked for future releases. These are not current implementation commitments.
 - **V2-VAULT-02**: User can manage multiple vaults or profiles.
 - **V2-VAULT-03**: User can inspect non-secret age recipient metadata from a vault.
 - **V2-VAULT-04**: User gets better merge/conflict handling for git-managed encrypted vault updates.
-- **V2-VAULT-05**: Shelf can spike SQLite as a future encrypted vault payload or metadata/search storage option when schema/query pressure justifies it; any design must preserve encrypted-at-rest vault safety and avoid plaintext WAL/journal/temp files.
 
 ### Integrations and Editing
 
@@ -51,20 +77,24 @@ Explicitly excluded. Documented to prevent scope creep.
 | New dotenv export format | Existing `shell` output is already sourceable; adding another format increases surface area without enough value. |
 | Hook-based project activation in current scope | Shell hooks mutate parent-shell state implicitly and add complexity; explicit export/source workflows are preferred for now. |
 | Dedicated vault restore command | Current backups are ordinary encrypted vault files and single-slot only; a command adds surface area without enough value. Manual copy plus `shelf vault status` is simpler. |
-| Immediate SQLite backend | SQLite remains a future spike candidate; current storage is age-encrypted JSON until storage/query pressure justifies another design. |
+| SQLite in v0.1.1 | v0.1.1 is about editing UX and tag workflows; storage model redesign is deferred to v0.2.0. |
+| Fine-grained CLI metadata edit subcommands | WebUI is the primary editing surface; CLI should stay compact and focus on scriptable application workflows. |
 | Broad one-file-per-command CLI split | `internal/cli` should stay command-family oriented rather than becoming a large directory of tiny files. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| None selected for v0.1.1 | - | - |
+| WEB-01..WEB-06 | Phase 17, Phase 18 | Planned |
+| TAG-01..TAG-02 | Phase 19 | Planned |
+| TAG-03..TAG-05 | Phase 20 | Planned |
+| BOUND-01..BOUND-02 | Phase 17..Phase 21 | Planned |
 
 **Coverage:**
-- Current requirements: 0 total
-- Mapped to phases: 0
+- Current requirements: 13 total
+- Mapped to phases: 13
 - Unmapped: 0
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after archiving v0.1.0 planning history*
+*Last updated: 2026-06-26 after selecting v0.1.1 editing and tag workflow requirements*
