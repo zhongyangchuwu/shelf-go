@@ -272,6 +272,7 @@ func newSecretGetCmd() *cobra.Command {
 }
 
 func newSecretListCmd() *cobra.Command {
+	var tags []string
 	cmd := &cobra.Command{
 		Use:               "list [prefix]",
 		Short:             "List secret paths",
@@ -286,12 +287,14 @@ func newSecretListCmd() *cobra.Command {
 			if len(args) > 0 {
 				prefix = args[0]
 			}
-			for _, path := range st.List(prefix) {
+			for _, path := range st.ListByTags(prefix, tags) {
 				fmt.Fprintln(cmd.OutOrStdout(), path)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().StringArrayVar(&tags, "tag", nil, "Select secrets with tag; repeat for AND matching")
+	_ = cmd.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 	return cmd
 }
 

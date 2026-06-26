@@ -64,6 +64,37 @@ func (s *Store) List(prefix string) []string {
 	return paths
 }
 
+func (s *Store) ListByTags(prefix string, tags []string) []string {
+	paths := s.List(prefix)
+	if len(tags) == 0 {
+		return paths
+	}
+	filtered := paths[:0]
+	for _, path := range paths {
+		secret, ok := s.Data.Secrets[path]
+		if ok && HasTags(secret, tags) {
+			filtered = append(filtered, path)
+		}
+	}
+	return filtered
+}
+
+func HasTags(secret Secret, tags []string) bool {
+	for _, want := range tags {
+		found := false
+		for _, got := range secret.Tags {
+			if got == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Store) Delete(path string) bool {
 	_, existed := s.Data.Secrets[path]
 	delete(s.Data.Secrets, path)
