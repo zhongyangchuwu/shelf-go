@@ -4,7 +4,7 @@
 
 Shelf Go is a local-first encrypted secret environment manager for solo developers. It keeps developer secrets in an age-encrypted portable vault, lets projects declare value-free environment bindings in `.shelf.json`, and provides predictable ways to inspect, export, inject, and edit those secrets without treating plaintext `.env` files as the source of truth.
 
-Shelf optimizes for correctness first and usability second: secret values must not leak into config, manifests, backups, or unexpected files; common workflows should still be comfortable through clear command namespaces, project-aware exports/runs, and local TUI/Web-style editing rather than raw JSON editing when possible.
+Shelf optimizes for correctness first and usability second: secret values must not leak into config, manifests, backups, or unexpected files; common workflows should still be comfortable through clear command namespaces, project-aware exports/runs, and local Web-style editing rather than raw JSON editing when possible.
 
 ## Core Value
 
@@ -14,29 +14,12 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 ### Validated
 
-- [x] Secret CRUD exists through the `shelf secret` command group, including add, set, get, list, info, edit, and remove.
-- [x] Secret identity uses stable `group_path:key` paths with metadata stored beside each secret.
-- [x] Age-encrypted vault persistence exists for core secret workflows, including vault config, recipients, identity paths, encrypted writes, encrypted backups, and actionable vault load errors.
-- [x] Plaintext-to-vault migration exists, preserving the source until the encrypted target decrypts and validates successfully.
-- [x] Project manifests exist through `.shelf.json` so projects can declare required secret paths without storing values.
-- [x] Project binding management exists through project commands for init, explain, add, rm, list, and export.
-- [x] Runtime injection exists through a project-aware run workflow and value-free dry-run behavior.
-- [x] Direct secret export exists for exact paths and prefixes in shell, env, and JSON formats.
-- [x] Local health checks exist through `shelf doctor`.
-- [x] Mutating secret-store commands use a write-side lock and atomic save behavior.
-- [x] Git safety checks exist through `shelf doctor`, distinguishing plaintext JSON from encrypted vault files and flagging tracked plaintext stores as unsafe.
-- [x] A localhost-only on-demand vault manager exists for browsing/searching metadata, intentional reveal, and create/update/delete over encrypted storage.
-- [x] User-facing documentation explains encrypted vault setup, age recipients and identity paths, chezmoi-safe storage, value-free manifests, plaintext exports, migration cleanup, and manager reveal risks.
-- [x] Pre-release command hierarchy is scoped and canonical: global onboarding is `shelf setup`, vault lifecycle is `shelf vault`, direct export is `shelf secret export`, and project runtime injection is `shelf project run`.
-- [x] Vault status/check diagnostics report config, vault path, recipient configuration, format, loadability, and recovery guidance without revealing values.
-- [x] Project session activation/deactivation/shell semantics were designed under `shelf project` and intentionally left unimplemented for now because hook-based shell mutation is not the minimal default workflow.
-- [x] Project export defaults to sourceable shell output, while explicit env and JSON formats remain available and no dotenv format is added.
-- [x] Vault recovery is intentionally minimal: Shelf creates a single last-write encrypted `.bak`, and users recover with ordinary file copy plus `shelf vault status` verification.
-- [x] Secret edit plaintext temp files are explicitly permission-hardened and covered by cleanup tests; local manager token and host boundaries are pinned by tests and documented.
+- [x] v0.1.0 is published with age-encrypted portable vault storage, scoped CLI command groups, value-free project manifests, project export/run workflows, localhost vault manager, release automation, and public documentation.
+- [x] Completed v0.1.0 planning history is archived at `.planning/archive/releases/v0.1.0/`.
 
 ### Active
 
-- [ ] Select the next release or implementation milestone.
+- [ ] Select the v0.1.1 release or implementation milestone.
 
 ### Out of Scope
 
@@ -49,11 +32,9 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 ## Context
 
-The existing repository is a Go CLI using Cobra. The command layer lives in `internal/cli`, reusable secret-store behavior lives in `internal/store`, project manifests live in `internal/manifest`, output rendering lives in `internal/render`, local manager HTTP behavior lives in `internal/manager`, and runtime config resolution lives in `internal/config`.
+The repository is a Go CLI using Cobra. The display layer lives in `cmd/shelf`, `internal/cli`, and `internal/manager`; feature support lives in `internal/app`, `internal/project`, `internal/vault`, and `internal/secret`; base support lives in `internal/config`, `internal/store`, `internal/manifest`, `internal/render`, `internal/atomicfile`, and `internal/version`.
 
-The current encrypted vault milestone is complete but was built before the final command hierarchy was settled. The repo has not been published, so no backward-compatible aliases are required. Simplicity is preferred over keeping old command spellings.
-
-The current command ambiguity is concrete: top-level `shelf init` initializes global config and vault state, while `shelf project init` initializes `.shelf.json`; top-level `shelf run` implicitly depends on project state; top-level `shelf export` exports secrets directly rather than project bindings; top-level `shelf manager` opens the vault UI but does not say what it manages.
+The v0.1.0 release is published and archived. New work should start by selecting a v0.1.1 milestone, adding current requirements, and creating fresh phase directories under `.planning/phases/`.
 
 ## Constraints
 
@@ -65,7 +46,7 @@ The current command ambiguity is concrete: top-level `shelf init` initializes gl
 - **Local-first:** Shelf should not require a hosted backend, account, or daemon for core CLI workflows.
 - **Usability:** CLI workflows must stay scriptable, but editing and browsing secrets should support better local interfaces than full-object terminal editing alone.
 - **Non-secret config:** Shelf config and `.shelf.json` project manifests must not contain secret values.
-- **Brownfield architecture:** New functionality should keep the current package boundaries: CLI orchestration in `internal/cli`, persistence in `internal/store`, project manifests in `internal/manifest`, rendering in `internal/render`, local manager behavior in `internal/manager`, and config resolution in `internal/config`.
+- **Brownfield architecture:** Keep command orchestration in `internal/cli`, reusable feature workflows in feature packages, persistence in `internal/store`, project manifests in `internal/manifest`, rendering in `internal/render`, local manager behavior in `internal/manager`, and config resolution in `internal/config`.
 
 ## Key Decisions
 
@@ -80,8 +61,9 @@ The current command ambiguity is concrete: top-level `shelf init` initializes gl
 | Use `vault` for vault lifecycle and local manager entrypoints | Initializing, migrating, inspecting, and opening the vault are vault operations, not secret-record operations. | Implemented as `vault init`, `vault migrate`, `vault status`/`check`, and `vault open`. |
 | Use `secret export` for direct path/prefix export | Direct export operates on vault secret paths, while `project export` operates on `.shelf.json` bindings. | Implemented under `shelf secret export`. |
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, revocation, audit, and conflict handling before the solo workflow is solid. | Kept out of scope. |
-| Prefer explicit export/source over shell hooks | Hook-based activation mutates parent-shell state implicitly and adds restore complexity; sourceable shell output keeps behavior visible and easy to audit. | Current milestone changes `project export` default to shell output and keeps activate/deactivate/shell deferred. |
+| Prefer explicit export/source over shell hooks | Hook-based activation mutates parent-shell state implicitly and adds restore complexity; sourceable shell output keeps behavior visible and easy to audit. | `project export` defaults to shell output; activate/deactivate/shell remains deferred. |
 | Defer storage-engine changes | JSON inside an age-encrypted vault keeps the security and portability model simple. SQLite is worth a future spike only when schema/search/history pressure appears; Dolt is too heavy for vault storage and conflicts with encrypted-at-rest secret semantics. | Current storage remains age-encrypted JSON; SQLite is recorded as a deferred candidate, Dolt is not. |
+| Keep reusable workflows out of `internal/cli` | CLI files should stay command-family oriented and not own behavior needed by tests, manager, or future UX. | `internal/app`, `internal/project`, `internal/vault`, `internal/secret`, and `internal/atomicfile` own reusable behavior. |
 
 ## Evolution
 
@@ -95,4 +77,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-25 after recording SQLite as a deferred storage spike candidate*
+*Last updated: 2026-06-26 after archiving v0.1.0 planning history*

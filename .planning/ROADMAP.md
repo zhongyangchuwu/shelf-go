@@ -1,126 +1,46 @@
-# Roadmap: Pre-release Architecture Refactor
+# Roadmap: Shelf Go v0.1.1
 
 ## Overview
 
-Shelf has completed the encrypted vault baseline, command hierarchy cutover, project workflow compatibility, vault UX hardening, safety hardening, release-readiness docs, and minimal project env UX. The next pre-release milestone reduces architecture friction before the first public release by moving reusable behavior out of `internal/cli` while keeping the CLI package compact and command-family oriented.
-
-## Architecture Direction
-
-### Layers
-
-```text
-Top/display:      cmd/shelf, internal/cli, internal/manager
-Feature support:  internal/app, internal/project, later internal/vault and internal/secret
-Base support:     internal/config, internal/store, internal/manifest, internal/render, internal/version, later internal/atomicfile
-```
-
-### Decisions
-
-- Keep `internal/cli` at roughly 3-6 files, grouped by command family, not one file per command.
-- Move reusable application/runtime construction to `internal/app`.
-- Move project identity and manifest resolution to `internal/project`.
-- Do not create `internal/gitutil` in the first extraction. Project-owned git helpers live in `internal/project`; shared git utilities can be extracted later only if both project and vault diagnostics need them.
-- Defer storage backend interfaces until a real second backend spike begins.
+Shelf Go v0.1.0 has shipped. The active planning workspace is now open for v0.1.1 selection; no implementation phase is selected yet.
 
 ## Phases
 
-- [x] Phase 13: App Runtime and Project Package Extraction
-- [x] Phase 14: Vault Diagnostics and Secret Workflow Extraction
-- [x] Phase 15: Shared Persistence Primitives and Store File Layout
-- [ ] Phase 16: First Release Readiness
+No active v0.1.1 phases yet.
 
 ## Phase Details
 
-### Phase 13: App Runtime and Project Package Extraction
-
-**Goal:** Move reusable runtime/vault loading and project resolution behavior out of `internal/cli` without changing command behavior.
-
-**Depends on:** Completed safety and minimal project env UX milestone.
-
-**Requirements:** ARCH-01, ARCH-02, ARCH-03
-
-**Success Criteria:**
-1. `internal/app` owns runtime/vault load, read, and update helpers currently in `internal/cli/root.go`.
-2. `internal/project` owns manifest resolution, project diagnostics, render binding conversion, project ID, git root lookup, and remote normalization currently in `internal/cli/project.go`.
-3. `internal/cli` remains command-family oriented and does not split into one file per subcommand.
-4. Existing project, run, and full test suites pass.
-
-**Plan:** `.planning/phases/013-architecture-package-boundaries/PLAN.md`
-
-### Phase 14: Vault Diagnostics and Secret Workflow Extraction
-
-**Goal:** Move reusable vault status/doctor diagnostics and plaintext edit workflow out of `internal/cli`.
-
-**Depends on:** Phase 13 complete.
-
-**Requirements:** ARCH-04, ARCH-05
-
-**Success Criteria:**
-1. `internal/vault` owns vault status/check/doctor diagnostic rules and returns typed diagnostic records for CLI rendering.
-2. `internal/secret` owns `secret edit` editable JSON and temp-file/editor lifecycle.
-3. `internal/cli/vault.go`, `internal/cli/doctor.go`, and `internal/cli/secret.go` remain thin command-family files.
-4. Vault, doctor, manager, and secret edit tests pass.
-
-**Plan:** `.planning/phases/014-vault-secret-extraction/PLAN.md`
-
-### Phase 15: Shared Persistence Primitives and Store File Layout
-
-**Goal:** Remove duplicated persistence primitives and make `internal/store` easier to evolve without introducing speculative backend interfaces.
-
-**Depends on:** Phase 14 complete.
-
-**Requirements:** ARCH-06, ARCH-07, ARCH-08
-
-**Success Criteria:**
-1. Atomic write behavior is centralized in a small shared helper with explicit mode, sync, and backup options.
-2. Env name and path token validation have one canonical implementation.
-
-3. `internal/store` separates store model/methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files within the same package.
-4. Store, manifest, render, setup, and full test suites pass.
-
-**Plan:** `.planning/phases/015-persistence-store-layout/PLAN.md`
-
-### Phase 16: First Release Readiness
-
-**Goal:** Prepare the first public release with repeatable artifacts, concise public docs, and release verification.
-
-**Depends on:** Phase 15 complete.
-
-**Requirements:** REL-01, REL-02, REL-03, REL-04
-
-**Success Criteria:**
-1. Minimal GoReleaser config produces multi-platform CLI archives and checksums in snapshot mode.
-2. GitHub Actions has separate CI and tag-triggered release workflows.
-3. README is usage-oriented instead of a command inventory.
-4. CHANGELOG has a `0.1.0` section and release verification is recorded.
-
-**Plan:** `.planning/phases/016-first-release-readiness/PLAN.md`
+None. Add a phase after selecting the next v0.1.1 milestone and mapping current requirements.
 
 ## Future Candidates
 
+- Manager UI redesign: improve `shelf vault open` visual design, information architecture, and edit/reveal UX; keep the current loopback manager functional while improving local editing speed and safety clarity.
+- Native Windows smoke tests: verify `shelf setup`, secret set/get, and project run on a real Windows runner.
 - SQLite storage spike: investigate SQLite as an encrypted vault payload or metadata/search layer only if JSON schema/search/history pressure becomes real. Any design must preserve encrypted-at-rest safety and avoid plaintext SQLite WAL, journal, or temp files.
-- Dolt is not a current vault-storage candidate: it is powerful for versioned SQL data, but too heavy for Shelf's portable encrypted-file model and weakens useful diff/history unless secrets or metadata are exposed.
+- Password-only encryption: consider only if users need a no-age-key workflow and the threat model remains clear.
+- Multiple vaults or profiles: consider after single-vault workflows show concrete pressure.
+- Chezmoi helper commands: consider optional integration while preserving Shelf's portable encrypted-file model.
+- Package-manager distribution: consider Homebrew/Scoop or similar after initial usage validates demand.
 - `internal/gitutil`: create only if both `internal/project` and future `internal/vault` need shared git subprocess helpers.
-- Manager UI redesign: improve `shelf vault open` visual design, information architecture, and edit/reveal UX in a post-0.1 phase; keep the current loopback manager documented as functional but not a release centerpiece.
 
-## Explicit Non-Goals for This Milestone
+## Explicit Non-Goals Until Selected
 
-- No command behavior changes.
-- No `project activate` / `project deactivate` shell hook implementation.
+- No active `project activate` / `project deactivate` shell hook implementation.
 - No `project shell` wrapper unless a later phase shows clear value over `project run -- $SHELL`.
 - No new `dotenv` format; use existing `shell` output for sourceable files.
-- No team sharing, hosted sync, permanent daemon, or release packaging work in this milestone.
-- No SQLite backend implementation.
-- No speculative repository/service abstraction beyond packages required by the current code.
+- No team sharing, hosted sync, or permanent daemon.
+- No SQLite backend implementation without a dedicated spike.
+- No speculative repository/service abstraction beyond packages required by current code.
 
 ## Progress
 
 | Phase | Status | Requirements | Plan | Completion Date |
 |-------|--------|--------------|------|-----------------|
-| Phase 13: App Runtime and Project Package Extraction | Complete | ARCH-01..ARCH-03 | `.planning/phases/013-architecture-package-boundaries/PLAN.md` | 2026-06-25 |
-| Phase 14: Vault Diagnostics and Secret Workflow Extraction | Complete | ARCH-04..ARCH-05 | `.planning/phases/014-vault-secret-extraction/PLAN.md` | 2026-06-25 |
-| Phase 15: Shared Persistence Primitives and Store File Layout | Complete | ARCH-06..ARCH-08 | `.planning/phases/015-persistence-store-layout/PLAN.md` | 2026-06-25 |
-| Phase 16: First Release Readiness | Complete | REL-01..REL-04 | `.planning/phases/016-first-release-readiness/PLAN.md` | 2026-06-25 |
+| None selected for v0.1.1 | Ready | - | - | - |
+
+## Archived Releases
+
+- v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-25 after completing Phase 16 first release readiness*
+*Last updated: 2026-06-26 after archiving v0.1.0 planning history*
