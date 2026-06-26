@@ -4,9 +4,9 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -31,12 +31,17 @@ type SecretInfo struct {
 }
 
 type secretPayload struct {
+	OldPath     string   `json:"old_path,omitempty"`
 	Path        string   `json:"path"`
-	Value       string   `json:"value"`
+	Value       *string  `json:"value,omitempty"`
 	Env         string   `json:"env,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
 	Force       bool     `json:"force,omitempty"`
+}
+
+type pathPayload struct {
+	Path string `json:"path"`
 }
 
 func NewServer(vault *store.Vault, token, host string) (*Server, error) {
@@ -55,9 +60,11 @@ func NewServer(vault *store.Vault, token, host string) (*Server, error) {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
+	mux.HandleFunc("/api/secret", s.handleSecret)
 	mux.HandleFunc("/api/secrets", s.handleSecrets)
 	mux.HandleFunc("/api/reveal", s.handleReveal)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		setNoStore(w)
 		if !s.validHost(r.Host) {
 			http.Error(w, "invalid host", http.StatusForbidden)
 			return
@@ -72,6 +79,14 @@ func (s *Server) Handler() http.Handler {
 		}
 		if r.URL.Query().Get("token") == s.token {
 			http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: s.token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+			if r.Method == http.MethodGet || r.Method == http.MethodHead {
+				cleanURL := *r.URL
+				query := cleanURL.Query()
+				query.Del("token")
+				cleanURL.RawQuery = query.Encode()
+				http.Redirect(w, r, cleanURL.String(), http.StatusSeeOther)
+				return
+			}
 		}
 		mux.ServeHTTP(w, r)
 	})
@@ -103,6 +118,32 @@ func (s *Server) handleSecrets(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleSecret(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		http.Error(w, "path is required", http.StatusBadRequest)
+		return
+	}
+	var info SecretInfo
+	err := s.vault.Read(func(st *store.Store) error {
+		secret, ok := st.Get(path)
+		if !ok {
+			return fmt.Errorf("secret not found: %s", path)
+		}
+		info = newSecretInfo(path, secret)
+		return nil
+	})
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, info)
+}
+
 func (s *Server) listSecrets(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
 	var items []SecretInfo
@@ -114,7 +155,7 @@ func (s *Server) listSecrets(w http.ResponseWriter, r *http.Request) {
 			if !ok || query != "" && !matchesSecret(query, path, secret) {
 				continue
 			}
-			items = append(items, SecretInfo{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0})
+			items = append(items, newSecretInfo(path, secret))
 		}
 		sort.Slice(items, func(i, j int) bool { return items[i].Path < items[j].Path })
 		return nil
@@ -127,20 +168,24 @@ func (s *Server) listSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+	if r.Method != http.MethodPost {
 		methodNotAllowed(w)
 		return
 	}
-	path := r.URL.Query().Get("path")
-	if path == "" {
+	var payload pathPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+	if payload.Path == "" {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
 	}
 	var value string
 	err := s.vault.Read(func(st *store.Store) error {
-		secret, ok := st.Get(path)
+		secret, ok := st.Get(payload.Path)
 		if !ok {
-			return fmt.Errorf("secret not found: %s", path)
+			return fmt.Errorf("secret not found: %s", payload.Path)
 		}
 		v, err := render.ValueString(secret.Value)
 		if err != nil {
@@ -153,7 +198,7 @@ func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"path": path, "value": value})
+	writeJSON(w, http.StatusOK, map[string]string{"path": payload.Path, "value": value})
 }
 
 func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
@@ -166,15 +211,41 @@ func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
 	}
-	value, err := store.ParseValue(payload.Value)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if r.Method == http.MethodPost && payload.Value == nil {
+		http.Error(w, "value is required", http.StatusBadRequest)
 		return
 	}
-	secret := store.Secret{Value: value, Env: payload.Env, Description: payload.Description, Tags: payload.Tags}
-	err = s.vault.Update(func(st *store.Store) error {
-		force := payload.Force || r.Method == http.MethodPut
-		return st.Set(payload.Path, secret, force)
+	err := s.vault.Update(func(st *store.Store) error {
+		secret := store.Secret{Env: payload.Env, Description: payload.Description, Tags: payload.Tags}
+		if r.Method == http.MethodPut {
+			oldPath := payload.OldPath
+			if oldPath == "" {
+				oldPath = payload.Path
+			}
+			existing, ok := st.Get(oldPath)
+			if !ok {
+				return fmt.Errorf("secret not found: %s", oldPath)
+			}
+			secret.Value = existing.Value
+			if payload.Value != nil {
+				value, err := store.ParseValue(*payload.Value)
+				if err != nil {
+					return err
+				}
+				secret.Value = value
+			}
+			id, err := store.ParseSecretID(payload.Path)
+			if err != nil {
+				return err
+			}
+			return st.Update(oldPath, id, secret)
+		}
+		value, err := store.ParseValue(*payload.Value)
+		if err != nil {
+			return err
+		}
+		secret.Value = value
+		return st.Set(payload.Path, secret, payload.Force)
 	})
 	if err != nil {
 		serverError(w, err)
@@ -238,11 +309,19 @@ func (s *Server) validOrigin(r *http.Request) bool {
 	if origin == "" {
 		return false
 	}
-	return origin == "http://"+s.host || origin == "http://localhost" || strings.HasPrefix(origin, "http://127.0.0.1:") || strings.HasPrefix(origin, "http://[::1]:")
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Scheme != "http" {
+		return false
+	}
+	return s.validHost(parsed.Host)
 }
 
 func isUnsafe(method string) bool {
 	return method != http.MethodGet && method != http.MethodHead && method != http.MethodOptions
+}
+
+func newSecretInfo(path string, secret store.Secret) SecretInfo {
+	return SecretInfo{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0}
 }
 
 func matchesSecret(query, path string, secret store.Secret) bool {
@@ -267,36 +346,14 @@ func serverError(w http.ResponseWriter, err error) {
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
+	setNoStore(w)
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
 
-var indexTemplate = template.Must(template.New("index").Parse(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Shelf Vault Manager</title></head>
-<body>
-<h1>Shelf Vault Manager</h1>
-<form id="search"><input name="q" placeholder="Search paths, env, description, tags"><button>Search</button></form>
-<ul id="results"></ul>
-<script>
-async function load(q='') {
-  const res = await fetch('/api/secrets?q=' + encodeURIComponent(q));
-  const data = await res.json();
-  results.innerHTML = '';
-  for (const item of data.secrets || []) {
-    const li = document.createElement('li');
-    li.textContent = item.path + (item.env ? ' -> ' + item.env : '') + (item.description ? ' - ' + item.description : '');
-    const button = document.createElement('button');
-    button.textContent = 'Reveal';
-    button.onclick = async () => {
-      const r = await fetch('/api/reveal?path=' + encodeURIComponent(item.path));
-      const revealed = await r.json();
-      alert(revealed.value);
-    };
-    li.appendChild(button);
-    results.appendChild(li);
-  }
+func setNoStore(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Referrer-Policy", "no-referrer")
 }
-search.onsubmit = event => { event.preventDefault(); load(new FormData(search).get('q') || ''); };
-load();
-</script>
-</body></html>`))

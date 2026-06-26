@@ -48,10 +48,29 @@ func managerRequest(method, target, body string) *http.Request {
 	return req
 }
 
+func authorizedManagerRequest(method, target, body string) *http.Request {
+	req := managerRequest(method, target, body)
+	req.Header.Set("X-Shelf-Token", testToken)
+	return req
+}
+
+func unsafeManagerRequest(method, target, body string) *http.Request {
+	req := authorizedManagerRequest(method, target, body)
+	req.Header.Set("Origin", "http://127.0.0.1:4321")
+	return req
+}
+
 func serveManager(server *Server, req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	server.Handler().ServeHTTP(rr, req)
 	return rr
+}
+
+func requireNoStore(t *testing.T, rr *httptest.ResponseRecorder) {
+	t.Helper()
+	if got := rr.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("Cache-Control = %q, want no-store", got)
+	}
 }
 
 func TestManagerRequiresTokenAndValidHost(t *testing.T) {
@@ -62,7 +81,7 @@ func TestManagerRequiresTokenAndValidHost(t *testing.T) {
 		t.Fatalf("missing token status = %d, want %d", rr.Code, http.StatusUnauthorized)
 	}
 
-	badHost := managerRequest(http.MethodGet, "/api/secrets?token="+testToken, "")
+	badHost := authorizedManagerRequest(http.MethodGet, "/api/secrets", "")
 	badHost.Host = "evil.test"
 	if rr := serveManager(server, badHost); rr.Code != http.StatusForbidden {
 		t.Fatalf("bad host status = %d, want %d", rr.Code, http.StatusForbidden)
@@ -72,14 +91,13 @@ func TestManagerRequiresTokenAndValidHost(t *testing.T) {
 func TestManagerAcceptsLocalhostAndAlternateTokenTransports(t *testing.T) {
 	server, _ := newTestServer(t)
 
-	localhost := managerRequest(http.MethodGet, "/api/secrets?token="+testToken, "")
+	localhost := authorizedManagerRequest(http.MethodGet, "/api/secrets", "")
 	localhost.Host = "localhost:4321"
 	if rr := serveManager(server, localhost); rr.Code != http.StatusOK {
 		t.Fatalf("localhost status = %d, want %d", rr.Code, http.StatusOK)
 	}
 
-	headerToken := managerRequest(http.MethodGet, "/api/secrets", "")
-	headerToken.Header.Set("X-Shelf-Token", testToken)
+	headerToken := authorizedManagerRequest(http.MethodGet, "/api/secrets", "")
 	if rr := serveManager(server, headerToken); rr.Code != http.StatusOK {
 		t.Fatalf("header token status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -91,12 +109,18 @@ func TestManagerAcceptsLocalhostAndAlternateTokenTransports(t *testing.T) {
 	}
 }
 
-func TestManagerQueryTokenSetsStrictCookie(t *testing.T) {
+func TestManagerQueryTokenSetsStrictCookieAndRedirects(t *testing.T) {
 	server, _ := newTestServer(t)
 	req := managerRequest(http.MethodGet, "/?token="+testToken, "")
 	rr := serveManager(server, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("index status = %d, want %d", rr.Code, http.StatusOK)
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("index status = %d, want %d", rr.Code, http.StatusSeeOther)
+	}
+	if got := rr.Header().Get("Location"); got != "/" {
+		t.Fatalf("Location = %q, want /", got)
+	}
+	if strings.Contains(rr.Header().Get("Location"), testToken) {
+		t.Fatalf("redirect leaked token in location: %s", rr.Header().Get("Location"))
 	}
 	cookies := rr.Result().Cookies()
 	if len(cookies) != 1 {
@@ -112,22 +136,43 @@ func TestManagerQueryTokenSetsStrictCookie(t *testing.T) {
 	if cookie.SameSite != http.SameSiteStrictMode {
 		t.Fatalf("cookie SameSite = %v, want Strict", cookie.SameSite)
 	}
+	requireNoStore(t, rr)
+}
+func TestManagerIndexServesEmbeddedWorkbench(t *testing.T) {
+	server, _ := newTestServer(t)
+	req := authorizedManagerRequest(http.MethodGet, "/", "")
+	rr := serveManager(server, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("index status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	requireNoStore(t, rr)
+	body := rr.Body.String()
+	for _, want := range []string{"Shelf manager", "Add secret", "Reveal value", "Copy value", "Delete secret", "Local encrypted vault"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("index missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{"https://", "http://", "localStorage", "sessionStorage"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("index contains forbidden browser dependency/storage %q", forbidden)
+		}
+	}
 }
 
 func TestManagerListSearchExcludesSecretValues(t *testing.T) {
 	server, _ := newTestServer(t)
 	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN","description":"primary api token","tags":["api"]}`
-	writeReq := managerRequest(http.MethodPost, "/api/secrets?token="+testToken, payload)
-	writeReq.Header.Set("Origin", "http://127.0.0.1:4321")
+	writeReq := unsafeManagerRequest(http.MethodPost, "/api/secrets", payload)
 	if rr := serveManager(server, writeReq); rr.Code != http.StatusOK {
 		t.Fatalf("write status = %d body=%s", rr.Code, rr.Body.String())
 	}
 
-	listReq := managerRequest(http.MethodGet, "/api/secrets?token="+testToken+"&q=api", "")
+	listReq := authorizedManagerRequest(http.MethodGet, "/api/secrets?q=api", "")
 	rr := serveManager(server, listReq)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("list status = %d body=%s", rr.Code, rr.Body.String())
 	}
+	requireNoStore(t, rr)
 	body := rr.Body.String()
 	for _, want := range []string{"app:token", "APP_TOKEN", "primary api token", "\"value_set\":true"} {
 		if !strings.Contains(body, want) {
@@ -139,25 +184,56 @@ func TestManagerListSearchExcludesSecretValues(t *testing.T) {
 	}
 }
 
-func TestManagerRevealIsExplicit(t *testing.T) {
+func TestManagerSecretDetailExcludesSecretValue(t *testing.T) {
 	server, _ := newTestServer(t)
-	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN"}`
-	writeReq := managerRequest(http.MethodPost, "/api/secrets?token="+testToken, payload)
-	writeReq.Header.Set("Origin", "http://127.0.0.1:4321")
+	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN","description":"primary api token","tags":["api"]}`
+	writeReq := unsafeManagerRequest(http.MethodPost, "/api/secrets", payload)
 	if rr := serveManager(server, writeReq); rr.Code != http.StatusOK {
 		t.Fatalf("write status = %d body=%s", rr.Code, rr.Body.String())
 	}
 
-	withoutToken := managerRequest(http.MethodGet, "/api/reveal?path=app:token", "")
+	detailReq := authorizedManagerRequest(http.MethodGet, "/api/secret?path=app:token", "")
+	rr := serveManager(server, detailReq)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("detail status = %d body=%s", rr.Code, rr.Body.String())
+	}
+	requireNoStore(t, rr)
+	body := rr.Body.String()
+	for _, want := range []string{"app:token", "APP_TOKEN", "primary api token", "\"value_set\":true"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("detail response missing %q: %s", want, body)
+		}
+	}
+	if strings.Contains(body, "secret-value") {
+		t.Fatalf("detail response leaked secret value: %s", body)
+	}
+}
+
+func TestManagerRevealRequiresPostAndIsExplicit(t *testing.T) {
+	server, _ := newTestServer(t)
+	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN"}`
+	writeReq := unsafeManagerRequest(http.MethodPost, "/api/secrets", payload)
+	if rr := serveManager(server, writeReq); rr.Code != http.StatusOK {
+		t.Fatalf("write status = %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	withoutToken := managerRequest(http.MethodPost, "/api/reveal", `{"path":"app:token"}`)
+	withoutToken.Header.Set("Origin", "http://127.0.0.1:4321")
 	if rr := serveManager(server, withoutToken); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("reveal without token status = %d, want %d", rr.Code, http.StatusUnauthorized)
 	}
 
-	revealReq := managerRequest(http.MethodGet, "/api/reveal?token="+testToken+"&path=app:token", "")
+	getReveal := authorizedManagerRequest(http.MethodGet, "/api/reveal?path=app:token", "")
+	if rr := serveManager(server, getReveal); rr.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("GET reveal status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
+	}
+
+	revealReq := unsafeManagerRequest(http.MethodPost, "/api/reveal", `{"path":"app:token"}`)
 	rr := serveManager(server, revealReq)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("reveal status = %d body=%s", rr.Code, rr.Body.String())
 	}
+	requireNoStore(t, rr)
 	if !strings.Contains(rr.Body.String(), "secret-value") {
 		t.Fatalf("reveal response missing value: %s", rr.Body.String())
 	}
@@ -166,20 +242,18 @@ func TestManagerRevealIsExplicit(t *testing.T) {
 func TestManagerWritesUseEncryptedVaultAndRejectBadOrigin(t *testing.T) {
 	server, vaultPath := newTestServer(t)
 	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN"}`
-	badOrigin := managerRequest(http.MethodPost, "/api/secrets?token="+testToken, payload)
+	badOrigin := authorizedManagerRequest(http.MethodPost, "/api/secrets", payload)
 	badOrigin.Header.Set("Origin", "http://evil.test")
 	if rr := serveManager(server, badOrigin); rr.Code != http.StatusForbidden {
 		t.Fatalf("bad origin status = %d, want %d", rr.Code, http.StatusForbidden)
 	}
 
-	writeReq := managerRequest(http.MethodPost, "/api/secrets?token="+testToken, payload)
-	writeReq.Header.Set("Origin", "http://127.0.0.1:4321")
+	writeReq := unsafeManagerRequest(http.MethodPost, "/api/secrets", payload)
 	if rr := serveManager(server, writeReq); rr.Code != http.StatusOK {
 		t.Fatalf("write status = %d body=%s", rr.Code, rr.Body.String())
 	}
 
-	updateReq := managerRequest(http.MethodPut, "/api/secrets?token="+testToken, `{"path":"app:token","value":"updated-value","env":"APP_TOKEN"}`)
-	updateReq.Header.Set("Origin", "http://127.0.0.1:4321")
+	updateReq := unsafeManagerRequest(http.MethodPut, "/api/secrets", `{"path":"app:token","value":"updated-value","env":"APP_TOKEN"}`)
 	if rr := serveManager(server, updateReq); rr.Code != http.StatusOK {
 		t.Fatalf("update status = %d body=%s", rr.Code, rr.Body.String())
 	}
@@ -194,19 +268,18 @@ func TestManagerWritesUseEncryptedVaultAndRejectBadOrigin(t *testing.T) {
 		}
 	}
 
-	revealReq := managerRequest(http.MethodGet, "/api/reveal?token="+testToken+"&path=app:token", "")
+	revealReq := unsafeManagerRequest(http.MethodPost, "/api/reveal", `{"path":"app:token"}`)
 	rr := serveManager(server, revealReq)
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "updated-value") {
 		t.Fatalf("updated reveal failed status=%d body=%s", rr.Code, rr.Body.String())
 	}
 
-	deleteReq := managerRequest(http.MethodDelete, "/api/secrets?token="+testToken+"&path=app:token", "")
-	deleteReq.Header.Set("Origin", "http://127.0.0.1:4321")
+	deleteReq := unsafeManagerRequest(http.MethodDelete, "/api/secrets?path=app:token", "")
 	if rr := serveManager(server, deleteReq); rr.Code != http.StatusOK {
 		t.Fatalf("delete status = %d body=%s", rr.Code, rr.Body.String())
 	}
 
-	listReq := managerRequest(http.MethodGet, "/api/secrets?token="+testToken, "")
+	listReq := authorizedManagerRequest(http.MethodGet, "/api/secrets", "")
 	rr = serveManager(server, listReq)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("list status = %d body=%s", rr.Code, rr.Body.String())
@@ -219,5 +292,29 @@ func TestManagerWritesUseEncryptedVaultAndRejectBadOrigin(t *testing.T) {
 	}
 	if len(decoded.Secrets) != 0 {
 		t.Fatalf("deleted secret still listed: %+v", decoded.Secrets)
+	}
+}
+
+func TestManagerPutPreservesValueAndRenamesExplicitly(t *testing.T) {
+	server, _ := newTestServer(t)
+	writeReq := unsafeManagerRequest(http.MethodPost, "/api/secrets", `{"path":"app:token","value":"secret-value","env":"APP_TOKEN"}`)
+	if rr := serveManager(server, writeReq); rr.Code != http.StatusOK {
+		t.Fatalf("write status = %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	updateReq := unsafeManagerRequest(http.MethodPut, "/api/secrets", `{"old_path":"app:token","path":"app:renamed","env":"RENAMED_TOKEN","description":"metadata only","tags":["api","local"]}`)
+	if rr := serveManager(server, updateReq); rr.Code != http.StatusOK {
+		t.Fatalf("update status = %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	revealReq := unsafeManagerRequest(http.MethodPost, "/api/reveal", `{"path":"app:renamed"}`)
+	rr := serveManager(server, revealReq)
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "secret-value") {
+		t.Fatalf("renamed reveal failed status=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	oldReveal := unsafeManagerRequest(http.MethodPost, "/api/reveal", `{"path":"app:token"}`)
+	if rr := serveManager(server, oldReveal); rr.Code != http.StatusBadRequest {
+		t.Fatalf("old path reveal status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 }

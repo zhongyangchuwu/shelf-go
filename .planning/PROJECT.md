@@ -16,10 +16,10 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 - [x] v0.1.0 is published with age-encrypted portable vault storage, scoped CLI command groups, value-free project manifests, project export/run workflows, localhost vault manager, release automation, and public documentation.
 - [x] Completed v0.1.0 planning history is archived at `.planning/archive/releases/v0.1.0/`.
+- [x] v0.1.1 Web manager design and editing console provide add/edit/delete/reveal/copy/tag workflows over the local vault without changing the storage format.
 
 ### Active
 
-- [ ] v0.1.1 improves the local Web manager into the primary secret editing surface for add/edit/delete/reveal/copy/tag workflows.
 - [ ] v0.1.1 keeps CLI editing compact while adding tag-based application flows for `secret` export/list and `project` bindings.
 - [ ] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
 
@@ -81,4 +81,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-26 after selecting v0.1.1 editing and tag workflow milestone*
+*Last updated: 2026-06-26 after completing the v0.1.1 Web manager editing console*

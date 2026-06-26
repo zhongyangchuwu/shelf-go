@@ -85,16 +85,18 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WEB-01..WEB-06 | Phase 17, Phase 18 | Planned |
+| WEB-01..WEB-06 | Phase 17, Phase 18 | Complete |
 | TAG-01..TAG-02 | Phase 19 | Planned |
 | TAG-03..TAG-05 | Phase 20 | Planned |
-| BOUND-01..BOUND-02 | Phase 17..Phase 21 | Planned |
+| BOUND-01 | Phase 17..Phase 21 | In Progress |
+| BOUND-02 | Phase 17..Phase 21 | In Progress |
 
 **Coverage:**
 - Current requirements: 13 total
 - Mapped to phases: 13
 - Unmapped: 0
+- Completed in v0.1.1 so far: WEB-01..WEB-06
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after selecting v0.1.1 editing and tag workflow requirements*
+*Last updated: 2026-06-26 after completing v0.1.1 Web manager editing requirements*

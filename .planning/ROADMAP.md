@@ -6,8 +6,8 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 
 ## Phases
 
-- [ ] Phase 17: Web Manager Design Contract
-- [ ] Phase 18: Web Manager Editing Console
+- [x] Phase 17: Web Manager Design Contract
+- [x] Phase 18: Web Manager Editing Console
 - [ ] Phase 19: Secret Tag Selection
 - [ ] Phase 20: Project Tag Bindings
 - [ ] Phase 21: v0.1.1 Release Hardening
@@ -28,7 +28,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 3. Technical direction keeps `net/http` and single-binary Go distribution; SPA and broad web frameworks are rejected unless explicitly re-approved.
 4. Safety contract covers token URL cleanup, loopback/token/Host/Origin checks, no-store secret responses, and no persistent browser storage for secret values.
 
-**Plan:** `.planning/phases/017-web-manager-design/CONTEXT.md`
+**Plan:** `.planning/phases/017-web-manager-design/PLAN.md`
 
 ### Phase 18: Web Manager Editing Console
 
@@ -44,7 +44,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 3. Existing manager safety tests remain covered and new tests cover token redirect, no-store secret responses, POST reveal/copy, and no value leakage in list/search responses.
 4. Assets are embedded locally and release builds remain single-binary friendly.
 
-**Plan:** TBD after Phase 17.
+**Plan:** `.planning/phases/018-web-manager-editing-console/PLAN.md`
 
 ### Phase 19: Secret Tag Selection
 
@@ -119,8 +119,8 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 
 | Phase | Status | Requirements | Plan | Completion Date |
 |-------|--------|--------------|------|-----------------|
-| Phase 17: Web Manager Design Contract | Planned | WEB-01..WEB-06, BOUND-01..BOUND-02 | `.planning/phases/017-web-manager-design/CONTEXT.md` | - |
-| Phase 18: Web Manager Editing Console | Not Started | WEB-01..WEB-06, BOUND-01 | TBD | - |
+| Phase 17: Web Manager Design Contract | Complete | WEB-01..WEB-06, BOUND-01..BOUND-02 | `.planning/phases/017-web-manager-design/PLAN.md` | 2026-06-26 |
+| Phase 18: Web Manager Editing Console | Complete | WEB-01..WEB-06, BOUND-01 | `.planning/phases/018-web-manager-editing-console/PLAN.md` | 2026-06-26 |
 | Phase 19: Secret Tag Selection | Not Started | TAG-01..TAG-02, TAG-05, BOUND-01 | TBD | - |
 | Phase 20: Project Tag Bindings | Not Started | TAG-03..TAG-05 | TBD | - |
 | Phase 21: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, BOUND-01..BOUND-02 | TBD | - |
@@ -130,4 +130,4 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after selecting v0.1.1 editing and tag workflow roadmap*
+*Last updated: 2026-06-26 after completing v0.1.1 Web manager design and editing console phases*
