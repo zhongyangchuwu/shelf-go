@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -80,12 +81,23 @@ func checkFile(report *Report, vaultPath string) {
 		return
 	}
 	report.OK("vault file exists", vaultPath)
+	detail, secure := fileModeDetail(info)
+	if secure {
+		report.OK("vault file mode", detail)
+	} else {
+		report.Warn("vault file mode", detail)
+	}
+}
+
+func fileModeDetail(info os.FileInfo) (string, bool) {
+	if runtime.GOOS == "windows" {
+		return "not checked on windows", true
+	}
 	mode := info.Mode().Perm()
 	if mode&0o077 == 0 {
-		report.OK("vault file mode", mode.String())
-	} else {
-		report.Warn("vault file mode", mode.String()+" is broader than 0600")
+		return mode.String(), true
 	}
+	return mode.String() + " is broader than 0600", false
 }
 
 func checkRecipients(report *Report, runtime config.Runtime) {

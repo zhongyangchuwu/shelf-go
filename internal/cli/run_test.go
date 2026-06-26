@@ -11,7 +11,7 @@ import (
 
 func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
 }
 func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
 }
 func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
 
 func TestRunDryRunUsesEncryptedVaultWithoutPlaintextSideData(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestRunDryRunUsesEncryptedVaultWithoutPlaintextSideData(t *testing.T) {
 
 func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
 }
 func TestRunReturnsChildExitCode(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}

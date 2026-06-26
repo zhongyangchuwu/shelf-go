@@ -62,7 +62,7 @@ func completionSearchPaths() []string {
 		return nil
 	}
 	home, _ := os.UserHomeDir()
-	parts := strings.Split(raw, ":")
+	parts := filepath.SplitList(raw)
 	paths := make([]string, 0, len(parts))
 	for _, part := range parts {
 		part = strings.TrimSpace(part)

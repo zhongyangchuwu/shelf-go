@@ -71,7 +71,7 @@ func TestDoctorChecksCompletionFromFpath(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(completionDir, "_shelf"), []byte("#compdef shelf\n"), 0o600); err != nil {
 		t.Fatalf("write completion: %v", err)
 	}
-	t.Setenv("FPATH", filepath.Join(dir, "missing")+":"+completionDir)
+	t.Setenv("FPATH", filepath.Join(dir, "missing")+string(os.PathListSeparator)+completionDir)
 	if _, err := runShelf(t, "--config", configPath, "--vault", data, "secret", "set", "app:token", "one"); err != nil {
 		t.Fatalf("set: %v", err)
 	}
@@ -87,8 +87,7 @@ func TestDoctorChecksCompletionFromFpath(t *testing.T) {
 
 func TestDoctorFailsTrackedPlaintextStore(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
-	if _, err := runGit(t, "init"); err != nil {
+	if _, err := runGitIn(t, dir, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
 	configPath := filepath.Join(dir, "config.yaml")
@@ -97,10 +96,10 @@ func TestDoctorFailsTrackedPlaintextStore(t *testing.T) {
 	if err := os.WriteFile(vaultPath, plaintext, 0o600); err != nil {
 		t.Fatalf("write plaintext: %v", err)
 	}
-	if _, err := runGit(t, "add", "secrets.json"); err != nil {
+	if _, err := runGitIn(t, dir, "add", "secrets.json"); err != nil {
 		t.Fatalf("git add: %v", err)
 	}
-	out, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "doctor")
+	out, err := runShelfIn(t, dir, "--config", configPath, "--vault", vaultPath, "doctor")
 	if err == nil {
 		t.Fatalf("expected doctor to fail tracked plaintext store")
 	}
@@ -113,8 +112,7 @@ func TestDoctorFailsTrackedPlaintextStore(t *testing.T) {
 
 func TestDoctorConfirmsTrackedEncryptedVault(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
-	if _, err := runGit(t, "init"); err != nil {
+	if _, err := runGitIn(t, dir, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
 	configPath := filepath.Join(dir, "config.yaml")
@@ -122,10 +120,10 @@ func TestDoctorConfirmsTrackedEncryptedVault(t *testing.T) {
 	if _, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "secret", "set", "app:token", "safe-secret"); err != nil {
 		t.Fatalf("set: %v", err)
 	}
-	if _, err := runGit(t, "add", "vault.age"); err != nil {
+	if _, err := runGitIn(t, dir, "add", "vault.age"); err != nil {
 		t.Fatalf("git add: %v", err)
 	}
-	out, err := runShelf(t, "--config", configPath, "--vault", vaultPath, "doctor")
+	out, err := runShelfIn(t, dir, "--config", configPath, "--vault", vaultPath, "doctor")
 	if err != nil {
 		t.Fatalf("doctor: %v\n%s", err, out)
 	}

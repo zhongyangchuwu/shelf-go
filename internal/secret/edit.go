@@ -52,16 +52,12 @@ func Edit(st *store.Store, req EditRequest) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp("", "shelf-secret-*.json")
+	tmp, err := createPrivateTempFile("edit.json")
 	if err != nil {
 		return err
 	}
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
-		return err
-	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer removePrivateTempFile(tmpName)
 	if _, err := tmp.Write(append(bytes, '\n')); err != nil {
 		tmp.Close()
 		return err

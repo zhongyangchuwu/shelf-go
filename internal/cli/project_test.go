@@ -9,7 +9,7 @@ import (
 
 func TestProjectIDNormalizesGitRemote(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestProjectIDNormalizesGitRemote(t *testing.T) {
 }
 func TestProjectInitCreatesManifestAtGitRoot(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestProjectInitCreatesManifestAtGitRoot(t *testing.T) {
 }
 func TestProjectInitRequiresForceToOverwrite(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestProjectInitRequiresForceToOverwrite(t *testing.T) {
 }
 func TestProjectExplainReportsStatuses(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestProjectExplainReportsStatuses(t *testing.T) {
 }
 func TestProjectExplainWarnsOptionalMissingWithoutFail(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestProjectExplainWarnsOptionalMissingWithoutFail(t *testing.T) {
 	}
 }
 func TestProjectInitAndExplainFailOutsideGit(t *testing.T) {
-	t.Chdir(t.TempDir())
+	chdirTest(t, t.TempDir())
 	if _, err := runShelf(t, "project", "init"); err == nil {
 		t.Fatalf("expected project init to fail outside git")
 	} else if !strings.Contains(err.Error(), "not inside a Git worktree") {
@@ -183,7 +183,7 @@ func TestProjectInitAndExplainFailOutsideGit(t *testing.T) {
 }
 func TestProjectExplainPromptsInitWhenManifestMissing(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -336,7 +336,7 @@ func TestProjectAddRejectsEmptyPrefix(t *testing.T) {
 }
 func TestProjectAddPromptsInitWhenNoManifest(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -533,7 +533,7 @@ func TestProjectExportFailsOnRequiredMissing(t *testing.T) {
 }
 func TestProjectExportSkipsOptionalMissing(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -568,7 +568,7 @@ func TestProjectExportSkipsOptionalMissing(t *testing.T) {
 }
 func TestProjectExportFailsOnEnvConflict(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -598,7 +598,7 @@ func TestProjectExportFailsOnEnvConflict(t *testing.T) {
 }
 func TestProjectExportExpandsPrefixSorted(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -635,7 +635,7 @@ func TestProjectExportExpandsPrefixSorted(t *testing.T) {
 }
 func TestProjectExportFailsOnRequiredEmptyPrefix(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -657,7 +657,7 @@ func TestProjectExportFailsOnRequiredEmptyPrefix(t *testing.T) {
 }
 func TestProjectExportWarnsOnOptionalEmptyPrefix(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -682,7 +682,7 @@ func TestProjectExportWarnsOnOptionalEmptyPrefix(t *testing.T) {
 }
 func TestProjectExplainHandlesPrefixEntries(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -714,7 +714,7 @@ func TestProjectExplainHandlesPrefixEntries(t *testing.T) {
 }
 func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -741,7 +741,7 @@ func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 
 func TestProjectAddCompletionSuggestsVaultSecrets(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -769,7 +769,7 @@ func TestProjectAddCompletionSuggestsVaultSecrets(t *testing.T) {
 
 func TestProjectRmCompletionSuggestsManifestEntries(t *testing.T) {
 	dir := t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}

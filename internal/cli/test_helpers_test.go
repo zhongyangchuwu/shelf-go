@@ -26,6 +26,46 @@ func runShelf(t *testing.T, args ...string) (string, error) {
 	err := cmd.Execute()
 	return out.String(), err
 }
+
+func runShelfIn(t *testing.T, dir string, args ...string) (string, error) {
+	t.Helper()
+	return inDir(t, dir, func() (string, error) {
+		return runShelf(t, args...)
+	})
+}
+
+func inDir(t *testing.T, dir string, fn func() (string, error)) (string, error) {
+	t.Helper()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir %s: %v", dir, err)
+	}
+	defer func() {
+		if err := os.Chdir(old); err != nil {
+			t.Fatalf("restore cwd %s: %v", old, err)
+		}
+	}()
+	return fn()
+}
+
+func chdirTest(t *testing.T, dir string) {
+	t.Helper()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir %s: %v", dir, err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(old); err != nil {
+			t.Fatalf("restore cwd %s: %v", old, err)
+		}
+	})
+}
 func runShelfWithInput(t *testing.T, input string, args ...string) (string, error) {
 	t.Helper()
 	args = withVaultTestConfig(t, args)
@@ -127,7 +167,7 @@ func withPromptPassword(t *testing.T, password string) {
 func setupProjectTest(t *testing.T) (dir, data string) {
 	t.Helper()
 	dir = t.TempDir()
-	t.Chdir(dir)
+	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
@@ -141,6 +181,17 @@ func setupProjectTest(t *testing.T) (dir, data string) {
 func runGit(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err := cmd.Run()
+	return out.String(), err
+}
+
+func runGitIn(t *testing.T, dir string, args ...string) (string, error) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
