@@ -29,11 +29,14 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Extract release notes
+        run: go run ./scripts/release-notes.go CHANGELOG.md "${GITHUB_REF_NAME}" > release-notes.md
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes=release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
