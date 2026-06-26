@@ -17,10 +17,12 @@
 - `justfile` can stay useful as a task index while scripts carry workflow logic.
 - Install verification needs overrideable paths to avoid writing completions into the maintainer's real home directory.
 - Tag workflow verification is safest in a disposable Git repository so it does not mutate real release refs.
+- Release preparation should be one script command surface because check, snapshot, and tag are used together.
+- Generic script-check wrappers are weak unless they exercise real workflow behavior; direct verification of concrete script commands is clearer.
 - GoReleaser snapshot verification remains fast enough for local release-prep confidence.
 
 ## Ship Inputs
 
 - Release notes can mention maintenance workflow cleanup only if desired; this is primarily maintainer-facing.
-- Phase 22 should document the new scripts in contributor/developer docs.
-- Phase 23 can call scripts directly for release readiness checks.
+- Phase 22 should document `scripts/install.sh` and `scripts/release.sh` in contributor/developer docs.
+- Phase 23 can call `scripts/release.sh check` and `scripts/release.sh snapshot` for release readiness checks.

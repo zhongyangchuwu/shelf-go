@@ -18,7 +18,7 @@
 - Phase 20 implemented value-free project tag bindings for `.shelf.json`, `project add/list/rm`, and project explain/export/run resolution.
 - v0.1.1 release hardening was moved later because script consolidation, docs, and architecture naming cleanup remain before release.
 - Phase 21 planning artifacts were created at `.planning/phases/021-script-workflow-consolidation/CONTEXT.md` and `PLAN.md`.
-- Phase 21 completed script workflow consolidation: install, tag, release-check, release-snapshot, and workflow-check now run through reusable `scripts/` Bash scripts.
+- Phase 21 completed script workflow consolidation: install now runs through `scripts/install.sh`, release check/snapshot/tag now run through one `scripts/release.sh` command surface, and `justfile` remains a thin task runner.
 - Remaining planned work:
   - Phase 22: update docs and resolve architecture naming/package mismatch around `shelf vault open` and `internal/manager`.
   - Phase 23: perform final v0.1.1 release hardening after Phase 22.

@@ -4,24 +4,19 @@
 
 - Added reusable Bash workflow scripts under `scripts/`:
   - `scripts/install.sh`
-  - `scripts/release-check.sh`
-  - `scripts/release-snapshot.sh`
-  - `scripts/tag-release.sh`
-  - `scripts/check-workflows.sh`
-- Updated `justfile` so install, tag, release-check, release-snapshot, and workflow-check are thin script delegations.
+  - `scripts/release.sh`
+- Updated `justfile` so install, tag, release-check, and release-snapshot are thin script delegations.
 - Preserved existing install behavior while making completion output paths overrideable for safe verification.
-- Preserved GoReleaser check and snapshot release commands behind scripts.
-- Added tag argument validation and duplicate tag detection before tag creation.
+- Preserved GoReleaser check and snapshot release commands behind one release script command surface.
+- Added release tag argument validation and duplicate tag detection before tag creation.
+- Removed the weak generic workflow-check wrapper; verification now exercises concrete script behavior directly.
 - Updated root planning artifacts to mark OPS-01..OPS-03 and Phase 21 complete.
 
 ## Files Changed
 
 - `justfile`
 - `scripts/install.sh`
-- `scripts/release-check.sh`
-- `scripts/release-snapshot.sh`
-- `scripts/tag-release.sh`
-- `scripts/check-workflows.sh`
+- `scripts/release.sh`
 - `.planning/PROJECT.md`
 - `.planning/REQUIREMENTS.md`
 - `.planning/ROADMAP.md`
@@ -34,18 +29,23 @@
 
 ## Deviations
 
-- Added `scripts/check-workflows.sh` and a `just workflow-check` alias to keep script validation reusable.
+- Collapsed the release/tag helpers into one `scripts/release.sh` after review showed separate `release-check`, `release-snapshot`, and `tag-release` scripts were unnecessary command surfaces.
+- Removed `scripts/check-workflows.sh`; it mostly checked shell syntax and did not prove meaningful workflow capability.
 - Ran a snapshot release script during verification even though the plan allowed deferring it; the resulting `dist/` output is ignored and not committed.
 - Did not update public developer docs; Phase 22 owns docs and architecture cleanup.
 
 ## Evidence
 
-- `./scripts/check-workflows.sh` passed.
-- `./scripts/release-check.sh` passed.
-- `./scripts/release-snapshot.sh` passed.
-- `just --dry-run install release-check release-snapshot tag 0.1.1 workflow-check` showed script delegation.
+- `bash -n scripts/*.sh` passed.
+- `./scripts/release.sh --help` passed.
+- `./scripts/release.sh` rejected a missing subcommand.
+- `./scripts/release.sh tag v0.1.1` rejected a leading-`v` version.
+- `./scripts/release.sh unexpected` rejected an unknown subcommand.
+- `./scripts/release.sh check` passed.
+- `./scripts/release.sh snapshot` passed.
+- `just --dry-run install release-check release-snapshot tag 0.1.1` showed script delegation.
 - Install script verification with temporary `GOBIN` and completion directory created the binary and completion file.
-- Tag script verification in a disposable Git repo created `v0.1.1` and rejected the duplicate tag.
+- Release tag verification in a disposable Git repo created `v0.1.1` and rejected the duplicate tag.
 - `go test ./...` passed.
 - `go vet ./...` passed.
 

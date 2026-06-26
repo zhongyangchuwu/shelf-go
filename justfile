@@ -14,13 +14,10 @@ vet:
     go vet ./...
 
 release-check:
-    ./scripts/release-check.sh
+    ./scripts/release.sh check
 
 release-snapshot:
-    ./scripts/release-snapshot.sh
+    ./scripts/release.sh snapshot
 
 tag version:
-    ./scripts/tag-release.sh {{version}}
-
-workflow-check:
-    ./scripts/check-workflows.sh
+    ./scripts/release.sh tag {{version}}

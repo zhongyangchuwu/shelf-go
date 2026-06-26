@@ -16,10 +16,12 @@ Move common install, tag, and release-preparation workflows out of inline `justf
 
 ## Decisions
 
-- Add separate scripts for install, release config check, snapshot release, and release tag creation instead of one multiplexed script.
+- Keep install as `scripts/install.sh` because it is a local developer setup workflow, separate from release management.
+- Use one release workflow command surface, `scripts/release.sh`, with subcommands for `check`, `snapshot`, and `tag <version>` because those tasks are used together during release preparation.
+- Do not keep a generic `workflow-check` script; it adds a weak command surface and does not test meaningful release capability.
 - Keep `justfile` recipe names stable and delegate to scripts.
 - Make install completion path overrideable for verification so tests do not write to the real home directory.
-- Use `go run github.com/goreleaser/goreleaser/v2@latest ...` inside scripts to preserve the existing toolchain behavior without requiring a separate binary install.
+- Use `go run github.com/goreleaser/goreleaser/v2@latest ...` inside `scripts/release.sh` to preserve the existing toolchain behavior without requiring a separate binary install.
 
 ## Open Questions
 
@@ -29,6 +31,8 @@ Move common install, tag, and release-preparation workflows out of inline `justf
 
 - Scripts pass Bash syntax checks.
 - Install script can run with temporary `GOBIN` and completion directory overrides.
-- Tag script rejects missing/invalid versions before creating tags.
+- Release script rejects missing/invalid subcommands and invalid tag versions before creating tags.
+- Release script can create a tag in a disposable Git repository and reject duplicates.
+- Release script can run GoReleaser check and snapshot flows.
 - `justfile` recipes are thin delegations to scripts for install, tag, release-check, and release-snapshot.
 - Existing Go test suite still passes because script consolidation should not affect product behavior.

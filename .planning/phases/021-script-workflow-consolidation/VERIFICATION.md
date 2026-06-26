@@ -5,29 +5,37 @@
 1. Workflow scripts exist and are valid Bash.
 2. `justfile` delegates install/tag/release recipes to scripts.
 3. Install script preserves local install and zsh completion behavior while allowing safe test overrides.
-4. Tag script validates arguments, creates `v<version>` tags, and rejects duplicates.
-5. GoReleaser check and snapshot release work through scripts.
-6. Product Go tests and vet still pass after workflow-only changes.
+4. Release script validates subcommands and tag arguments.
+5. Release script creates `v<version>` tags and rejects duplicates.
+6. GoReleaser check and snapshot release work through `scripts/release.sh`.
+7. Product Go tests and vet still pass after workflow-only changes.
 
 ## Evidence Observed
 
-- `./scripts/check-workflows.sh`
+- `bash -n scripts/*.sh`
   - Result: passed.
-  - Covered `bash -n scripts/*.sh`, script help paths, tag missing argument rejection, tag leading-`v` rejection, and release-check extra argument rejection.
-- `just --dry-run install release-check release-snapshot tag 0.1.1 workflow-check`
+- `./scripts/release.sh --help`
   - Result: passed.
-  - Observed each recipe delegates to `./scripts/...`.
+- `./scripts/release.sh`
+  - Result: failed as expected with usage for missing subcommand.
+- `./scripts/release.sh tag v0.1.1`
+  - Result: failed as expected before tag creation because versions must omit leading `v`.
+- `./scripts/release.sh unexpected`
+  - Result: failed as expected with usage for unknown subcommand.
+- `just --dry-run install release-check release-snapshot tag 0.1.1`
+  - Result: passed.
+  - Observed each recipe delegates to `./scripts/install.sh` or `./scripts/release.sh`.
 - Temporary install verification through `scripts/install.sh`
   - Result: passed.
   - Used temporary `GOBIN` and `SHELF_COMPLETION_DIR`.
   - Observed installed binary exists and completion file exists.
-- Disposable Git repository tag verification through `scripts/tag-release.sh 0.1.1`
+- Disposable Git repository tag verification through `scripts/release.sh tag 0.1.1`
   - Result: passed.
   - Observed `v0.1.1` created and duplicate tag attempt rejected.
-- `./scripts/release-check.sh`
+- `./scripts/release.sh check`
   - Result: passed.
   - GoReleaser validated `.goreleaser.yaml`.
-- `./scripts/release-snapshot.sh`
+- `./scripts/release.sh snapshot`
   - Result: passed.
   - GoReleaser built snapshot archives for configured Linux, macOS, and Windows targets.
 - `go test ./...`
@@ -37,9 +45,9 @@
 
 ## Coverage
 
-- Existence: scripts and phase artifacts created.
+- Existence: install and release scripts and phase artifacts created.
 - Wiring: `justfile` delegates workflow recipes to scripts.
-- Behavior: install, tag creation, validation failure paths, release check, and snapshot release exercised.
+- Behavior: install, release command validation, tag creation, duplicate rejection, release check, and snapshot release exercised.
 - Regression: full Go test and vet passed.
 
 ## Gaps
@@ -50,4 +58,4 @@
 
 ## Result
 
-Passed. Phase 21 acceptance criteria are satisfied.
+Passed. Phase 21 acceptance criteria are satisfied with a smaller script surface: `install.sh` for local setup and `release.sh` for release preparation.
