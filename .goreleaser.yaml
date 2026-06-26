@@ -32,15 +32,22 @@ archives:
         formats:
           - zip
     name_template: >-
-      {{ .ProjectName }}_
+      {{- .ProjectName }}_
       {{- .Version }}_
       {{- .Os }}_
-      {{- .Arch }}
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}32-bit
+      {{- else if eq .Arch "arm" }}armv6
+      {{- else }}{{ .Arch }}{{ end }}
 
 checksum:
   name_template: checksums.txt
 
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
 changelog:
+  use: github-native
   sort: asc
 
 release:
