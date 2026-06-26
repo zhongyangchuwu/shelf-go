@@ -27,9 +27,9 @@ Requirements for v0.1.1 editing experience, tag-based workflows, workflow script
 
 ### Scripted Workflow Cleanup
 
-- [ ] **OPS-01**: Install flow currently embedded in `justfile` is moved to a reusable script under `scripts/`, and `just install` delegates to that script.
-- [ ] **OPS-02**: Tag and release preparation flows are moved from ad-hoc manual commands and inline `justfile` recipes into reusable scripts under `scripts/`.
-- [ ] **OPS-03**: Scripted workflows have clear usage, argument validation, and keep `justfile` as a thin task runner.
+- [x] **OPS-01**: Install flow currently embedded in `justfile` is moved to a reusable script under `scripts/`, and `just install` delegates to that script.
+- [x] **OPS-02**: Tag and release preparation flows are moved from ad-hoc manual commands and inline `justfile` recipes into reusable scripts under `scripts/`.
+- [x] **OPS-03**: Scripted workflows have clear usage, argument validation, and keep `justfile` as a thin task runner.
 
 ### Documentation and Architecture Cleanup
 
@@ -103,7 +103,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | WEB-01..WEB-06 | Phase 17, Phase 18 | Complete |
 | TAG-01..TAG-02 | Phase 19 | Complete |
 | TAG-03..TAG-05 | Phase 20 | Complete |
-| OPS-01..OPS-03 | Phase 21 | Planned |
+| OPS-01..OPS-03 | Phase 21 | Complete |
 | DOC-01..DOC-02 | Phase 22 | Planned |
 | ARCH-01..ARCH-02 | Phase 22 | Planned |
 | BOUND-01 | Phase 17..Phase 23 | In Progress |
@@ -114,8 +114,8 @@ Explicitly excluded. Documented to prevent scope creep.
 - Current requirements: 23 total
 - Mapped to phases: 23
 - Unmapped: 0
-- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after adding script, docs, architecture, and release-prep requirements*
+*Last updated: 2026-06-26 after completing script workflow consolidation requirements*

@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 21 - Script Workflow Consolidation
+- Phase: Phase 22 - Documentation and Architecture Cleanup
 - Status: not-started
 - Active Artifact: .planning/ROADMAP.md
-- Next Action: Start Phase 21 planning for moving install/tag/release workflows from `justfile` and manual commands into reusable `scripts/` Bash scripts.
+- Next Action: Start Phase 22 planning for user/developer documentation and architecture naming cleanup around `shelf vault open` and `internal/manager`.
 
 ## Blockers
 - None
@@ -17,10 +17,11 @@
 - Phase 19 implemented direct secret tag selection for `secret list` and `secret export`.
 - Phase 20 implemented value-free project tag bindings for `.shelf.json`, `project add/list/rm`, and project explain/export/run resolution.
 - v0.1.1 release hardening was moved later because script consolidation, docs, and architecture naming cleanup remain before release.
-- Newly planned work:
-  - Phase 21: consolidate install/tag/release workflows into `scripts/` and make `justfile` a thin task runner.
+- Phase 21 planning artifacts were created at `.planning/phases/021-script-workflow-consolidation/CONTEXT.md` and `PLAN.md`.
+- Phase 21 completed script workflow consolidation: install, tag, release-check, release-snapshot, and workflow-check now run through reusable `scripts/` Bash scripts.
+- Remaining planned work:
   - Phase 22: update docs and resolve architecture naming/package mismatch around `shelf vault open` and `internal/manager`.
-  - Phase 23: perform final v0.1.1 release hardening after Phases 21 and 22.
+  - Phase 23: perform final v0.1.1 release hardening after Phase 22.
 - v0.1.1 still defers SQLite/storage redesign to v0.2.0 and keeps the current age-encrypted JSON vault format.
 
 ## Updated

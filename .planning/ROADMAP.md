@@ -14,7 +14,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 18: Web Manager Editing Console
 - [x] Phase 19: Secret Tag Selection
 - [x] Phase 20: Project Tag Bindings
-- [ ] Phase 21: Script Workflow Consolidation
+- [x] Phase 21: Script Workflow Consolidation
 - [ ] Phase 22: Documentation and Architecture Cleanup
 - [ ] Phase 23: v0.1.1 Release Hardening
 
@@ -99,7 +99,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 4. `justfile` remains a thin task runner rather than the source of workflow logic.
 5. Script behavior is documented enough for maintainers to release without relying on remembered manual commands.
 
-**Plan:** TBD.
+**Plan:** `.planning/phases/021-script-workflow-consolidation/PLAN.md`
 
 ### Phase 22: Documentation and Architecture Cleanup
 
@@ -165,7 +165,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 18: Web Manager Editing Console | Complete | WEB-01..WEB-06, BOUND-01 | `.planning/phases/018-web-manager-editing-console/PLAN.md` | 2026-06-26 |
 | Phase 19: Secret Tag Selection | Complete | TAG-01..TAG-02, TAG-05, BOUND-01 | `.planning/phases/019-secret-tag-selection/PLAN.md` | 2026-06-26 |
 | Phase 20: Project Tag Bindings | Complete | TAG-03..TAG-05 | `.planning/phases/020-project-tag-bindings/PLAN.md` | 2026-06-26 |
-| Phase 21: Script Workflow Consolidation | Not Started | OPS-01..OPS-03 | TBD | - |
+| Phase 21: Script Workflow Consolidation | Complete | OPS-01..OPS-03 | `.planning/phases/021-script-workflow-consolidation/PLAN.md` | 2026-06-26 |
 | Phase 22: Documentation and Architecture Cleanup | Not Started | DOC-01..DOC-02, ARCH-01..ARCH-02 | TBD | - |
 | Phase 23: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | TBD | - |
 
@@ -174,4 +174,4 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after splitting script, docs, architecture, and release phases*
+*Last updated: 2026-06-26 after completing script workflow consolidation*

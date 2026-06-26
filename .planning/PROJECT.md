@@ -19,10 +19,10 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 Web manager design and editing console provide add/edit/delete/reveal/copy/tag workflows over the local vault without changing the storage format.
 - [x] v0.1.1 direct secret CLI workflows support tag-based list/export selection with repeatable AND semantics.
 - [x] v0.1.1 project manifests support value-free tag bindings for project export/run workflows.
+- [x] v0.1.1 consolidates install/tag/release workflows into reusable `scripts/` Bash scripts and keeps `justfile` thin.
 
 ### Active
 
-- [ ] v0.1.1 consolidates install/tag/release workflows into reusable `scripts/` Bash scripts and keeps `justfile` thin.
 - [ ] v0.1.1 updates user and developer docs for Web manager editing, tag workflows, and scripted workflows.
 - [ ] v0.1.1 reviews and resolves architecture naming around `shelf vault open`, `internal/manager`, and the Web manager concept.
 - [ ] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
@@ -88,4 +88,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-26 after adding v0.1.1 script, docs, architecture, and release cleanup phases*
+*Last updated: 2026-06-26 after completing script workflow consolidation*
