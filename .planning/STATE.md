@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 21 - v0.1.1 Release Hardening
+- Phase: Phase 21 - Script Workflow Consolidation
 - Status: not-started
 - Active Artifact: .planning/ROADMAP.md
-- Next Action: Start Phase 21 release hardening: docs, changelog, vet, release check, and snapshot release.
+- Next Action: Start Phase 21 planning for moving install/tag/release workflows from `justfile` and manual commands into reusable `scripts/` Bash scripts.
 
 ## Blockers
 - None
@@ -16,7 +16,11 @@
 - Phase 18 implemented the Web manager editing console and manager API hardening.
 - Phase 19 implemented direct secret tag selection for `secret list` and `secret export`.
 - Phase 20 implemented value-free project tag bindings for `.shelf.json`, `project add/list/rm`, and project explain/export/run resolution.
-- Verification observed for Phase 20: `go test ./internal/manifest`, `go test ./internal/project`, focused `go test ./internal/cli`, `go test ./...`, and LSP workspace diagnostics passed.
+- v0.1.1 release hardening was moved later because script consolidation, docs, and architecture naming cleanup remain before release.
+- Newly planned work:
+  - Phase 21: consolidate install/tag/release workflows into `scripts/` and make `justfile` a thin task runner.
+  - Phase 22: update docs and resolve architecture naming/package mismatch around `shelf vault open` and `internal/manager`.
+  - Phase 23: perform final v0.1.1 release hardening after Phases 21 and 22.
 - v0.1.1 still defers SQLite/storage redesign to v0.2.0 and keeps the current age-encrypted JSON vault format.
 
 ## Updated

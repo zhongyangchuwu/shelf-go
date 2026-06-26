@@ -2,7 +2,11 @@
 
 ## Overview
 
-Shelf Go v0.1.1 improves the day-to-day editing and selection experience without changing the storage model. The release rebuilds `shelf vault open` into a practical local secret console, adds tag-based secret selection for CLI exports, and lets projects bind tag-selected secret sets while keeping secret values out of manifests. SQLite and storage backend redesign are explicitly deferred to v0.2.0.
+Shelf Go v0.1.1 improves the day-to-day editing and selection experience without changing the storage model. The release rebuilds `shelf vault open` into a practical local secret console, adds tag-based secret selection for CLI exports, and lets projects bind tag-selected secret sets while keeping secret values out of manifests.
+
+Before release, v0.1.1 still needs workflow/script cleanup, documentation updates, and architecture naming cleanup. Release hardening is intentionally the final phase, not the next phase.
+
+SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
 ## Phases
 
@@ -10,7 +14,9 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 - [x] Phase 18: Web Manager Editing Console
 - [x] Phase 19: Secret Tag Selection
 - [x] Phase 20: Project Tag Bindings
-- [ ] Phase 21: v0.1.1 Release Hardening
+- [ ] Phase 21: Script Workflow Consolidation
+- [ ] Phase 22: Documentation and Architecture Cleanup
+- [ ] Phase 23: v0.1.1 Release Hardening
 
 ## Phase Details
 
@@ -78,19 +84,54 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 
 **Plan:** `.planning/phases/020-project-tag-bindings/PLAN.md`
 
-### Phase 21: v0.1.1 Release Hardening
+### Phase 21: Script Workflow Consolidation
 
-**Goal:** Prepare v0.1.1 for release after WebUI and tag workflows are implemented.
+**Goal:** Move common developer/release flows out of ad-hoc manual commands and inline `justfile` recipes into reusable scripts under `scripts/`.
 
-**Depends on:** Phases 18, 19, and 20 complete.
+**Depends on:** Phase 20 complete.
 
-**Requirements:** WEB-01..WEB-06, TAG-01..TAG-05, BOUND-01..BOUND-02
+**Requirements:** OPS-01, OPS-02, OPS-03
 
 **Success Criteria:**
-1. README and docs describe Web manager editing and tag-based workflows.
+1. Install flow currently embedded in `justfile` is captured as a script under `scripts/` and `just install` delegates to it.
+2. Tag/release flow is captured as scripts under `scripts/`, including the existing tag command and GoReleaser checks/snapshot workflow.
+3. Scripts are portable Bash with `set -euo pipefail`, predictable arguments, and concise usage errors.
+4. `justfile` remains a thin task runner rather than the source of workflow logic.
+5. Script behavior is documented enough for maintainers to release without relying on remembered manual commands.
+
+**Plan:** TBD.
+
+### Phase 22: Documentation and Architecture Cleanup
+
+**Goal:** Improve docs and clean up naming/package architecture before release, especially around the Web manager naming mismatch.
+
+**Depends on:** Phase 21 complete.
+
+**Requirements:** DOC-01, DOC-02, ARCH-01, ARCH-02
+
+**Success Criteria:**
+1. User-facing docs describe Web manager editing, tag-based direct secret workflows, and project tag bindings.
+2. Developer docs describe scripts and release workflow after Phase 21.
+3. Architecture review resolves the mismatch between command name `shelf vault open`, package path `internal/manager`, and user-facing function naming.
+4. Any package/command naming changes keep CLI behavior intentional, documented, and covered by tests.
+5. The `internal/manager` placement is either justified in architecture docs or refactored to a clearer package boundary.
+
+**Plan:** TBD.
+
+### Phase 23: v0.1.1 Release Hardening
+
+**Goal:** Prepare v0.1.1 for release only after scripts, docs, and architecture cleanup are complete.
+
+**Depends on:** Phases 18, 19, 20, 21, and 22 complete.
+
+**Requirements:** WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01
+
+**Success Criteria:**
+1. README and docs reflect the implemented Web manager, tag workflows, scripts, and architecture names.
 2. CHANGELOG has a `0.1.1` section.
-3. Go tests, vet, release check, and snapshot release pass.
+3. Go tests, vet, release check, and snapshot release pass through the consolidated scripts.
 4. Verification records confirm no storage format change and SQLite deferral to v0.2.0.
+5. Release readiness does not rely on manual commands that should live in scripts.
 
 **Plan:** TBD.
 
@@ -114,6 +155,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 - No `project shell` wrapper unless a later phase shows clear value over `project run -- $SHELL`.
 - No new `dotenv` format; use existing `shell` output for sourceable files.
 - No team sharing or hosted sync.
+- No release hardening before script, docs, and architecture cleanup phases complete.
 
 ## Progress
 
@@ -123,11 +165,13 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 | Phase 18: Web Manager Editing Console | Complete | WEB-01..WEB-06, BOUND-01 | `.planning/phases/018-web-manager-editing-console/PLAN.md` | 2026-06-26 |
 | Phase 19: Secret Tag Selection | Complete | TAG-01..TAG-02, TAG-05, BOUND-01 | `.planning/phases/019-secret-tag-selection/PLAN.md` | 2026-06-26 |
 | Phase 20: Project Tag Bindings | Complete | TAG-03..TAG-05 | `.planning/phases/020-project-tag-bindings/PLAN.md` | 2026-06-26 |
-| Phase 21: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, BOUND-01..BOUND-02 | TBD | - |
+| Phase 21: Script Workflow Consolidation | Not Started | OPS-01..OPS-03 | TBD | - |
+| Phase 22: Documentation and Architecture Cleanup | Not Started | DOC-01..DOC-02, ARCH-01..ARCH-02 | TBD | - |
+| Phase 23: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | TBD | - |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after completing v0.1.1 project tag bindings*
+*Last updated: 2026-06-26 after splitting script, docs, architecture, and release phases*

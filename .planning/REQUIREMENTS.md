@@ -6,29 +6,43 @@
 
 ## Current Requirements
 
-Requirements for v0.1.1 editing experience and tag-based workflows. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, documentation, architecture cleanup, and release preparation. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
 
 ### Web Manager Editing
 
-- [ ] **WEB-01**: The local Web manager provides a searchable, understandable secret console with path, env, description, tag, and value-set metadata visible without revealing secret values.
-- [ ] **WEB-02**: The Web manager supports adding, editing, renaming, and deleting secret records, including value, env, description, and tags.
-- [ ] **WEB-03**: The Web manager supports explicit reveal, hide, and copy flows without returning secret values in list/search responses or storing them in browser-local persistent storage.
-- [ ] **WEB-04**: The Web manager preserves and strengthens local-only safety boundaries: loopback binding, token/cookie access, Host/Origin checks, token removal from the visible URL after first load, and no-store responses for secret-bearing endpoints.
-- [ ] **WEB-05**: The Web manager uses embedded local assets only; no CDN, hosted frontend, or permanent daemon dependency is required.
-- [ ] **WEB-06**: The Web manager adopts a polished console visual direction based on a reusable HTML/CSS design system or template reference, with the implementation kept compatible with Go's single-binary distribution.
+- [x] **WEB-01**: The local Web manager provides a searchable, understandable secret console with path, env, description, tag, and value-set metadata visible without revealing secret values.
+- [x] **WEB-02**: The Web manager supports adding, editing, renaming, and deleting secret records, including value, env, description, and tags.
+- [x] **WEB-03**: The Web manager supports explicit reveal, hide, and copy flows without returning secret values in list/search responses or storing them in browser-local persistent storage.
+- [x] **WEB-04**: The Web manager preserves and strengthens local-only safety boundaries: loopback binding, token/cookie access, Host/Origin checks, token removal from the visible URL after first load, and no-store responses for secret-bearing endpoints.
+- [x] **WEB-05**: The Web manager uses embedded local assets only; no CDN, hosted frontend, or permanent daemon dependency is required.
+- [x] **WEB-06**: The Web manager adopts a polished console visual direction based on a reusable HTML/CSS design system or template reference, with the implementation kept compatible with Go's single-binary distribution.
 
 ### Tag-Based CLI and Project Workflows
 
-- [ ] **TAG-01**: `shelf secret list` can filter secrets by one or more tags while keeping output value-free and deterministic.
-- [ ] **TAG-02**: `shelf secret export` can select secrets by one or more tags using the existing env, shell, and JSON formats and the existing `--all` behavior.
-- [ ] **TAG-03**: Project manifests can declare tag-selected secret sets without storing secret values.
-- [ ] **TAG-04**: `shelf project add`, `list`, `explain`, `export`, and `run` support tag-selected bindings with clear expansion, missing-secret, and env-conflict diagnostics.
-- [ ] **TAG-05**: Multiple tag selectors use AND semantics for v0.1.1 so exported/project-bound sets stay narrow and predictable.
+- [x] **TAG-01**: `shelf secret list` can filter secrets by one or more tags while keeping output value-free and deterministic.
+- [x] **TAG-02**: `shelf secret export` can select secrets by one or more tags using the existing env, shell, and JSON formats and the existing `--all` behavior.
+- [x] **TAG-03**: Project manifests can declare tag-selected secret sets without storing secret values.
+- [x] **TAG-04**: `shelf project add`, `list`, `explain`, `export`, and `run` support tag-selected bindings with clear expansion, missing-secret, and env-conflict diagnostics.
+- [x] **TAG-05**: Multiple tag selectors use AND semantics for v0.1.1 so exported/project-bound sets stay narrow and predictable.
 
-### Scope Boundary
+### Scripted Workflow Cleanup
+
+- [ ] **OPS-01**: Install flow currently embedded in `justfile` is moved to a reusable script under `scripts/`, and `just install` delegates to that script.
+- [ ] **OPS-02**: Tag and release preparation flows are moved from ad-hoc manual commands and inline `justfile` recipes into reusable scripts under `scripts/`.
+- [ ] **OPS-03**: Scripted workflows have clear usage, argument validation, and keep `justfile` as a thin task runner.
+
+### Documentation and Architecture Cleanup
+
+- [ ] **DOC-01**: User-facing docs describe Web manager editing, direct tag list/export, and project tag bindings.
+- [ ] **DOC-02**: Developer docs describe install/tag/release scripts so maintainers do not rely on remembered manual commands.
+- [ ] **ARCH-01**: Architecture naming is reviewed and updated around `shelf vault open`, `internal/manager`, and the user-facing Web manager concept.
+- [ ] **ARCH-02**: Web manager package placement is either justified in docs or refactored to a clearer package boundary with tests preserved.
+
+### Scope Boundary and Release
 
 - [ ] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in WebUI and existing compact secret commands.
 - [ ] **BOUND-02**: v0.1.1 keeps the current age-encrypted JSON vault format and does not implement or spike SQLite; storage redesign is deferred to v0.2.0 planning.
+- [ ] **REL-011-01**: v0.1.1 release readiness is checked only after scripts, docs, and architecture cleanup are complete.
 
 ## Deferred Requirements
 
@@ -80,6 +94,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | SQLite in v0.1.1 | v0.1.1 is about editing UX and tag workflows; storage model redesign is deferred to v0.2.0. |
 | Fine-grained CLI metadata edit subcommands | WebUI is the primary editing surface; CLI should stay compact and focus on scriptable application workflows. |
 | Broad one-file-per-command CLI split | `internal/cli` should stay command-family oriented rather than becoming a large directory of tiny files. |
+| Release hardening as next phase | Script, docs, and architecture cleanup must happen before v0.1.1 release readiness. |
 
 ## Traceability
 
@@ -88,15 +103,19 @@ Explicitly excluded. Documented to prevent scope creep.
 | WEB-01..WEB-06 | Phase 17, Phase 18 | Complete |
 | TAG-01..TAG-02 | Phase 19 | Complete |
 | TAG-03..TAG-05 | Phase 20 | Complete |
-| BOUND-01 | Phase 17..Phase 21 | In Progress |
-| BOUND-02 | Phase 17..Phase 21 | In Progress |
+| OPS-01..OPS-03 | Phase 21 | Planned |
+| DOC-01..DOC-02 | Phase 22 | Planned |
+| ARCH-01..ARCH-02 | Phase 22 | Planned |
+| BOUND-01 | Phase 17..Phase 23 | In Progress |
+| BOUND-02 | Phase 17..Phase 23 | In Progress |
+| REL-011-01 | Phase 23 | Planned |
 
 **Coverage:**
-- Current requirements: 13 total
-- Mapped to phases: 13
+- Current requirements: 23 total
+- Mapped to phases: 23
 - Unmapped: 0
 - Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after completing v0.1.1 project tag bindings*
+*Last updated: 2026-06-26 after adding script, docs, architecture, and release-prep requirements*
