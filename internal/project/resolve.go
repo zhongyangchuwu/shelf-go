@@ -48,6 +48,27 @@ func ResolveEntries(m manifest.Manifest, st *store.Store) ([]Binding, []Diagnost
 			continue
 		}
 
+		if entry.IsTag() {
+			matches := st.ListByTags("", entry.Tags)
+			if len(matches) == 0 {
+				path := entry.Key() + " (tags)"
+				if entry.IsRequired() {
+					diagnostics = append(diagnostics, Diagnostic{Status: "fail", Path: path, Message: "no matches required"})
+				} else {
+					diagnostics = append(diagnostics, Diagnostic{Status: "warn", Path: path, Message: "no matches optional"})
+				}
+				continue
+			}
+			for _, path := range matches {
+				secret, ok := st.Get(path)
+				if !ok {
+					continue
+				}
+				appendResolvedEntry(&entries, &diagnostics, envOwners, path, secret, "")
+			}
+			continue
+		}
+
 		secret, ok := st.Get(entry.Path)
 		if !ok {
 			if entry.IsRequired() {

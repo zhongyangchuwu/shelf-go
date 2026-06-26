@@ -72,9 +72,9 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 			wantErr: "secrets array is required",
 		},
 		{
-			name: "entry without path or prefix",
-			in: Manifest{Version: CurrentVersion, Secrets: []Entry{{}}},
-			wantErr: "path or prefix is required",
+			name:    "entry without selector",
+			in:      Manifest{Version: CurrentVersion, Secrets: []Entry{{}}},
+			wantErr: "path, prefix, or tags is required",
 		},
 		{
 			name: "path and prefix both set",
@@ -82,7 +82,7 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 				Path:   "providers/openai/accounts/personal:api_key",
 				Prefix: "providers/openai",
 			}}},
-			wantErr: "path and prefix are mutually exclusive",
+			wantErr: "path, prefix, and tags are mutually exclusive",
 		},
 		{
 			name: "invalid path",

@@ -122,10 +122,11 @@ func newProjectExplainCmd() *cobra.Command {
 func newProjectAddCmd() *cobra.Command {
 	var envName string
 	var optional bool
+	var tags []string
 	cmd := &cobra.Command{
-		Use:               "add <path-or-prefix>",
-		Short:             "Add a secret path or prefix to project manifest",
-		Args:              cobra.ExactArgs(1),
+		Use:               "add [path-or-prefix]",
+		Short:             "Add a secret path, prefix, or tag selector to project manifest",
+		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completeProjectAddArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := projectsvc.Root()
@@ -139,46 +140,58 @@ func newProjectAddCmd() *cobra.Command {
 				return err
 			}
 
-			input := args[0]
-			isPrefix := !strings.Contains(input, ":")
-			if isPrefix && envName != "" {
+			isTag := len(tags) > 0
+			if isTag && len(args) > 0 {
+				return fmt.Errorf("path-or-prefix must not be set with --tag")
+			}
+			if !isTag && len(args) == 0 {
+				return fmt.Errorf("path-or-prefix or --tag is required")
+			}
+			if isTag && envName != "" {
 				return fmt.Errorf("--env is only valid for path entries")
 			}
 
-			// Validate against the store.
 			_, st, err := loadRuntime(cmd)
-			if err != nil {
-				return err
-			}
-			if isPrefix {
-				matches := st.List(input)
-				if len(matches) == 0 {
-					return fmt.Errorf("no secrets match prefix: %s", input)
-				}
-			} else {
-				if _, ok := st.Get(input); !ok {
-					return fmt.Errorf("secret not found: %s", input)
-				}
-			}
-
-			m, err := manifest.Load(manifestPath)
 			if err != nil {
 				return err
 			}
 
 			entry := manifest.Entry{}
-			if isPrefix {
-				entry.Prefix = input
+			if isTag {
+				if len(st.ListByTags("", tags)) == 0 {
+					return fmt.Errorf("no secrets match tags: %s", strings.Join(tags, ","))
+				}
+				entry.Tags = tags
 			} else {
-				entry.Path = input
-				if envName != "" {
-					entry.Env = envName
+				input := args[0]
+				isPrefix := !strings.Contains(input, ":")
+				if isPrefix && envName != "" {
+					return fmt.Errorf("--env is only valid for path entries")
+				}
+				if isPrefix {
+					matches := st.List(input)
+					if len(matches) == 0 {
+						return fmt.Errorf("no secrets match prefix: %s", input)
+					}
+					entry.Prefix = input
+				} else {
+					if _, ok := st.Get(input); !ok {
+						return fmt.Errorf("secret not found: %s", input)
+					}
+					entry.Path = input
+					if envName != "" {
+						entry.Env = envName
+					}
 				}
 			}
 			if optional {
 				entry.Required = new(bool)
 			}
 
+			m, err := manifest.Load(manifestPath)
+			if err != nil {
+				return err
+			}
 			if err := m.AddEntry(entry); err != nil {
 				return err
 			}
@@ -191,6 +204,9 @@ func newProjectAddCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&envName, "env", "", "Environment variable name override (path entries only)")
 	cmd.Flags().BoolVar(&optional, "optional", false, "Mark entry as optional")
+	cmd.Flags().StringArrayVar(&tags, "tag", nil, "Tag selector for this project; repeat for AND matching")
+	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 	return cmd
 }
 
@@ -278,22 +294,18 @@ func newProjectListCmd() *cobra.Command {
 				return err
 			}
 			for _, entry := range m.Secrets {
+				req := "required"
+				if !entry.IsRequired() {
+					req = "optional"
+				}
 				if entry.IsPrefix() {
-					req := "required"
-					if !entry.IsRequired() {
-						req = "optional"
-					}
 					fmt.Fprintf(cmd.OutOrStdout(), "prefix %s (%s)\n", entry.Prefix, req)
+				} else if entry.IsTag() {
+					fmt.Fprintf(cmd.OutOrStdout(), "tag    %s (%s)\n", entry.Key(), req)
+				} else if entry.Env != "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "path   %s -> %s (%s)\n", entry.Path, entry.Env, req)
 				} else {
-					req := "required"
-					if !entry.IsRequired() {
-						req = "optional"
-					}
-					if entry.Env != "" {
-						fmt.Fprintf(cmd.OutOrStdout(), "path   %s -> %s (%s)\n", entry.Path, entry.Env, req)
-					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "path   %s (%s)\n", entry.Path, req)
-					}
+					fmt.Fprintf(cmd.OutOrStdout(), "path   %s (%s)\n", entry.Path, req)
 				}
 			}
 			return nil

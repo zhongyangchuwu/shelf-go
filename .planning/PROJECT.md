@@ -18,10 +18,10 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] Completed v0.1.0 planning history is archived at `.planning/archive/releases/v0.1.0/`.
 - [x] v0.1.1 Web manager design and editing console provide add/edit/delete/reveal/copy/tag workflows over the local vault without changing the storage format.
 - [x] v0.1.1 direct secret CLI workflows support tag-based list/export selection with repeatable AND semantics.
+- [x] v0.1.1 project manifests support value-free tag bindings for project export/run workflows.
 
 ### Active
 
-- [ ] v0.1.1 adds project tag bindings for value-free `.shelf.json` application flows.
 - [ ] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
 
 ### Out of Scope
@@ -82,4 +82,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-26 after completing v0.1.1 direct secret tag selection*
+*Last updated: 2026-06-26 after completing v0.1.1 project tag bindings*

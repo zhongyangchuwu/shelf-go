@@ -9,7 +9,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 - [x] Phase 17: Web Manager Design Contract
 - [x] Phase 18: Web Manager Editing Console
 - [x] Phase 19: Secret Tag Selection
-- [ ] Phase 20: Project Tag Bindings
+- [x] Phase 20: Project Tag Bindings
 - [ ] Phase 21: v0.1.1 Release Hardening
 
 ## Phase Details
@@ -76,7 +76,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 3. `project list`, `explain`, `export`, and `run` expand tag bindings with clear missing and conflict diagnostics.
 4. Dynamic tag binding behavior is documented and covered by command tests.
 
-**Plan:** TBD.
+**Plan:** `.planning/phases/020-project-tag-bindings/PLAN.md`
 
 ### Phase 21: v0.1.1 Release Hardening
 
@@ -122,7 +122,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 | Phase 17: Web Manager Design Contract | Complete | WEB-01..WEB-06, BOUND-01..BOUND-02 | `.planning/phases/017-web-manager-design/PLAN.md` | 2026-06-26 |
 | Phase 18: Web Manager Editing Console | Complete | WEB-01..WEB-06, BOUND-01 | `.planning/phases/018-web-manager-editing-console/PLAN.md` | 2026-06-26 |
 | Phase 19: Secret Tag Selection | Complete | TAG-01..TAG-02, TAG-05, BOUND-01 | `.planning/phases/019-secret-tag-selection/PLAN.md` | 2026-06-26 |
-| Phase 20: Project Tag Bindings | Not Started | TAG-03..TAG-05 | TBD | - |
+| Phase 20: Project Tag Bindings | Complete | TAG-03..TAG-05 | `.planning/phases/020-project-tag-bindings/PLAN.md` | 2026-06-26 |
 | Phase 21: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, BOUND-01..BOUND-02 | TBD | - |
 
 ## Archived Releases
@@ -130,4 +130,4 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after completing v0.1.1 secret tag selection*
+*Last updated: 2026-06-26 after completing v0.1.1 project tag bindings*
