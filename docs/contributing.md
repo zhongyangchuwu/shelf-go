@@ -50,19 +50,15 @@ just install
 cmd/shelf/           process entry point
 
 internal/cli/        Cobra commands and CLI orchestration
-internal/manager/    localhost vault manager UI
+internal/manager/    local manager surface, currently loopback HTTP/Web
 
-internal/app/        runtime and vault construction helpers
-internal/project/    project identity and manifest binding resolution
+internal/app/        runtime, vault construction, and version composition
+internal/project/    project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/     reusable secret workflows such as editor-based updates
-internal/vault/      vault status/check/doctor diagnostics
 
-internal/atomicfile/ atomic write primitive
 internal/config/     runtime config resolution
-internal/store/      secret model, path grammar, JSON codec, age vault persistence, locking
-internal/manifest/   .shelf.json model, validation, and IO
-internal/render/     env/shell/JSON rendering
-internal/version/    version string
+internal/vault/      encrypted vault core, persistence, locking, diagnostics
+internal/exportfmt/  env/shell/JSON export formatting
 ```
 
 ## Documentation policy

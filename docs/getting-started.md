@@ -133,7 +133,7 @@ The backup is a normal encrypted Shelf vault file. Shelf overwrites this single 
 ## Open the local manager
 
 ```bash
-shelf vault open
+shelf manager
 ```
 
 The manager binds to loopback, prints a tokenized local URL, and supports metadata browsing plus explicit reveal and write actions. Browser reveal and edit actions handle plaintext locally.

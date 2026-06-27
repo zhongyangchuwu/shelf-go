@@ -1,4 +1,4 @@
-package store
+package vault
 
 import (
 	"os"

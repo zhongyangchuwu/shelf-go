@@ -19,7 +19,7 @@ builds:
       - -trimpath
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
-      - -s -w -X github.com/zhongyangchuwu/shelf-go/internal/version.releaseVersion={{ .Version }}
+      - -s -w -X github.com/zhongyangchuwu/shelf-go/internal/app.releaseVersion={{ .Version }}
 
 archives:
   - id: shelf

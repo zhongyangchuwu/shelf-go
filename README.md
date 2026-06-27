@@ -144,7 +144,7 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 
 ## Safety notes
 
-- `shelf secret get`, `shelf secret export`, `shelf project export`, `shelf project run`, `shelf secret edit`, and `shelf vault open` can intentionally materialize plaintext values.
+- `shelf secret get`, `shelf secret export`, `shelf project export`, `shelf project run`, `shelf secret edit`, and `shelf manager` can intentionally materialize plaintext values.
 - `.shelf.json` project manifests are value-free and can be committed after review.
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
 - `config.yaml` may contain public age recipients and identity file paths. It must not contain private identity contents or secret values.

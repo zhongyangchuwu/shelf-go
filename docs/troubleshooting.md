@@ -122,18 +122,18 @@ shelf project export --format shell
 
 ## Vault manager address rejected
 
-`shelf vault open` only accepts loopback addresses.
+`shelf manager` only accepts loopback addresses.
 
 Use the default random local port:
 
 ```bash
-shelf vault open
+shelf manager
 ```
 
 Or provide an explicit loopback address:
 
 ```bash
-shelf vault open --addr 127.0.0.1:8080
+shelf manager --addr 127.0.0.1:8080
 ```
 
 The printed URL contains a local access token and can remain in browser history. Treat it as sensitive local plaintext and stop the manager with Ctrl-C when finished.

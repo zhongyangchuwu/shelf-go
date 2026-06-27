@@ -10,14 +10,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/render"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 const sessionCookie = "shelf_manager_token"
 
 type Server struct {
-	vault *store.Vault
+	vault *vault.Vault
 	token string
 	host  string
 }
@@ -44,7 +44,7 @@ type pathPayload struct {
 	Path string `json:"path"`
 }
 
-func NewServer(vault *store.Vault, token, host string) (*Server, error) {
+func NewServer(vault *vault.Vault, token, host string) (*Server, error) {
 	if vault == nil {
 		return nil, fmt.Errorf("vault is required")
 	}
@@ -129,7 +129,7 @@ func (s *Server) handleSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var info SecretInfo
-	err := s.vault.Read(func(st *store.Store) error {
+	err := s.vault.Read(func(st *vault.Store) error {
 		secret, ok := st.Get(path)
 		if !ok {
 			return fmt.Errorf("secret not found: %s", path)
@@ -147,7 +147,7 @@ func (s *Server) handleSecret(w http.ResponseWriter, r *http.Request) {
 func (s *Server) listSecrets(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
 	var items []SecretInfo
-	err := s.vault.Read(func(st *store.Store) error {
+	err := s.vault.Read(func(st *vault.Store) error {
 		paths := st.List("")
 		items = make([]SecretInfo, 0, len(paths))
 		for _, path := range paths {
@@ -182,12 +182,12 @@ func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var value string
-	err := s.vault.Read(func(st *store.Store) error {
+	err := s.vault.Read(func(st *vault.Store) error {
 		secret, ok := st.Get(payload.Path)
 		if !ok {
 			return fmt.Errorf("secret not found: %s", payload.Path)
 		}
-		v, err := render.ValueString(secret.Value)
+		v, err := exportfmt.ValueString(secret.Value)
 		if err != nil {
 			return err
 		}
@@ -215,8 +215,8 @@ func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "value is required", http.StatusBadRequest)
 		return
 	}
-	err := s.vault.Update(func(st *store.Store) error {
-		secret := store.Secret{Env: payload.Env, Description: payload.Description, Tags: payload.Tags}
+	err := s.vault.Update(func(st *vault.Store) error {
+		secret := vault.Secret{Env: payload.Env, Description: payload.Description, Tags: payload.Tags}
 		if r.Method == http.MethodPut {
 			oldPath := payload.OldPath
 			if oldPath == "" {
@@ -228,19 +228,19 @@ func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
 			}
 			secret.Value = existing.Value
 			if payload.Value != nil {
-				value, err := store.ParseValue(*payload.Value)
+				value, err := vault.ParseValue(*payload.Value)
 				if err != nil {
 					return err
 				}
 				secret.Value = value
 			}
-			id, err := store.ParseSecretID(payload.Path)
+			id, err := vault.ParseSecretID(payload.Path)
 			if err != nil {
 				return err
 			}
 			return st.Update(oldPath, id, secret)
 		}
-		value, err := store.ParseValue(*payload.Value)
+		value, err := vault.ParseValue(*payload.Value)
 		if err != nil {
 			return err
 		}
@@ -260,7 +260,7 @@ func (s *Server) deleteSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
 	}
-	err := s.vault.Update(func(st *store.Store) error {
+	err := s.vault.Update(func(st *vault.Store) error {
 		if !st.Delete(path) {
 			return fmt.Errorf("secret not found: %s", path)
 		}
@@ -320,11 +320,11 @@ func isUnsafe(method string) bool {
 	return method != http.MethodGet && method != http.MethodHead && method != http.MethodOptions
 }
 
-func newSecretInfo(path string, secret store.Secret) SecretInfo {
+func newSecretInfo(path string, secret vault.Secret) SecretInfo {
 	return SecretInfo{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0}
 }
 
-func matchesSecret(query, path string, secret store.Secret) bool {
+func matchesSecret(query, path string, secret vault.Secret) bool {
 	if strings.Contains(strings.ToLower(path), query) || strings.Contains(strings.ToLower(secret.Env), query) || strings.Contains(strings.ToLower(secret.Description), query) {
 		return true
 	}

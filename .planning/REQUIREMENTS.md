@@ -1,21 +1,21 @@
 # Requirements: Shelf Go
 
 **Defined:** 2026-06-16
-**Revised:** 2026-06-26
+**Revised:** 2026-06-27
 **Core Value:** A developer can safely manage project secrets in an encrypted local vault and use them through explicit CLI, file, and child-process workflows without treating plaintext `.env` files as the source of truth.
 
 ## Current Requirements
 
-Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, documentation, architecture cleanup, and release preparation. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, architecture cleanup, documentation, and release preparation. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
 
 ### Web Manager Editing
 
-- [x] **WEB-01**: The local Web manager provides a searchable, understandable secret console with path, env, description, tag, and value-set metadata visible without revealing secret values.
-- [x] **WEB-02**: The Web manager supports adding, editing, renaming, and deleting secret records, including value, env, description, and tags.
-- [x] **WEB-03**: The Web manager supports explicit reveal, hide, and copy flows without returning secret values in list/search responses or storing them in browser-local persistent storage.
-- [x] **WEB-04**: The Web manager preserves and strengthens local-only safety boundaries: loopback binding, token/cookie access, Host/Origin checks, token removal from the visible URL after first load, and no-store responses for secret-bearing endpoints.
-- [x] **WEB-05**: The Web manager uses embedded local assets only; no CDN, hosted frontend, or permanent daemon dependency is required.
-- [x] **WEB-06**: The Web manager adopts a polished console visual direction based on a reusable HTML/CSS design system or template reference, with the implementation kept compatible with Go's single-binary distribution.
+- [x] **WEB-01**: The local manager provides a searchable, understandable secret console with path, env, description, tag, and value-set metadata visible without revealing secret values.
+- [x] **WEB-02**: The local manager supports adding, editing, renaming, and deleting secret records, including value, env, description, and tags.
+- [x] **WEB-03**: The local manager supports explicit reveal, hide, and copy flows without returning secret values in list/search responses or storing them in browser-local persistent storage.
+- [x] **WEB-04**: The local manager preserves and strengthens local-only safety boundaries: loopback binding, token/cookie access, Host/Origin checks, token removal from the visible URL after first load, and no-store responses for secret-bearing endpoints.
+- [x] **WEB-05**: The local manager uses embedded local assets only; no CDN, hosted frontend, or permanent daemon dependency is required.
+- [x] **WEB-06**: The local manager adopts a polished console visual direction based on a reusable HTML/CSS design system or template reference, with the implementation kept compatible with Go's single-binary distribution.
 
 ### Tag-Based CLI and Project Workflows
 
@@ -31,18 +31,21 @@ Requirements for v0.1.1 editing experience, tag-based workflows, workflow script
 - [x] **OPS-02**: Tag and release preparation flows are moved from ad-hoc manual commands and inline `justfile` recipes into reusable scripts under `scripts/`.
 - [x] **OPS-03**: Scripted workflows have clear usage, argument validation, and keep `justfile` as a thin task runner.
 
-### Documentation and Architecture Cleanup
+### Architecture Cleanup
 
-- [ ] **DOC-01**: User-facing docs describe Web manager editing, direct tag list/export, and project tag bindings.
-- [ ] **DOC-02**: Developer docs describe install/tag/release scripts so maintainers do not rely on remembered manual commands.
-- [ ] **ARCH-01**: Architecture naming is reviewed and updated around `shelf vault open`, `internal/manager`, and the user-facing Web manager concept.
-- [ ] **ARCH-02**: Web manager package placement is either justified in docs or refactored to a clearer package boundary with tests preserved.
+- [x] **ARCH-01**: The manager entrypoint is renamed to `shelf manager`, and the vault-scoped `shelf vault open` command is removed before release.
+- [x] **ARCH-02**: The internal package layout is repartitioned so vault core, project manifest handling, application composition, and export formatting have clear package names and dependency direction.
+
+### Documentation Cleanup
+
+- [ ] **DOC-01**: User-facing docs describe manager editing, direct tag list/export, and project tag bindings.
+- [ ] **DOC-02**: Developer docs describe install/tag/release scripts and the final internal architecture so maintainers do not rely on remembered manual commands or stale package maps.
 
 ### Scope Boundary and Release
 
-- [ ] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in WebUI and existing compact secret commands.
+- [ ] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in the manager and existing compact secret commands.
 - [ ] **BOUND-02**: v0.1.1 keeps the current age-encrypted JSON vault format and does not implement or spike SQLite; storage redesign is deferred to v0.2.0 planning.
-- [ ] **REL-011-01**: v0.1.1 release readiness is checked only after scripts, docs, and architecture cleanup are complete.
+- [ ] **REL-011-01**: v0.1.1 release readiness is checked only after architecture and documentation cleanup are complete.
 
 ## Deferred Requirements
 
@@ -85,16 +88,17 @@ Explicitly excluded. Documented to prevent scope creep.
 |---------|--------|
 | Team sharing | The current product is for solo developers; sharing requires identity, permissions, revocation, audit, and conflict semantics. |
 | Hosted sync service | Shelf should stay local-first and portable instead of requiring a backend account. |
-| Permanent daemon | Core CLI workflows should not depend on a long-running process; the vault manager should be short-lived/on-demand. |
+| Permanent daemon | Core CLI workflows should not depend on a long-running process; the manager should be short-lived/on-demand. |
 | Browser extension or autofill | Shelf is focused on developer secrets and env workflows, not general password-manager replacement. |
 | Plain `.env` as source of truth | `.env` files may be generated/exported, but Shelf's source of truth is the encrypted vault plus project manifests. |
 | New dotenv export format | Existing `shell` output is already sourceable; adding another format increases surface area without enough value. |
 | Hook-based project activation in current scope | Shell hooks mutate parent-shell state implicitly and add complexity; explicit export/source workflows are preferred for now. |
 | Dedicated vault restore command | Current backups are ordinary encrypted vault files and single-slot only; a command adds surface area without enough value. Manual copy plus `shelf vault status` is simpler. |
 | SQLite in v0.1.1 | v0.1.1 is about editing UX and tag workflows; storage model redesign is deferred to v0.2.0. |
-| Fine-grained CLI metadata edit subcommands | WebUI is the primary editing surface; CLI should stay compact and focus on scriptable application workflows. |
+| Fine-grained CLI metadata edit subcommands | The manager is the primary editing surface; CLI should stay compact and focus on scriptable application workflows. |
 | Broad one-file-per-command CLI split | `internal/cli` should stay command-family oriented rather than becoming a large directory of tiny files. |
-| Release hardening as next phase | Script, docs, and architecture cleanup must happen before v0.1.1 release readiness. |
+| Release hardening as next phase | Architecture and docs cleanup must happen before v0.1.1 release readiness. |
+| Compatibility alias for old manager command | The project is pre-release; keeping both `shelf manager` and `shelf vault open` would make one feature have two names. |
 
 ## Traceability
 
@@ -104,18 +108,18 @@ Explicitly excluded. Documented to prevent scope creep.
 | TAG-01..TAG-02 | Phase 19 | Complete |
 | TAG-03..TAG-05 | Phase 20 | Complete |
 | OPS-01..OPS-03 | Phase 21 | Complete |
-| DOC-01..DOC-02 | Phase 22 | Planned |
-| ARCH-01..ARCH-02 | Phase 22 | Planned |
-| BOUND-01 | Phase 17..Phase 23 | In Progress |
-| BOUND-02 | Phase 17..Phase 23 | In Progress |
-| REL-011-01 | Phase 23 | Planned |
+| ARCH-01..ARCH-02 | Phase 22 | Complete |
+| DOC-01..DOC-02 | Phase 23 | Planned |
+| BOUND-01 | Phase 17..Phase 24 | In Progress |
+| BOUND-02 | Phase 17..Phase 24 | In Progress |
+| REL-011-01 | Phase 24 | Planned |
 
 **Coverage:**
 - Current requirements: 23 total
 - Mapped to phases: 23
 - Unmapped: 0
-- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after completing script workflow consolidation requirements*
+*Last updated: 2026-06-27 after completing architecture repartition core*

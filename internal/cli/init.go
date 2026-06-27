@@ -9,9 +9,8 @@ import (
 
 	"filippo.io/age"
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newSetupCmd() *cobra.Command {
@@ -56,7 +55,7 @@ func newInitFilesCmd(use, short string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vaultCreated, err := ensureVaultFile(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+			vaultCreated, err := ensureVaultFile(runtime.VaultPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 			if err != nil {
 				return err
 			}
@@ -195,17 +194,17 @@ func ensureInitIdentity(path string) (*age.X25519Identity, error) {
 	return identity, nil
 }
 
-func ensureVaultFile(vaultPath string, options store.VaultOptions) (bool, error) {
+func ensureVaultFile(vaultPath string, options vault.VaultOptions) (bool, error) {
 	if _, err := os.Stat(vaultPath); err == nil {
 		return false, nil
 	} else if err != nil && !os.IsNotExist(err) {
 		return false, err
 	}
-	vault, err := store.NewVault(vaultPath, options)
+	v, err := vault.NewVault(vaultPath, options)
 	if err != nil {
 		return false, err
 	}
-	if err := vault.Save(&store.Store{Data: store.NewData()}); err != nil {
+	if err := v.Save(&vault.Store{Data: vault.NewData()}); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -236,7 +235,7 @@ func ensureConfigFile(configPath string, cfg initConfig, force bool) (bool, erro
 	for _, path := range identityPaths {
 		fmt.Fprintf(&b, "  - %s\n", path)
 	}
-	return true, atomicfile.Write(configPath, []byte(b.String()), atomicfile.Options{FileMode: 0o600, DirMode: 0o700})
+	return true, vault.Write(configPath, []byte(b.String()), vault.Options{FileMode: 0o600, DirMode: 0o700})
 }
 
 func expandInitPath(path string) (string, error) {

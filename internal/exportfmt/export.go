@@ -1,4 +1,4 @@
-package render
+package exportfmt
 
 import (
 	"bytes"
@@ -8,19 +8,19 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 var nonEnvChar = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
-func EnvName(path string, secret store.Secret) (string, error) {
+func EnvName(path string, secret vault.Secret) (string, error) {
 	if secret.Env != "" {
 		return secret.Env, nil
 	}
 	name := nonEnvChar.ReplaceAllString(path, "_")
 	name = strings.Trim(name, "_")
 	name = strings.ToUpper(name)
-	if !store.IsEnvName(name) {
+	if !vault.IsEnvName(name) {
 		return "", fmt.Errorf("derived env name for %s is invalid: %s", path, name)
 	}
 	return name, nil
@@ -41,7 +41,7 @@ func ValueString(raw json.RawMessage) (string, error) {
 	return compact.String(), nil
 }
 
-func Env(paths []string, secrets map[string]store.Secret) (string, error) {
+func Env(paths []string, secrets map[string]vault.Secret) (string, error) {
 	entries, err := Bindings(paths, secrets)
 	if err != nil {
 		return "", err
@@ -49,7 +49,7 @@ func Env(paths []string, secrets map[string]store.Secret) (string, error) {
 	return EnvBindings(entries)
 }
 
-func Shell(paths []string, secrets map[string]store.Secret) (string, error) {
+func Shell(paths []string, secrets map[string]vault.Secret) (string, error) {
 	entries, err := Bindings(paths, secrets)
 	if err != nil {
 		return "", err
@@ -57,7 +57,7 @@ func Shell(paths []string, secrets map[string]store.Secret) (string, error) {
 	return ShellBindings(entries)
 }
 
-func JSON(paths []string, secrets map[string]store.Secret) (string, error) {
+func JSON(paths []string, secrets map[string]vault.Secret) (string, error) {
 	entries, err := Bindings(paths, secrets)
 	if err != nil {
 		return "", err
@@ -70,7 +70,7 @@ type Binding struct {
 	Value   string
 }
 
-func Bindings(paths []string, secrets map[string]store.Secret) ([]Binding, error) {
+func Bindings(paths []string, secrets map[string]vault.Secret) ([]Binding, error) {
 	entries := make([]Binding, 0, len(paths))
 	for _, path := range paths {
 		secret := secrets[path]

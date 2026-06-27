@@ -1,4 +1,4 @@
-package manifest
+package project
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func Load(path string) (Manifest, error) {
@@ -42,5 +42,5 @@ func Save(path string, manifest Manifest) error {
 		return err
 	}
 	content = append(content, '\n')
-	return atomicfile.Write(path, content, atomicfile.Options{FileMode: 0o644, DirMode: 0o700, Sync: true})
+	return vault.Write(path, content, vault.Options{FileMode: 0o644, DirMode: 0o700, Sync: true})
 }

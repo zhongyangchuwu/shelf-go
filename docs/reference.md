@@ -122,12 +122,12 @@ shelf vault status
 shelf vault check
 ```
 
-### `shelf vault open`
+### `shelf manager`
 
-Starts the on-demand localhost vault manager.
+Starts the on-demand local manager.
 
 ```bash
-shelf vault open [--addr 127.0.0.1:0]
+shelf manager [--addr 127.0.0.1:0]
 ```
 
 The manager prints a tokenized loopback URL. Treat the URL as sensitive local plaintext, and stop the process with Ctrl-C when finished.

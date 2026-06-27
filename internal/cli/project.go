@@ -8,9 +8,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/manifest"
-	projectsvc "github.com/zhongyangchuwu/shelf-go/internal/project"
-	"github.com/zhongyangchuwu/shelf-go/internal/render"
+	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
+	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 func newProjectCmd() *cobra.Command {
@@ -32,7 +31,7 @@ func newProjectIDCmd() *cobra.Command {
 		Short: "Print current Git project identity",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := projectsvc.ID()
+			id, err := project.ID()
 			if err != nil {
 				return err
 			}
@@ -49,21 +48,21 @@ func newProjectInitCmd() *cobra.Command {
 		Short: "Initialize project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, manifest.FileName)
+			manifestPath := filepath.Join(root, project.FileName)
 			existed := false
 			if _, err := os.Stat(manifestPath); err == nil {
 				existed = true
 				if !force {
-					return fmt.Errorf("%s already exists (use --force to overwrite)", manifest.FileName)
+					return fmt.Errorf("%s already exists (use --force to overwrite)", project.FileName)
 				}
 			} else if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
-			if err := manifest.Save(manifestPath, manifest.New()); err != nil {
+			if err := project.Save(manifestPath, project.New()); err != nil {
 				return err
 			}
 			label := map[bool]string{true: "overwritten", false: "created"}
@@ -81,37 +80,37 @@ func newProjectExplainCmd() *cobra.Command {
 		Short: "Explain project manifest resolution",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, manifest.FileName)
-			m, err := manifest.Load(manifestPath)
+			manifestPath := filepath.Join(root, project.FileName)
+			m, err := project.Load(manifestPath)
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found in %s; run `shelf project init`", manifest.FileName, root)
+				return fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
 			}
 			if err != nil {
 				return err
 			}
 
-			projectID := projectsvc.IDBestEffort(root)
+			projectID := project.IDBestEffort(root)
 			fmt.Fprintf(cmd.OutOrStdout(), "project: %s\n", projectID)
 			fmt.Fprintf(cmd.OutOrStdout(), "root:    %s\n", root)
-			fmt.Fprintf(cmd.OutOrStdout(), "config:  %s\n\n", manifest.FileName)
+			fmt.Fprintf(cmd.OutOrStdout(), "config:  %s\n\n", project.FileName)
 
 			_, st, err := loadRuntime(cmd)
 			if err != nil {
 				return err
 			}
-			resolvedEntries, diagnostics := projectsvc.ResolveEntries(m, st)
-			projectsvc.RenderDiagnostics(cmd.OutOrStdout(), diagnostics)
+			resolvedEntries, diagnostics := project.ResolveEntries(m, st)
+			project.RenderDiagnostics(cmd.OutOrStdout(), diagnostics)
 			for _, entry := range resolvedEntries {
 				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.Path, entry.EnvName)
 			}
 			for _, warning := range envOverrideWarnings(resolvedEntries, os.Environ()) {
 				fmt.Fprintln(cmd.OutOrStdout(), warning)
 			}
-			if projectsvc.HasFailures(diagnostics) {
+			if project.HasFailures(diagnostics) {
 				return fmt.Errorf("project manifest check failed")
 			}
 			return nil
@@ -129,13 +128,13 @@ func newProjectAddCmd() *cobra.Command {
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completeProjectAddArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, manifest.FileName)
+			manifestPath := filepath.Join(root, project.FileName)
 			if _, err := os.Stat(manifestPath); errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found; run `shelf project init` first", manifest.FileName)
+				return fmt.Errorf("%s not found; run `shelf project init` first", project.FileName)
 			} else if err != nil {
 				return err
 			}
@@ -156,7 +155,7 @@ func newProjectAddCmd() *cobra.Command {
 				return err
 			}
 
-			entry := manifest.Entry{}
+			entry := project.Entry{}
 			if isTag {
 				if len(st.ListByTags("", tags)) == 0 {
 					return fmt.Errorf("no secrets match tags: %s", strings.Join(tags, ","))
@@ -188,14 +187,14 @@ func newProjectAddCmd() *cobra.Command {
 				entry.Required = new(bool)
 			}
 
-			m, err := manifest.Load(manifestPath)
+			m, err := project.Load(manifestPath)
 			if err != nil {
 				return err
 			}
 			if err := m.AddEntry(entry); err != nil {
 				return err
 			}
-			if err := manifest.Save(manifestPath, m); err != nil {
+			if err := project.Save(manifestPath, m); err != nil {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "added %s\n", entry.Key())
@@ -217,14 +216,14 @@ func newProjectRmCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProjectEntries,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, manifest.FileName)
-			m, err := manifest.Load(manifestPath)
+			manifestPath := filepath.Join(root, project.FileName)
+			m, err := project.Load(manifestPath)
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found", manifest.FileName)
+				return fmt.Errorf("%s not found", project.FileName)
 			}
 			if err != nil {
 				return err
@@ -232,7 +231,7 @@ func newProjectRmCmd() *cobra.Command {
 			if !m.RemoveEntry(args[0]) {
 				return fmt.Errorf("entry not found: %s", args[0])
 			}
-			if err := manifest.Save(manifestPath, m); err != nil {
+			if err := project.Save(manifestPath, m); err != nil {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "removed %s\n", args[0])
@@ -257,11 +256,11 @@ func completeProjectEntries(cmd *cobra.Command, args []string, toComplete string
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	root, err := projectsvc.Root()
+	root, err := project.Root()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	m, err := manifest.Load(filepath.Join(root, manifest.FileName))
+	m, err := project.Load(filepath.Join(root, project.FileName))
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -281,14 +280,14 @@ func newProjectListCmd() *cobra.Command {
 		Short: "List project manifest entries",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, manifest.FileName)
-			m, err := manifest.Load(manifestPath)
+			manifestPath := filepath.Join(root, project.FileName)
+			m, err := project.Load(manifestPath)
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found", manifest.FileName)
+				return fmt.Errorf("%s not found", project.FileName)
 			}
 			if err != nil {
 				return err
@@ -320,14 +319,14 @@ func newProjectExportCmd() *cobra.Command {
 		Short: "Export environment variables from project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, manifest.FileName)
-			m, err := manifest.Load(manifestPath)
+			manifestPath := filepath.Join(root, project.FileName)
+			m, err := project.Load(manifestPath)
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found", manifest.FileName)
+				return fmt.Errorf("%s not found", project.FileName)
 			}
 			if err != nil {
 				return err
@@ -338,9 +337,9 @@ func newProjectExportCmd() *cobra.Command {
 				return err
 			}
 
-			resolvedEntries, diagnostics := projectsvc.ResolveEntries(m, st)
-			projectsvc.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
-			if projectsvc.HasFailures(diagnostics) {
+			resolvedEntries, diagnostics := project.ResolveEntries(m, st)
+			project.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
+			if project.HasFailures(diagnostics) {
 				return fmt.Errorf("project export failed")
 			}
 			if len(resolvedEntries) == 0 {
@@ -366,8 +365,8 @@ func newProjectExportCmd() *cobra.Command {
 	return cmd
 }
 
-func renderProjectExportEnv(cmd *cobra.Command, entries []projectsvc.Binding) error {
-	out, err := render.EnvBindings(projectsvc.BindingsForRender(entries))
+func renderProjectExportEnv(cmd *cobra.Command, entries []project.Binding) error {
+	out, err := exportfmt.EnvBindings(project.BindingsForRender(entries))
 	if err != nil {
 		return err
 	}
@@ -375,8 +374,8 @@ func renderProjectExportEnv(cmd *cobra.Command, entries []projectsvc.Binding) er
 	return nil
 }
 
-func renderProjectExportShell(cmd *cobra.Command, entries []projectsvc.Binding) error {
-	out, err := render.ShellBindings(projectsvc.BindingsForRender(entries))
+func renderProjectExportShell(cmd *cobra.Command, entries []project.Binding) error {
+	out, err := exportfmt.ShellBindings(project.BindingsForRender(entries))
 	if err != nil {
 		return err
 	}
@@ -384,8 +383,8 @@ func renderProjectExportShell(cmd *cobra.Command, entries []projectsvc.Binding) 
 	return nil
 }
 
-func renderProjectExportJSON(cmd *cobra.Command, entries []projectsvc.Binding) error {
-	out, err := render.JSONBindings(projectsvc.BindingsForRender(entries))
+func renderProjectExportJSON(cmd *cobra.Command, entries []project.Binding) error {
+	out, err := exportfmt.JSONBindings(project.BindingsForRender(entries))
 	if err != nil {
 		return err
 	}

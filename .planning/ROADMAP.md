@@ -2,9 +2,9 @@
 
 ## Overview
 
-Shelf Go v0.1.1 improves the day-to-day editing and selection experience without changing the storage model. The release rebuilds `shelf vault open` into a practical local secret console, adds tag-based secret selection for CLI exports, and lets projects bind tag-selected secret sets while keeping secret values out of manifests.
+Shelf Go v0.1.1 improves the day-to-day editing and selection experience without changing the storage model. The release adds a local manager surface, tag-based secret selection for CLI exports, and project tag bindings while keeping secret values out of manifests.
 
-Before release, v0.1.1 still needs workflow/script cleanup, documentation updates, and architecture naming cleanup. Release hardening is intentionally the final phase, not the next phase.
+Before release, v0.1.1 still needs architecture repartitioning, documentation updates, and release hardening. Release hardening is intentionally the final phase.
 
 SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
@@ -15,8 +15,9 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 19: Secret Tag Selection
 - [x] Phase 20: Project Tag Bindings
 - [x] Phase 21: Script Workflow Consolidation
-- [ ] Phase 22: Documentation and Architecture Cleanup
-- [ ] Phase 23: v0.1.1 Release Hardening
+- [x] Phase 22: Architecture Repartition Core
+- [ ] Phase 23: Documentation and Usage Alignment
+- [ ] Phase 24: v0.1.1 Release Hardening
 
 ## Phase Details
 
@@ -28,27 +29,15 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
 **Requirements:** WEB-01..WEB-06, BOUND-01, BOUND-02
 
-**Success Criteria:**
-1. WebUI design contract describes list/search, add, edit, delete, reveal, copy, hide, tag filtering, and tag editing flows.
-2. Visual direction is selected from reusable console/admin template references, with local embedded assets and no CDN requirement.
-3. Technical direction keeps `net/http` and single-binary Go distribution; SPA and broad web frameworks are rejected unless explicitly re-approved.
-4. Safety contract covers token URL cleanup, loopback/token/Host/Origin checks, no-store secret responses, and no persistent browser storage for secret values.
-
 **Plan:** `.planning/phases/017-web-manager-design/PLAN.md`
 
 ### Phase 18: Web Manager Editing Console
 
-**Goal:** Rebuild `shelf vault open` as the main secret editing surface.
+**Goal:** Rebuild the local manager as the main secret editing surface.
 
 **Depends on:** Phase 17 complete.
 
 **Requirements:** WEB-01..WEB-06, BOUND-01
-
-**Success Criteria:**
-1. Manager UI lists and searches secrets by path, env, description, and tags without returning values in list responses.
-2. Manager UI supports add, edit/rename, delete, tag editing, explicit reveal, hide, and copy workflows.
-3. Existing manager safety tests remain covered and new tests cover token redirect, no-store secret responses, POST reveal/copy, and no value leakage in list/search responses.
-4. Assets are embedded locally and release builds remain single-binary friendly.
 
 **Plan:** `.planning/phases/018-web-manager-editing-console/PLAN.md`
 
@@ -60,12 +49,6 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
 **Requirements:** TAG-01, TAG-02, TAG-05, BOUND-01
 
-**Success Criteria:**
-1. `shelf secret list --tag` filters by one or more tags and remains value-free.
-2. `shelf secret export --tag` exports tag-selected secrets in existing env, shell, and JSON formats.
-3. Multiple `--tag` filters use AND semantics and deterministic sorted output.
-4. Existing path/prefix export behavior, `--all`, and no-new-dotenv boundary remain unchanged.
-
 **Plan:** `.planning/phases/019-secret-tag-selection/PLAN.md`
 
 ### Phase 20: Project Tag Bindings
@@ -75,12 +58,6 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 **Depends on:** Phase 19 complete.
 
 **Requirements:** TAG-03, TAG-04, TAG-05
-
-**Success Criteria:**
-1. Manifest schema supports tag-selected entries with path/prefix/tag forms mutually exclusive.
-2. `shelf project add --tag` records value-free tag bindings.
-3. `project list`, `explain`, `export`, and `run` expand tag bindings with clear missing and conflict diagnostics.
-4. Dynamic tag binding behavior is documented and covered by command tests.
 
 **Plan:** `.planning/phases/020-project-tag-bindings/PLAN.md`
 
@@ -92,42 +69,53 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
 **Requirements:** OPS-01, OPS-02, OPS-03
 
-**Success Criteria:**
-1. Install flow currently embedded in `justfile` is captured as a script under `scripts/` and `just install` delegates to it.
-2. Tag/release flow is captured as scripts under `scripts/`, including the existing tag command and GoReleaser checks/snapshot workflow.
-3. Scripts are portable Bash with `set -euo pipefail`, predictable arguments, and concise usage errors.
-4. `justfile` remains a thin task runner rather than the source of workflow logic.
-5. Script behavior is documented enough for maintainers to release without relying on remembered manual commands.
-
 **Plan:** `.planning/phases/021-script-workflow-consolidation/PLAN.md`
 
-### Phase 22: Documentation and Architecture Cleanup
+### Phase 22: Architecture Repartition Core
 
-**Goal:** Improve docs and clean up naming/package architecture before release, especially around the Web manager naming mismatch.
+**Goal:** Cleanly repartition internal packages and replace the vault-scoped manager command with a single local manager entrypoint.
 
 **Depends on:** Phase 21 complete.
 
-**Requirements:** DOC-01, DOC-02, ARCH-01, ARCH-02
+**Requirements:** ARCH-01, ARCH-02, BOUND-01, BOUND-02
 
 **Success Criteria:**
-1. User-facing docs describe Web manager editing, tag-based direct secret workflows, and project tag bindings.
+1. `shelf manager` is the only manager command entrypoint; `shelf vault open` is removed.
+2. `internal/manager` remains the local manager surface package and is not limited to vault-only features.
+3. Project manifest schema/IO/validation moves into `internal/project`.
+4. Encrypted vault core, diagnostics, locking, age, JSON, and atomic write support live under `internal/vault`.
+5. Version composition moves into `internal/app`.
+6. Export env/shell/JSON formatting moves from `internal/render` to `internal/exportfmt`.
+7. Behavior remains unchanged apart from the intentional manager command rename.
+
+**Plan:** `.planning/phases/022-architecture-repartition-core/PLAN.md`
+
+### Phase 23: Documentation and Usage Alignment
+
+**Goal:** Update user and developer docs after the architecture and command naming cutover.
+
+**Depends on:** Phase 22 complete.
+
+**Requirements:** DOC-01, DOC-02, ARCH-01, ARCH-02, BOUND-01, BOUND-02
+
+**Success Criteria:**
+1. User-facing docs describe manager editing, tag-based direct secret workflows, and project tag bindings.
 2. Developer docs describe scripts and release workflow after Phase 21.
-3. Architecture review resolves the mismatch between command name `shelf vault open`, package path `internal/manager`, and user-facing function naming.
-4. Any package/command naming changes keep CLI behavior intentional, documented, and covered by tests.
-5. The `internal/manager` placement is either justified in architecture docs or refactored to a clearer package boundary.
+3. Architecture docs describe the final Phase 22 package layout and manager command naming.
+4. Docs no longer treat `shelf vault open` as the primary manager entrypoint.
 
 **Plan:** TBD.
 
-### Phase 23: v0.1.1 Release Hardening
+### Phase 24: v0.1.1 Release Hardening
 
-**Goal:** Prepare v0.1.1 for release only after scripts, docs, and architecture cleanup are complete.
+**Goal:** Prepare v0.1.1 for release only after architecture and docs cleanup are complete.
 
-**Depends on:** Phases 18, 19, 20, 21, and 22 complete.
+**Depends on:** Phases 18, 19, 20, 21, 22, and 23 complete.
 
 **Requirements:** WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01
 
 **Success Criteria:**
-1. README and docs reflect the implemented Web manager, tag workflows, scripts, and architecture names.
+1. README and docs reflect the implemented manager, tag workflows, scripts, and architecture names.
 2. CHANGELOG has a `0.1.1` section.
 3. Go tests, vet, release check, and snapshot release pass through the consolidated scripts.
 4. Verification records confirm no storage format change and SQLite deferral to v0.2.0.
@@ -143,19 +131,18 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - Multiple vaults or profiles: consider after single-vault workflows show concrete pressure.
 - Chezmoi helper commands: consider optional integration while preserving Shelf's portable encrypted-file model.
 - Package-manager distribution: consider Homebrew/Scoop or similar after initial usage validates demand.
-- `internal/gitutil`: create only if both `internal/project` and future `internal/vault` need shared git subprocess helpers.
 
 ## Explicit Non-Goals for v0.1.1
 
 - No SQLite implementation, SQLite spike, or storage backend abstraction.
 - No new vault file format.
-- No `secret meta` or `secret tag` command group; WebUI is the primary editing surface.
+- No `secret meta` or `secret tag` command group; manager is the primary editing surface.
 - No SPA requirement, hosted frontend, CDN dependency, or permanent daemon.
 - No `project activate` / `project deactivate` shell hook implementation.
 - No `project shell` wrapper unless a later phase shows clear value over `project run -- $SHELL`.
 - No new `dotenv` format; use existing `shell` output for sourceable files.
 - No team sharing or hosted sync.
-- No release hardening before script, docs, and architecture cleanup phases complete.
+- No release hardening before architecture and documentation cleanup phases complete.
 
 ## Progress
 
@@ -166,12 +153,13 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 19: Secret Tag Selection | Complete | TAG-01..TAG-02, TAG-05, BOUND-01 | `.planning/phases/019-secret-tag-selection/PLAN.md` | 2026-06-26 |
 | Phase 20: Project Tag Bindings | Complete | TAG-03..TAG-05 | `.planning/phases/020-project-tag-bindings/PLAN.md` | 2026-06-26 |
 | Phase 21: Script Workflow Consolidation | Complete | OPS-01..OPS-03 | `.planning/phases/021-script-workflow-consolidation/PLAN.md` | 2026-06-26 |
-| Phase 22: Documentation and Architecture Cleanup | Not Started | DOC-01..DOC-02, ARCH-01..ARCH-02 | TBD | - |
-| Phase 23: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | TBD | - |
+| Phase 22: Architecture Repartition Core | Complete | ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/022-architecture-repartition-core/PLAN.md` | 2026-06-27 |
+| Phase 23: Documentation and Usage Alignment | Not Started | DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02 | TBD | - |
+| Phase 24: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | TBD | - |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-26 after completing script workflow consolidation*
+*Last updated: 2026-06-27 after completing architecture repartition core*

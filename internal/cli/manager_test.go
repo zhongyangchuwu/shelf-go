@@ -34,28 +34,28 @@ func TestManagerTokenIsGenerated(t *testing.T) {
 	}
 }
 
-func TestRootIncludesVaultOpenCommand(t *testing.T) {
+func TestRootIncludesManagerCommand(t *testing.T) {
 	cmd := NewRootCmd()
-	var vault *cobra.Command
+	var foundManager bool
+	var vaultCmd *cobra.Command
 	for _, child := range cmd.Commands() {
-		if child.Name() == "vault" {
-			vault = child
-		}
 		if child.Name() == "manager" {
-			t.Fatalf("root command should not include manager subcommand")
+			foundManager = true
+		}
+		if child.Name() == "vault" {
+			vaultCmd = child
 		}
 	}
-	if vault == nil {
+	if !foundManager {
+		t.Fatalf("root command missing manager subcommand")
+	}
+	if vaultCmd == nil {
 		t.Fatalf("root command missing vault subcommand")
 	}
-	foundOpen := false
-	for _, child := range vault.Commands() {
+	for _, child := range vaultCmd.Commands() {
 		if child.Name() == "open" {
-			foundOpen = true
+			t.Fatalf("vault command should not include open subcommand")
 		}
-	}
-	if !foundOpen {
-		t.Fatalf("vault command missing open subcommand")
 	}
 }
 
@@ -65,7 +65,6 @@ func TestRootExcludesPreReleaseTopLevelCommands(t *testing.T) {
 		"migrate": {},
 		"export":  {},
 		"run":     {},
-		"manager": {},
 	}
 	for _, child := range NewRootCmd().Commands() {
 		if _, exists := forbidden[child.Name()]; exists {

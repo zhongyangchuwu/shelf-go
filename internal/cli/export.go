@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/render"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newExportCmd() *cobra.Command {
@@ -33,7 +33,7 @@ func newExportCmd() *cobra.Command {
 						paths = st.List(prefix)
 					}
 				} else if secret, ok := st.Get(prefix); ok {
-					if store.HasTags(secret, tags) {
+					if vault.HasTags(secret, tags) {
 						paths = []string{prefix}
 					}
 				} else {
@@ -59,11 +59,11 @@ func newExportCmd() *cobra.Command {
 			var out string
 			switch format {
 			case "json":
-				out, err = render.JSON(paths, st.Data.Secrets)
+				out, err = exportfmt.JSON(paths, st.Data.Secrets)
 			case "env":
-				out, err = render.Env(paths, st.Data.Secrets)
+				out, err = exportfmt.Env(paths, st.Data.Secrets)
 			case "shell":
-				out, err = render.Shell(paths, st.Data.Secrets)
+				out, err = exportfmt.Shell(paths, st.Data.Secrets)
 			default:
 				return fmt.Errorf("unsupported format: %s", format)
 			}
