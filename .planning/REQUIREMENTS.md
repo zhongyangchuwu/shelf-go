@@ -43,9 +43,9 @@ Requirements for v0.1.1 editing experience, tag-based workflows, workflow script
 
 ### Scope Boundary and Release
 
-- [ ] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in the manager and existing compact secret commands.
-- [ ] **BOUND-02**: v0.1.1 keeps the current age-encrypted JSON vault format and does not implement or spike SQLite; storage redesign is deferred to v0.2.0 planning.
-- [ ] **REL-011-01**: v0.1.1 release readiness is checked only after architecture and documentation cleanup are complete.
+- [x] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in the manager and existing compact secret commands.
+- [x] **BOUND-02**: v0.1.1 keeps the current age-encrypted JSON vault format and does not implement or spike SQLite; storage redesign is deferred to v0.2.0 planning.
+- [x] **REL-011-01**: v0.1.1 release readiness is checked only after architecture and documentation cleanup are complete.
 
 ## Deferred Requirements
 
@@ -110,16 +110,16 @@ Explicitly excluded. Documented to prevent scope creep.
 | OPS-01..OPS-03 | Phase 21 | Complete |
 | ARCH-01..ARCH-02 | Phase 22 | Complete |
 | DOC-01..DOC-02 | Phase 23 | Complete |
-| BOUND-01 | Phase 17..Phase 24 | In Progress |
-| BOUND-02 | Phase 17..Phase 24 | In Progress |
-| REL-011-01 | Phase 24 | Planned |
+| BOUND-01 | Phase 17..Phase 24 | Complete |
+| BOUND-02 | Phase 17..Phase 24 | Complete |
+| REL-011-01 | Phase 24 | Complete |
 
 **Coverage:**
 - Current requirements: 23 total
 - Mapped to phases: 23
 - Unmapped: 0
-- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02, DOC-01..DOC-02
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-27 after completing documentation alignment*
+*Last updated: 2026-06-27 after completing v0.1.1 release hardening*

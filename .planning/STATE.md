@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 24 - v0.1.1 Release Hardening
-- Status: not-started
-- Active Artifact: .planning/ROADMAP.md
-- Next Action: Start Phase 24 release hardening with changelog, consolidated release checks, snapshot verification, and release records.
+- Phase: v0.1.1 Release Ready
+- Status: ready-to-tag
+- Active Artifact: .planning/phases/024-v0.1.1-release-hardening/VERIFICATION.md
+- Next Action: Review the release-ready commit, then tag and push v0.1.1 with `./scripts/release.sh tag 0.1.1` and `git push origin v0.1.1`.
 
 ## Blockers
 - None
@@ -25,6 +25,7 @@
   - Export formatting moved into `internal/exportfmt`.
   - Final internal package set is `app`, `cli`, `config`, `exportfmt`, `manager`, `project`, `secret`, and `vault`.
 - Phase 23 completed documentation alignment for manager editing, direct tag workflows, project tag bindings, scripted workflows, and final package layout.
+- Phase 24 completed release hardening: changelog updated, `go test ./...`, `go vet ./...`, `./scripts/release.sh check`, and `./scripts/release.sh snapshot` passed.
 - v0.1.1 still defers SQLite/storage redesign to v0.2.0 and keeps the current age-encrypted JSON vault format.
 
 ## Updated

@@ -22,11 +22,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 consolidates install/tag/release workflows into reusable `scripts/` Bash scripts and keeps `justfile` thin.
 - [x] v0.1.1 repartitions internal packages and uses `shelf manager` as the single local manager entrypoint.
 - [x] v0.1.1 updates user and developer docs for Web manager editing, tag workflows, scripted workflows, and final package layout.
+- [x] v0.1.1 release hardening passed tests, vet, release check, and snapshot release through consolidated scripts.
 
 ### Active
 
-- [ ] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
-- [ ] v0.1.1 release hardening happens only after scripts, docs, and architecture cleanup complete.
+- [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
 
 ### Out of Scope
 
@@ -42,7 +42,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 The repository is a Go CLI using Cobra. The display layer lives in `cmd/shelf`, `internal/cli`, and `internal/manager`. Feature support lives in `internal/app`, `internal/project`, and `internal/secret`; base support lives in `internal/config`, `internal/vault`, and `internal/exportfmt`.
 
-The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, and architecture repartitioning are implemented; remaining pre-release work is docs and release hardening.
+The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, architecture repartitioning, documentation alignment, and release hardening are complete; the release is ready to tag and publish after review.
 
 ## Constraints
 
@@ -74,7 +74,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Defer storage-engine changes | JSON inside an age-encrypted vault keeps the security and portability model simple. SQLite is worth future discussion but not part of editing UX delivery. | Current storage remains age-encrypted JSON through v0.1.1; SQLite moves to v0.2.0 consideration. |
 | Keep reusable workflows out of `internal/cli` | CLI files should stay command-family oriented and not own behavior needed by tests, manager, or future UX. | `internal/app`, `internal/project`, `internal/vault`, `internal/secret`, `internal/manager`, and `internal/exportfmt` own reusable behavior outside CLI. |
 | Keep CLI editing compact | Fine-grained `meta`/`tag` edit commands increase command surface while WebUI is the intended editing surface. | v0.1.1 does not add `secret meta` or `secret tag`; CLI focuses on list/export/project tag application flows. |
-| Release hardening is final, not next | Install/tag/release scripts, docs, and architecture naming cleanup are prerequisites for a maintainable release. | Phase 22 is architecture repartitioning, Phase 23 is docs alignment, Phase 24 is release hardening. |
+| Release hardening is final, not next | Install/tag/release scripts, docs, and architecture naming cleanup are prerequisites for a maintainable release. | Completed in Phase 24; v0.1.1 is ready to tag after review. |
 
 ## Evolution
 
@@ -88,4 +88,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-27 after completing architecture repartition core*
+*Last updated: 2026-06-27 after completing v0.1.1 release hardening*

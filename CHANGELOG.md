@@ -4,6 +4,17 @@ All notable user-facing changes will be recorded here.
 
 ## Unreleased
 
+## 0.1.1 - 2026-06-27
+
+- Replaced the local manager entrypoint with `shelf manager` and removed the pre-release `shelf vault open` command.
+- Rebuilt the local manager as a searchable editing console with add, edit, rename, delete, reveal, copy, and tag workflows.
+- Hardened manager access with token URL cleanup, no-store responses, metadata-only list/detail responses, and explicit POST reveal actions.
+- Added tag-based secret selection to `shelf secret list` and `shelf secret export` with repeatable AND semantics.
+- Added value-free project tag bindings for `shelf project add`, `list`, `explain`, `export`, and `run`.
+- Consolidated install, release check, snapshot, and tag workflows under reusable `scripts/` commands while keeping `justfile` as a thin wrapper.
+- Repartitioned internal packages around `app`, `project`, `secret`, `vault`, `manager`, `config`, and `exportfmt` boundaries.
+- Updated README and docs for manager editing, tag workflows, scripts, architecture, and troubleshooting.
+
 ## 0.1.0 - 2026-06-25
 
 - Added age-encrypted vault storage with `shelf-vault/v1` envelope.

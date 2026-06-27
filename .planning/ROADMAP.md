@@ -16,8 +16,8 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 20: Project Tag Bindings
 - [x] Phase 21: Script Workflow Consolidation
 - [x] Phase 22: Architecture Repartition Core
-- [ ] Phase 23: Documentation and Usage Alignment
-- [ ] Phase 24: v0.1.1 Release Hardening
+- [x] Phase 23: Documentation and Usage Alignment
+- [x] Phase 24: v0.1.1 Release Hardening
 
 ## Phase Details
 
@@ -121,7 +121,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 4. Verification records confirm no storage format change and SQLite deferral to v0.2.0.
 5. Release readiness does not rely on manual commands that should live in scripts.
 
-**Plan:** TBD.
+**Plan:** `.planning/phases/024-v0.1.1-release-hardening/PLAN.md`
 
 ## Future Candidates
 
@@ -155,11 +155,11 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 21: Script Workflow Consolidation | Complete | OPS-01..OPS-03 | `.planning/phases/021-script-workflow-consolidation/PLAN.md` | 2026-06-26 |
 | Phase 22: Architecture Repartition Core | Complete | ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/022-architecture-repartition-core/PLAN.md` | 2026-06-27 |
 | Phase 23: Documentation and Usage Alignment | Complete | DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/023-documentation-and-usage-alignment/PLAN.md` | 2026-06-27 |
-| Phase 24: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | TBD | - |
+| Phase 24: v0.1.1 Release Hardening | Complete | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | `.planning/phases/024-v0.1.1-release-hardening/PLAN.md` | 2026-06-27 |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-27 after completing documentation alignment*
+*Last updated: 2026-06-27 after completing v0.1.1 release hardening*
