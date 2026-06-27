@@ -21,10 +21,10 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 project manifests support value-free tag bindings for project export/run workflows.
 - [x] v0.1.1 consolidates install/tag/release workflows into reusable `scripts/` Bash scripts and keeps `justfile` thin.
 - [x] v0.1.1 repartitions internal packages and uses `shelf manager` as the single local manager entrypoint.
+- [x] v0.1.1 updates user and developer docs for Web manager editing, tag workflows, scripted workflows, and final package layout.
 
 ### Active
 
-- [ ] v0.1.1 updates user and developer docs for Web manager editing, tag workflows, and scripted workflows.
 - [ ] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
 - [ ] v0.1.1 release hardening happens only after scripts, docs, and architecture cleanup complete.
 

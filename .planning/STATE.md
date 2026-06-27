@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 23 - Documentation and Usage Alignment
+- Phase: Phase 24 - v0.1.1 Release Hardening
 - Status: not-started
 - Active Artifact: .planning/ROADMAP.md
-- Next Action: Start Phase 23 planning for user/developer documentation covering `shelf manager`, tag workflows, scripts, and the final package layout.
+- Next Action: Start Phase 24 release hardening with changelog, consolidated release checks, snapshot verification, and release records.
 
 ## Blockers
 - None
@@ -24,6 +24,7 @@
   - Version composition moved into `internal/app`.
   - Export formatting moved into `internal/exportfmt`.
   - Final internal package set is `app`, `cli`, `config`, `exportfmt`, `manager`, `project`, `secret`, and `vault`.
+- Phase 23 completed documentation alignment for manager editing, direct tag workflows, project tag bindings, scripted workflows, and final package layout.
 - v0.1.1 still defers SQLite/storage redesign to v0.2.0 and keeps the current age-encrypted JSON vault format.
 
 ## Updated

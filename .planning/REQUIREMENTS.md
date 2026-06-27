@@ -38,8 +38,8 @@ Requirements for v0.1.1 editing experience, tag-based workflows, workflow script
 
 ### Documentation Cleanup
 
-- [ ] **DOC-01**: User-facing docs describe manager editing, direct tag list/export, and project tag bindings.
-- [ ] **DOC-02**: Developer docs describe install/tag/release scripts and the final internal architecture so maintainers do not rely on remembered manual commands or stale package maps.
+- [x] **DOC-01**: User-facing docs describe manager editing, direct tag list/export, and project tag bindings.
+- [x] **DOC-02**: Developer docs describe install/tag/release scripts and the final internal architecture so maintainers do not rely on remembered manual commands or stale package maps.
 
 ### Scope Boundary and Release
 
@@ -109,7 +109,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | TAG-03..TAG-05 | Phase 20 | Complete |
 | OPS-01..OPS-03 | Phase 21 | Complete |
 | ARCH-01..ARCH-02 | Phase 22 | Complete |
-| DOC-01..DOC-02 | Phase 23 | Planned |
+| DOC-01..DOC-02 | Phase 23 | Complete |
 | BOUND-01 | Phase 17..Phase 24 | In Progress |
 | BOUND-02 | Phase 17..Phase 24 | In Progress |
 | REL-011-01 | Phase 24 | Planned |
@@ -118,8 +118,8 @@ Explicitly excluded. Documented to prevent scope creep.
 - Current requirements: 23 total
 - Mapped to phases: 23
 - Unmapped: 0
-- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02, DOC-01..DOC-02
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-27 after completing architecture repartition core*
+*Last updated: 2026-06-27 after completing documentation alignment*

@@ -22,16 +22,23 @@ internal/exportfmt/  env/shell/JSON export formatting
 The intended dependency direction is display to feature support to base support:
 
 ```text
-cmd/shelf -> internal/cli
-internal/cli -> app, project, secret, vault, manager, config, exportfmt
-internal/manager -> vault, exportfmt
-app -> config, vault
-project -> vault, exportfmt
-secret -> vault
-exportfmt -> vault
+Display:
+  cmd/shelf -> internal/cli
+  internal/cli -> app, project, secret, vault, manager, config, exportfmt
+  internal/manager -> vault, exportfmt
+
+Feature support:
+  app -> config, vault
+  project -> vault, exportfmt
+  secret -> vault
+
+Base support:
+  exportfmt -> vault
+  config -> standard library + YAML
+  vault -> standard library + age/flock dependencies
 ```
 
-Base packages must not import `internal/cli` or `internal/manager`.
+Base packages must not import `internal/cli` or `internal/manager`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
 
 ## Command layer
 
@@ -77,7 +84,7 @@ Current file responsibilities:
 - `atomicfile.go`: atomic write primitive for vault/config/manifest writes;
 - `status.go`: typed status records for vault status/check/doctor diagnostics.
 
-There is intentionally no storage backend interface yet. A second backend should be introduced only after a concrete storage spike proves the need.
+There is intentionally no storage backend interface yet. v0.1.1 keeps JSON inside an age-encrypted vault; SQLite or another storage engine is deferred to v0.2.0 after a concrete threat model and artifact-leakage review.
 
 ## Project workflows
 
@@ -89,7 +96,7 @@ Resolution order for env names:
 2. secret object's `env`;
 3. env name derived from the full secret path.
 
-Prefix and tag manifest entries may expand to multiple secrets and cannot carry `env`. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
+Prefix and tag manifest entries may expand to multiple secrets and cannot carry `env`. Tag selectors use AND semantics and are stored as value-free `tags` arrays. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
 
 ## Secret edit workflow
 
@@ -101,15 +108,17 @@ Prefix and tag manifest entries may expand to multiple secrets and cannot carry 
 
 ## Local manager
 
-`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept.
+`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept. The public entrypoint is `shelf manager`; there is no `shelf vault open` alias.
 
 Safety boundaries:
 
 - loopback-only address validation in CLI before server start;
-- tokenized URL and strict cookie;
-- Host and Origin checks;
-- metadata list/search without values;
-- explicit reveal for plaintext values.
+- tokenized URL with token removal from the visible URL after first load;
+- strict cookie, Host checks, and Origin checks;
+- no-store responses for manager pages and API responses;
+- metadata list/search/detail without values;
+- explicit POST reveal/copy flows for plaintext values;
+- embedded local HTML/CSS/JS assets, no CDN or permanent daemon requirement.
 
 ## Public documentation boundary
 

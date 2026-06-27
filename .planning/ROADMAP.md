@@ -104,7 +104,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 3. Architecture docs describe the final Phase 22 package layout and manager command naming.
 4. Docs no longer treat `shelf vault open` as the primary manager entrypoint.
 
-**Plan:** TBD.
+**Plan:** `.planning/phases/023-documentation-and-usage-alignment/PLAN.md`
 
 ### Phase 24: v0.1.1 Release Hardening
 
@@ -154,7 +154,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 20: Project Tag Bindings | Complete | TAG-03..TAG-05 | `.planning/phases/020-project-tag-bindings/PLAN.md` | 2026-06-26 |
 | Phase 21: Script Workflow Consolidation | Complete | OPS-01..OPS-03 | `.planning/phases/021-script-workflow-consolidation/PLAN.md` | 2026-06-26 |
 | Phase 22: Architecture Repartition Core | Complete | ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/022-architecture-repartition-core/PLAN.md` | 2026-06-27 |
-| Phase 23: Documentation and Usage Alignment | Not Started | DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02 | TBD | - |
+| Phase 23: Documentation and Usage Alignment | Complete | DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/023-documentation-and-usage-alignment/PLAN.md` | 2026-06-27 |
 | Phase 24: v0.1.1 Release Hardening | Not Started | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | TBD | - |
 
 ## Archived Releases
@@ -162,4 +162,4 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-27 after completing architecture repartition core*
+*Last updated: 2026-06-27 after completing documentation alignment*

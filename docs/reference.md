@@ -130,7 +130,7 @@ Starts the on-demand local manager.
 shelf manager [--addr 127.0.0.1:0]
 ```
 
-The manager prints a tokenized loopback URL. Treat the URL as sensitive local plaintext, and stop the process with Ctrl-C when finished.
+The manager prints a tokenized loopback URL and serves an embedded Web console for search, add, edit, rename, delete, reveal, copy, and tag workflows. List/detail responses are metadata-only; reveal/copy actions intentionally return plaintext values. Treat the URL and revealed values as sensitive local plaintext, and stop the process with Ctrl-C when finished.
 
 ### `shelf doctor`
 
@@ -169,8 +169,10 @@ shelf secret get <path>
 Prints matching secret paths only.
 
 ```bash
-shelf secret list [prefix]
+shelf secret list [prefix] [--tag TAG ...]
 ```
+
+Repeated `--tag` selectors use AND semantics. With a prefix, the tag filter is applied inside that prefix.
 
 ### `shelf secret info`
 
@@ -200,13 +202,13 @@ shelf secret rm <path>
 
 ### `shelf secret export`
 
-Exports an exact path or prefix in shell, env, or JSON format.
+Exports an exact path, prefix, or tag-selected set in shell, env, or JSON format.
 
 ```bash
-shelf secret export <path-or-prefix> --format shell|env|json [--all]
+shelf secret export [path-or-prefix] --format shell|env|json [--all] [--tag TAG ...]
 ```
 
-For prefix export, the default includes only secrets with explicit `env`; `--all` also derives env names for secrets without `env`.
+At least one path, prefix, or `--tag` selector is required. Repeated `--tag` selectors use AND semantics. For prefix or tag-set export, the default includes only secrets with explicit `env`; `--all` also derives env names for secrets without `env`.
 
 ### `shelf project id`
 
@@ -226,20 +228,21 @@ shelf project init [--force]
 
 ### `shelf project add`
 
-Adds an exact path or prefix to the project manifest.
+Adds an exact path, prefix, or tag selector to the project manifest.
 
 ```bash
 shelf project add <path-or-prefix> [--env NAME] [--optional]
+shelf project add --tag TAG [--tag TAG ...] [--optional]
 ```
 
-`--env` is valid only for exact path entries.
+`--env` is valid only for exact path entries. Prefix and tag entries may expand to multiple secrets and cannot carry an env override.
 
 ### `shelf project rm`
 
-Removes a manifest entry.
+Removes a manifest entry by exact path, prefix, or comma-joined tag selector key.
 
 ```bash
-shelf project rm <path-or-prefix>
+shelf project rm <path-or-prefix-or-tag-key>
 ```
 
 ### `shelf project list`
@@ -302,6 +305,10 @@ Path: `<git-root>/.shelf.json`
     {
       "prefix": "providers/openai",
       "required": false
+    },
+    {
+      "tags": ["ai", "prod"],
+      "required": false
     }
   ]
 }
@@ -311,10 +318,10 @@ Rules:
 
 - `version` is required and fixed at `1`.
 - `secrets` is an array.
-- Each entry has exactly one of `path` or `prefix`.
-- `env` is a project-level env override for exact path entries.
+- Each entry has exactly one selector: `path`, `prefix`, or `tags`.
+- `env` is a project-level env override for exact path entries only.
 - `required` defaults to `true`.
-- Duplicate path/prefix entries are rejected.
+- Duplicate path, prefix, or identical tag-selector entries are rejected.
 - Secret values are prohibited.
 
 Env name resolution order:
@@ -322,5 +329,7 @@ Env name resolution order:
 1. manifest entry `env`;
 2. secret object's `env`;
 3. derived from the full secret path.
+
+Tag entries expand to every secret that has all listed tags. If a required tag entry matches no secrets, project explain/export/run reports a missing required entry.
 
 Two entries resolving to the same env name are a conflict.

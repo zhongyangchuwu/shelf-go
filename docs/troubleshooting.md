@@ -80,29 +80,30 @@ shelf project add app:token
 shelf project explain
 ```
 
-## Required secret is missing
+## Required secret or tag binding is missing
 
-`project explain`, `project export`, and `project run` fail when a required manifest entry is absent from the vault.
+`project explain`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For tag entries, this means no secret has all listed tags.
 
-Add the secret or mark the entry optional:
+Add the secret, adjust tags, or mark the entry optional:
 
 ```bash
-shelf secret set app:token sk-example --env APP_TOKEN
+shelf secret set app:token sk-example --env APP_TOKEN --tag app
 shelf project add app:token --optional
+shelf project add --tag app --optional
 ```
 
 ## Env name conflict
 
 Two project entries resolved to the same env name. Resolution order is project `env`, then secret `env`, then derived name.
 
-Fix by using explicit env overrides on exact path entries:
+Fix exact path entries by using explicit env overrides:
 
 ```bash
 shelf project rm app:token
 shelf project add app:token --env APP_TOKEN
 ```
 
-Prefix entries cannot use `--env` because they may expand to multiple secrets.
+Prefix and tag entries cannot use `--env` because they may expand to multiple secrets.
 
 ## `project run` did not change my shell
 
