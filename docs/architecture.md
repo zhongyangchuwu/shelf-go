@@ -1,6 +1,6 @@
 # Architecture
 
-Shelf Go is a local-first Go CLI. The durable store is an age-encrypted vault file; project bindings are value-free JSON manifests; the localhost manager is an on-demand UI over the same vault operations.
+Shelf Go is a local-first Go CLI. The durable store is an age-encrypted vault file; project bindings are value-free JSON manifests; the local manager is an on-demand loopback surface over the same vault operations.
 
 ## Package layers
 
@@ -8,44 +8,45 @@ Shelf Go is a local-first Go CLI. The durable store is an age-encrypted vault fi
 cmd/shelf/          process entry point
 
 internal/cli/       Cobra command tree, flags, argument validation, and text rendering
-internal/manager/   loopback HTTP vault manager UI
+internal/manager/   local manager surface, currently loopback HTTP/Web
 
-internal/app/       runtime and vault construction helpers
-internal/project/   project identity and manifest binding resolution
+internal/app/       runtime, vault construction, and version composition
+internal/project/   project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/    reusable secret workflows such as editor-based updates
-internal/vault/     vault status/check/doctor diagnostics
 
-internal/atomicfile/ atomic write primitive
 internal/config/     runtime config resolution
-internal/store/      secret model, path grammar, JSON codec, age vault persistence, locking
-internal/manifest/   .shelf.json model, validation, and IO
-internal/render/     env/shell/JSON rendering
-internal/version/    version string
+internal/vault/      encrypted vault core: model, path grammar, JSON codec, age persistence, locking, diagnostics
+internal/exportfmt/  env/shell/JSON export formatting
 ```
 
 The intended dependency direction is display to feature support to base support:
 
 ```text
-cmd/shelf -> internal/cli
-internal/cli -> app, project, secret, vault, manager, config, store, manifest, render, version
-internal/manager -> store, render
-app -> config, store
-project -> manifest, store, render
-secret -> store
-vault -> config, store
-manifest -> store
-render -> store
-store -> atomicfile
+Display:
+  cmd/shelf -> internal/cli
+  internal/cli -> app, project, secret, vault, manager, config, exportfmt
+  internal/manager -> vault, exportfmt
+
+Feature support:
+  app -> config, vault
+  project -> vault, exportfmt
+  secret -> vault
+
+Base support:
+  exportfmt -> vault
+  config -> standard library + YAML
+  vault -> standard library + age/flock dependencies
 ```
 
-Base packages must not import `internal/cli` or `internal/manager`.
+Base packages must not import `internal/cli` or `internal/manager`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
 
 ## Command layer
 
 `internal/cli` owns user-facing command shape:
 
 - root command setup and global flags;
-- `setup` / `vault` commands;
+- `setup` / `vault` lifecycle commands;
+- `manager` local manager command;
 - `secret` commands;
 - `project` commands;
 - `doctor`;
@@ -55,38 +56,39 @@ Command handlers should stay thin: parse flags, call feature/base packages, then
 
 ## Runtime and vault construction
 
-`internal/app` centralizes runtime and vault loading:
+`internal/app` centralizes runtime, vault loading, and version composition:
 
-- `LoadVault(configPath, vaultPath)` resolves config and constructs `*store.Vault`;
-- `LoadRuntime(configPath, vaultPath)` loads a decrypted store snapshot;
+- `LoadVault(configPath, vaultPath)` resolves config and constructs `*vault.Vault`;
+- `LoadRuntime(configPath, vaultPath)` loads a decrypted vault store snapshot;
 - `ReadVault(configPath, vaultPath, fn)` runs read-only vault work;
-- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `store.Vault.Update`.
+- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `vault.Vault.Update`;
+- `String()` returns the application version string from release ldflags or Go build info.
 
-This keeps command files independent from vault construction details.
+This keeps command files independent from vault construction and build-info details.
 
-## Store and persistence
+## Vault core and persistence
 
-`internal/store` owns the secret data model and encrypted vault persistence.
+`internal/vault` owns the secret data model, encrypted vault persistence, and vault diagnostics.
 
 Current file responsibilities:
 
 - `model.go`: `Data`, `Secret`, `Info`, `CurrentVersion`, `NewData`;
 - `path.go`: secret path parsing and path-token validation;
 - `validate.go`: secret validation and env-name validation;
-- `store.go`: in-memory `Store` methods;
+- `store.go`: decrypted in-memory `Store` snapshot methods;
 - `json.go`: strict JSON encode/decode for the plaintext model;
 - `age.go`: age recipient parsing, encryption, identity loading, and decryption;
 - `vault.go`: vault file format detection and encrypted vault orchestration;
 - `io.go`: legacy plaintext store load/save support used by migration tests and compatibility paths;
-- `lock.go`: file locking for vault writes.
+- `lock.go`: file locking for vault writes;
+- `atomicfile.go`: atomic write primitive for vault/config/manifest writes;
+- `status.go`: typed status records for vault status/check/doctor diagnostics.
 
-`internal/atomicfile` provides the shared atomic write primitive. Store and vault writes use restrictive permissions, sync, and a single last-write `.bak` backup.
+There is intentionally no storage backend interface yet. v0.1.1 keeps JSON inside an age-encrypted vault; SQLite or another storage engine is deferred to v0.2.0 after a concrete threat model and artifact-leakage review.
 
-There is intentionally no storage backend interface yet. A second backend should be introduced only after a concrete storage spike proves the need.
+## Project workflows
 
-## Project binding resolution
-
-`internal/project` owns Git project identity and manifest-to-env resolution.
+`internal/project` owns Git project identity, `.shelf.json` schema/IO/validation, and manifest-to-env resolution.
 
 Resolution order for env names:
 
@@ -94,27 +96,29 @@ Resolution order for env names:
 2. secret object's `env`;
 3. env name derived from the full secret path.
 
-Prefix manifest entries may expand to multiple secrets and cannot carry `env`. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
+Prefix and tag manifest entries may expand to multiple secrets and cannot carry `env`. Tag selectors use AND semantics and are stored as value-free `tags` arrays. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
 
 ## Secret edit workflow
 
 `internal/secret` owns reusable editor-based secret updates. It converts a stored secret into editable JSON, invokes the configured editor through the CLI seam, validates the edited object, and ensures the temporary plaintext file is removed on normal exits where possible.
 
-## Vault diagnostics
+## Export formatting
 
-`internal/vault` produces typed status records for config, recipient configuration, vault format, permissions, loadability, Git tracking, and backup checks. `internal/cli` renders those records for `vault status`, `vault check`, and `doctor`.
+`internal/exportfmt` formats vault secrets and project bindings as env, shell, or JSON output. It is not UI rendering; manager UI assets stay in `internal/manager`.
 
-## Localhost manager
+## Local manager
 
-`internal/manager` is an on-demand loopback HTTP UI. It receives a `*store.Vault`, uses the same store validation and encrypted-save path as CLI writes, and does not run as a permanent daemon.
+`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept. The public entrypoint is `shelf manager`; there is no `shelf vault open` alias.
 
 Safety boundaries:
 
 - loopback-only address validation in CLI before server start;
-- tokenized URL and strict cookie;
-- Host and Origin checks;
-- metadata list/search without values;
-- explicit reveal for plaintext values.
+- tokenized URL with token removal from the visible URL after first load;
+- strict cookie, Host checks, and Origin checks;
+- no-store responses for manager pages and API responses;
+- metadata list/search/detail without values;
+- explicit POST reveal/copy flows for plaintext values;
+- embedded local HTML/CSS/JS assets, no CDN or permanent daemon requirement.
 
 ## Public documentation boundary
 

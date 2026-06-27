@@ -50,20 +50,24 @@ shelf setup \
 
 The private age identity decrypts the vault. Do not commit it.
 
-## Store and inspect secrets
+## Store, tag, and inspect secrets
 
-Add a secret with an optional environment name:
+Add secrets with optional environment names, descriptions, and tags:
 
 ```bash
-shelf secret set app:token sk-example --env APP_TOKEN
+shelf secret set app:token sk-example --env APP_TOKEN --tag app --tag local
+shelf secret set providers/openai:api_key sk-openai --env OPENAI_API_KEY --tag ai --tag prod
 ```
 
-Inspect metadata without printing the value:
+Inspect metadata without printing values:
 
 ```bash
 shelf secret info app:token
 shelf secret list app
+shelf secret list --tag ai --tag prod
 ```
+
+Repeated `--tag` selectors use AND semantics. `secret list` prints paths only; it does not print secret values.
 
 Print a value only when you intentionally need plaintext:
 
@@ -71,14 +75,15 @@ Print a value only when you intentionally need plaintext:
 shelf secret get app:token
 ```
 
-Export a single secret or prefix for scripts:
+Export a single secret, prefix, or tag-selected set for scripts:
 
 ```bash
 shelf secret export app:token --format shell
 shelf secret export app --format env --all
+shelf secret export --tag ai --tag prod --format env
 ```
 
-Export output contains plaintext. Do not commit redirected `.env` files.
+Export output contains plaintext. Do not commit redirected `.env` files. Use `shelf manager` for full-object editing when you need to rename a path or change env, description, tags, or values comfortably.
 
 ## Use secrets in a project
 
@@ -87,10 +92,12 @@ Inside a Git worktree, create a value-free project manifest:
 ```bash
 shelf project init
 shelf project add app:token
+shelf project add --tag ai --tag prod --optional
+shelf project list
 shelf project explain
 ```
 
-Shelf writes `.shelf.json` at the Git root. It stores secret paths, prefixes, env overrides, and required/optional flags, but never secret values.
+Shelf writes `.shelf.json` at the Git root. It stores exact paths, prefixes, tag selectors, env overrides, and required/optional flags, but never secret values. Tag selectors expand at export/run time and use the same AND semantics as direct secret commands.
 
 Export sourceable shell lines when you explicitly want a file or current-shell workflow:
 
@@ -110,6 +117,14 @@ Preview injected env names without values:
 ```bash
 shelf project run --dry-run -- npm run dev
 ```
+
+## Open the local manager
+
+```bash
+shelf manager
+```
+
+The manager starts an on-demand loopback Web console. It can search, add, edit, rename, delete, reveal, copy, and tag secret records. List and detail responses stay metadata-only; values reveal only through explicit reveal/copy actions. Stop the process with Ctrl-C when finished.
 
 ## Portability and recovery
 
@@ -144,7 +159,7 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 
 ## Safety notes
 
-- `shelf secret get`, `shelf secret export`, `shelf project export`, `shelf project run`, `shelf secret edit`, and `shelf vault open` can intentionally materialize plaintext values.
+- `shelf secret get`, `shelf secret export`, `shelf project export`, `shelf project run`, `shelf secret edit`, and `shelf manager` can intentionally materialize plaintext values.
 - `.shelf.json` project manifests are value-free and can be committed after review.
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
 - `config.yaml` may contain public age recipients and identity file paths. It must not contain private identity contents or secret values.
@@ -155,4 +170,13 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 ```bash
 go test ./...
 go build -o ./bin/shelf ./cmd/shelf
+```
+
+Reusable local workflows live under `scripts/`; `justfile` is a thin wrapper:
+
+```bash
+./scripts/install.sh
+./scripts/release.sh check
+./scripts/release.sh snapshot
+./scripts/release.sh tag 0.1.1
 ```

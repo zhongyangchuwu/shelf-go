@@ -4,15 +4,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
-	"github.com/zhongyangchuwu/shelf-go/internal/version"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "shelf",
 		Short:         "Shelf Go rewrite",
-		Version:       version.String(),
+		Version:       app.String(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -23,31 +22,32 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newSetupCmd())
 	root.AddCommand(newVaultCmd())
+	root.AddCommand(newManagerCmd())
 	root.AddCommand(newSecretCmd())
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newProjectCmd())
 	return root
 }
 
-func loadVault(cmd *cobra.Command) (config.Runtime, *store.Vault, error) {
+func loadVault(cmd *cobra.Command) (config.Runtime, *vault.Vault, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	vaultPath, _ := cmd.Flags().GetString("vault")
 	return app.LoadVault(configPath, vaultPath)
 }
 
-func loadRuntime(cmd *cobra.Command) (config.Runtime, *store.Store, error) {
+func loadRuntime(cmd *cobra.Command) (config.Runtime, *vault.Store, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	vaultPath, _ := cmd.Flags().GetString("vault")
 	return app.LoadRuntime(configPath, vaultPath)
 }
 
-func updateVault(cmd *cobra.Command, fn func(*store.Store) error) error {
+func updateVault(cmd *cobra.Command, fn func(*vault.Store) error) error {
 	configPath, _ := cmd.Flags().GetString("config")
 	vaultPath, _ := cmd.Flags().GetString("vault")
 	return app.UpdateVault(configPath, vaultPath, fn)
 }
 
-func readVault(cmd *cobra.Command, fn func(*store.Store) error) error {
+func readVault(cmd *cobra.Command, fn func(*vault.Store) error) error {
 	configPath, _ := cmd.Flags().GetString("config")
 	vaultPath, _ := cmd.Flags().GetString("vault")
 	return app.ReadVault(configPath, vaultPath, fn)

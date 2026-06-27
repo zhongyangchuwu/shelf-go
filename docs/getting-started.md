@@ -48,10 +48,11 @@ shelf vault status
 
 Expected output reports the config path, vault path, configured recipient count, vault format, and loadability without printing secret values.
 
-## Add a secret
+## Add and tag secrets
 
 ```bash
-shelf secret set app:token sk-example --env APP_TOKEN
+shelf secret set app:token sk-example --env APP_TOKEN --tag app --tag local
+shelf secret set providers/openai:api_key sk-openai --env OPENAI_API_KEY --tag ai --tag prod
 shelf secret info app:token
 ```
 
@@ -61,15 +62,14 @@ shelf secret info app:token
 shelf secret get app:token
 ```
 
-## Export directly
+List or export by tag when a workflow needs a selected set:
 
 ```bash
-shelf secret export app:token --format shell
-shelf secret export app:token --format env
-shelf secret export app:token --format json
+shelf secret list --tag ai --tag prod
+shelf secret export --tag ai --tag prod --format env
 ```
 
-Export output contains plaintext values. Redirected `.env` files must not be committed.
+Repeated `--tag` selectors use AND semantics. `secret list` stays value-free; `secret export` contains plaintext values. Redirected `.env` files must not be committed.
 
 ## Use a project manifest
 
@@ -81,7 +81,17 @@ shelf project add app:token
 shelf project explain
 ```
 
-Shelf writes `<git-root>/.shelf.json`. The manifest stores paths, prefixes, env overrides, and required/optional flags; it does not store values.
+Shelf writes `<git-root>/.shelf.json`. The manifest stores paths, prefixes, tag selectors, env overrides, and required/optional flags; it does not store values.
+
+Add a tag-selected project binding when a project needs every secret matching a tag set:
+
+```bash
+shelf project add --tag ai --tag prod --optional
+shelf project list
+shelf project explain
+```
+
+Tag project bindings expand during `project explain`, `project export`, and `project run`. Prefix and tag entries cannot carry `--env` because they may expand to multiple secrets.
 
 Export sourceable shell lines when you want to update your current shell manually:
 
@@ -133,10 +143,10 @@ The backup is a normal encrypted Shelf vault file. Shelf overwrites this single 
 ## Open the local manager
 
 ```bash
-shelf vault open
+shelf manager
 ```
 
-The manager binds to loopback, prints a tokenized local URL, and supports metadata browsing plus explicit reveal and write actions. Browser reveal and edit actions handle plaintext locally.
+The manager binds to loopback, prints a tokenized local URL, and provides a Web console for search, add, edit, rename, delete, reveal, copy, and tag workflows. List/detail responses do not include secret values; reveal/copy actions intentionally handle plaintext locally.
 
 ## Next steps
 

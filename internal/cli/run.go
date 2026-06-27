@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/manifest"
-	projectsvc "github.com/zhongyangchuwu/shelf-go/internal/project"
+	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 type exitCoder interface {
@@ -49,13 +48,13 @@ func newRunCmd() *cobra.Command {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := projectsvc.Root()
+			root, err := project.Root()
 			if err != nil {
 				return err
 			}
-			m, err := manifest.Load(filepath.Join(root, manifest.FileName))
+			m, err := project.Load(filepath.Join(root, project.FileName))
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found in %s; run `shelf project init`", manifest.FileName, root)
+				return fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
 			}
 			if err != nil {
 				return err
@@ -65,9 +64,9 @@ func newRunCmd() *cobra.Command {
 				return err
 			}
 
-			resolvedEntries, diagnostics := projectsvc.ResolveEntries(m, st)
-			projectsvc.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
-			if projectsvc.HasFailures(diagnostics) {
+			resolvedEntries, diagnostics := project.ResolveEntries(m, st)
+			project.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
+			if project.HasFailures(diagnostics) {
 				return fmt.Errorf("project run failed")
 			}
 
@@ -100,7 +99,7 @@ func newRunCmd() *cobra.Command {
 	return cmd
 }
 
-func childEnv(parent []string, entries []projectsvc.Binding) []string {
+func childEnv(parent []string, entries []project.Binding) []string {
 	values := make(map[string]string, len(entries))
 	for _, entry := range entries {
 		values[entry.EnvName] = entry.Value
@@ -134,7 +133,7 @@ func childEnv(parent []string, entries []projectsvc.Binding) []string {
 	return out
 }
 
-func envOverrideWarnings(entries []projectsvc.Binding, parent []string) []string {
+func envOverrideWarnings(entries []project.Binding, parent []string) []string {
 	parentNames := make(map[string]struct{}, len(parent))
 	for _, item := range parent {
 		key, _, ok := splitEnv(item)

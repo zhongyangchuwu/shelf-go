@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newMigrateCmd() *cobra.Command {
@@ -25,17 +25,17 @@ func newMigrateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vault := configuredVault
+			targetVault := configuredVault
 			if targetPath != "" && targetPath != runtime.VaultPath {
-				vault, err = store.NewVault(targetPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+				targetVault, err = vault.NewVault(targetPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 				if err != nil {
 					return err
 				}
 			}
-			if err := migratePlaintextStore(sourcePath, vault, force); err != nil {
+			if err := migratePlaintextStore(sourcePath, targetVault, force); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "migrated plaintext store %s to encrypted vault %s\n", sourcePath, vault.Path())
+			fmt.Fprintf(cmd.OutOrStdout(), "migrated plaintext store %s to encrypted vault %s\n", sourcePath, targetVault.Path())
 			fmt.Fprintf(cmd.OutOrStdout(), "plaintext source preserved at %s; move, delete, or archive it after confirming your new config\n", sourcePath)
 			return nil
 		},
@@ -46,29 +46,29 @@ func newMigrateCmd() *cobra.Command {
 	return cmd
 }
 
-func migratePlaintextStore(sourcePath string, vault *store.Vault, force bool) error {
+func migratePlaintextStore(sourcePath string, targetVault *vault.Vault, force bool) error {
 	before, err := os.ReadFile(sourcePath)
 	if err != nil {
 		return fmt.Errorf("read plaintext source: %w", err)
 	}
-	st, err := store.Load(sourcePath)
+	st, err := vault.Load(sourcePath)
 	if err != nil {
 		return fmt.Errorf("load plaintext source: %w", err)
 	}
-	format, err := store.DetectFileFormat(vault.Path())
+	format, err := vault.DetectFileFormat(targetVault.Path())
 	if err != nil {
 		return fmt.Errorf("inspect target vault: %w", err)
 	}
-	if format != store.FileFormatMissing && format != store.FileFormatEmpty && !force {
-		return fmt.Errorf("target vault already exists; pass --force to replace %s", vault.Path())
+	if format != vault.FileFormatMissing && format != vault.FileFormatEmpty && !force {
+		return fmt.Errorf("target vault already exists; pass --force to replace %s", targetVault.Path())
 	}
-	if format == store.FileFormatPlaintextStore {
+	if format == vault.FileFormatPlaintextStore {
 		return fmt.Errorf("target vault is plaintext JSON; choose a different --to path or move it before migration")
 	}
-	if err := vault.Save(st); err != nil {
+	if err := targetVault.Save(st); err != nil {
 		return fmt.Errorf("write encrypted vault: %w", err)
 	}
-	verified, err := vault.Load()
+	verified, err := targetVault.Load()
 	if err != nil {
 		return fmt.Errorf("verify encrypted vault: %w", err)
 	}

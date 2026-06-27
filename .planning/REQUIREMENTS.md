@@ -1,111 +1,60 @@
 # Requirements: Shelf Go
 
 **Defined:** 2026-06-16
-**Revised:** 2026-06-25
+**Revised:** 2026-06-27
 **Core Value:** A developer can safely manage project secrets in an encrypted local vault and use them through explicit CLI, file, and child-process workflows without treating plaintext `.env` files as the source of truth.
 
 ## Current Requirements
 
-Requirements for first public release readiness. Prior encrypted-vault, command-hierarchy, vault-UX, project-session design, safety, architecture, and release-readiness work is treated as baseline behavior that must remain passing.
+Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, architecture cleanup, documentation, and release preparation. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
 
-### Release Readiness
+### Web Manager Editing
 
-- [x] **REL-01**: Release automation builds repeatable multi-platform CLI artifacts, archives, and checksums from version tags.
-- [x] **REL-02**: GitHub Actions runs CI checks and tag-triggered release publishing with least necessary permissions.
-- [x] **REL-03**: README explains the project motivation and primary initialization, secret, and project workflows without becoming a full command inventory.
-- [x] **REL-04**: First-release changelog, verification evidence, and deferred post-0.1 work are recorded before tagging.
+- [x] **WEB-01**: The local manager provides a searchable, understandable secret console with path, env, description, tag, and value-set metadata visible without revealing secret values.
+- [x] **WEB-02**: The local manager supports adding, editing, renaming, and deleting secret records, including value, env, description, and tags.
+- [x] **WEB-03**: The local manager supports explicit reveal, hide, and copy flows without returning secret values in list/search responses or storing them in browser-local persistent storage.
+- [x] **WEB-04**: The local manager preserves and strengthens local-only safety boundaries: loopback binding, token/cookie access, Host/Origin checks, token removal from the visible URL after first load, and no-store responses for secret-bearing endpoints.
+- [x] **WEB-05**: The local manager uses embedded local assets only; no CDN, hosted frontend, or permanent daemon dependency is required.
+- [x] **WEB-06**: The local manager adopts a polished console visual direction based on a reusable HTML/CSS design system or template reference, with the implementation kept compatible with Go's single-binary distribution.
 
-### Architecture Boundaries
+### Tag-Based CLI and Project Workflows
 
-- [x] **ARCH-01**: Runtime/vault construction helpers are owned outside `internal/cli` so future backend construction changes do not require editing every command file.
-- [x] **ARCH-02**: Project manifest resolution, project diagnostics, env conflict detection, render binding conversion, project identity, git root lookup, and remote normalization are owned by `internal/project`, not `internal/cli`.
-- [x] **ARCH-03**: `internal/cli` remains compact and command-family oriented, targeting roughly 3-6 files instead of one file per subcommand.
-- [x] **ARCH-04**: Vault status/check/doctor diagnostic rules are reusable outside CLI through an `internal/vault` feature package.
-- [x] **ARCH-05**: `secret edit` editable JSON and temp-file/editor workflow are reusable outside CLI through an `internal/secret` feature package while preserving plaintext cleanup behavior.
-- [x] **ARCH-06**: Atomic file write behavior is centralized with explicit permission, sync, and backup options for vault, manifest, and config writes.
-- [x] **ARCH-07**: Env name and path token validation have a single canonical implementation used by store, manifest, and render.
-- [x] **ARCH-08**: `internal/store` keeps one package but separates model, store methods, JSON encode/decode, age seal/open, and vault orchestration into clearer files.
+- [x] **TAG-01**: `shelf secret list` can filter secrets by one or more tags while keeping output value-free and deterministic.
+- [x] **TAG-02**: `shelf secret export` can select secrets by one or more tags using the existing env, shell, and JSON formats and the existing `--all` behavior.
+- [x] **TAG-03**: Project manifests can declare tag-selected secret sets without storing secret values.
+- [x] **TAG-04**: `shelf project add`, `list`, `explain`, `export`, and `run` support tag-selected bindings with clear expansion, missing-secret, and env-conflict diagnostics.
+- [x] **TAG-05**: Multiple tag selectors use AND semantics for v0.1.1 so exported/project-bound sets stay narrow and predictable.
 
-## Baseline Implemented Requirements
+### Scripted Workflow Cleanup
 
-Already implemented and must remain working unless explicitly redesigned by the current milestone.
+- [x] **OPS-01**: Install flow currently embedded in `justfile` is moved to a reusable script under `scripts/`, and `just install` delegates to that script.
+- [x] **OPS-02**: Tag and release preparation flows are moved from ad-hoc manual commands and inline `justfile` recipes into reusable scripts under `scripts/`.
+- [x] **OPS-03**: Scripted workflows have clear usage, argument validation, and keep `justfile` as a thin task runner.
 
-### Project Export UX
+### Architecture Cleanup
 
-- [x] **PUX-01**: `shelf project export` defaults to existing `shell` output so redirected files are directly sourceable.
-- [x] **PUX-02**: Explicit `--format env|shell|json` behavior remains supported, and no new `dotenv` format is introduced.
-- [x] **PUX-03**: User docs recommend explicit source workflows such as `shelf project export > .env.local` and warn that generated env files are plaintext and must not be committed.
+- [x] **ARCH-01**: The manager entrypoint is renamed to `shelf manager`, and the vault-scoped `shelf vault open` command is removed before release.
+- [x] **ARCH-02**: The internal package layout is repartitioned so vault core, project manifest handling, application composition, and export formatting have clear package names and dependency direction.
 
-### Vault Recovery
+### Documentation Cleanup
 
-- [x] **VREC-01**: User can recover from a single last-write encrypted `.bak` using ordinary file copy and `shelf vault status` verification.
-- [x] **VREC-02**: Recovery docs explain that `.bak` is overwritten on each later vault replacement and is not a history system.
-- [x] **VREC-03**: Recovery docs explain identity loss, backup recovery, and post-recovery `shelf vault status` verification.
+- [x] **DOC-01**: User-facing docs describe manager editing, direct tag list/export, and project tag bindings.
+- [x] **DOC-02**: Developer docs describe install/tag/release scripts and the final internal architecture so maintainers do not rely on remembered manual commands or stale package maps.
 
-### Safety Hardening
+### Scope Boundary and Release
 
-- [x] **SAFE-EDIT-01**: `shelf secret edit` limits plaintext temporary-file exposure with restrictive permissions and cleanup behavior.
-- [x] **SAFE-MGR-01**: Local manager plaintext and token boundaries are either cheaply hardened or documented explicitly without adding a permanent daemon.
-- [x] **SAFE-DOC-01**: User-facing docs name remaining plaintext boundaries and recommended cleanup behavior.
-
-### Command Hierarchy
-
-- [x] **CMD-01**: User can run global onboarding through `shelf setup` instead of ambiguous top-level `shelf init`.
-- [x] **CMD-02**: User can initialize/configure vault storage through `shelf vault init`.
-- [x] **CMD-03**: User can migrate plaintext stores through `shelf vault migrate`.
-- [x] **CMD-04**: User can open the local vault manager through `shelf vault open`.
-- [x] **CMD-05**: User can directly export path/prefix secrets through `shelf secret export`.
-- [x] **CMD-06**: User can run project-bound commands through `shelf project run -- ...`.
-- [x] **CMD-07**: The pre-release CLI removes old top-level `init`, `migrate`, `export`, `run`, and `manager` commands.
-- [x] **CMD-08**: User-facing docs and command tests describe the scoped hierarchy as canonical.
-
-### Vault UX
-
-- [x] **VUX-01**: User can inspect vault configuration and loadability through a vault-scoped status/check command without revealing secret values.
-- [x] **VUX-02**: Vault commands provide concise next steps for missing recipients, missing identities, plaintext legacy stores, unsupported formats, and undecryptable vaults.
-- [x] **VUX-03**: Vault docs explain first-run flow, age identity/recipient setup, migration cleanup, and local manager opening flow.
-- [x] **VUX-04**: Vault UX verification covers encrypted save/load, migration, doctor/status behavior, and manager write safety after the command hierarchy change.
-
-### Encrypted Vault Baseline
-
-- [x] **BASE-VAULT-01**: User can configure Shelf to use an age-encrypted vault file as the durable secret store.
-- [x] **BASE-VAULT-02**: User can configure one or more age recipients without storing private identity material in Shelf config.
-- [x] **BASE-VAULT-03**: User can configure identity file paths or identity discovery needed to decrypt the vault.
-- [x] **BASE-VAULT-04**: Shelf decrypts the vault on load, validates the plaintext store model, and exposes the existing in-memory secret model to commands.
-- [x] **BASE-VAULT-05**: Shelf encrypts the full validated store to configured age recipients on save.
-- [x] **BASE-VAULT-06**: Shelf rejects unreadable, undecryptable, corrupt, or unsupported vault formats with actionable errors.
-- [x] **BASE-VAULT-07**: User can migrate an existing plaintext Shelf JSON store into an age-encrypted vault while preserving the original source until the encrypted target validates successfully.
-- [x] **BASE-VAULT-08**: Shelf creates backups or recovery artifacts in encrypted form when secret values are involved.
-- [x] **BASE-VAULT-09**: Shelf avoids writing plaintext secret values to durable temp files during normal store operations.
-
-### Project and Secret Baseline
-
-- [x] **BASE-CLI-01**: Existing secret read and write commands work against the encrypted vault.
-- [x] **BASE-CLI-02**: Existing direct export path and prefix flows work against the encrypted vault.
-- [x] **BASE-CLI-03**: Existing project manifest commands work against the encrypted vault without writing secret values to `.shelf.json`.
-- [x] **BASE-CLI-04**: Existing runtime injection and dry-run behavior work against the encrypted vault and preserve value-printing rules.
-- [x] **BASE-CLI-05**: Regression coverage verifies that encryption did not change command semantics.
-
-### Safety and Local Manager Baseline
-
-- [x] **BASE-SAFE-01**: User can keep the encrypted vault as a normal portable file suitable for git-backed dotfile workflows such as chezmoi.
-- [x] **BASE-SAFE-02**: Shelf config remains non-secret and can be reviewed or committed without exposing secret values or private identities.
-- [x] **BASE-SAFE-03**: `shelf doctor` reports whether the active store is plaintext or encrypted.
-- [x] **BASE-SAFE-04**: `shelf doctor` warns when plaintext secret storage appears to be tracked by git.
-- [x] **BASE-SAFE-05**: User can start a localhost-only vault manager for metadata search, intentional reveal, and create/update/delete over encrypted storage.
-- [x] **BASE-SAFE-06**: Vault-manager writes use the same validation, locking, encrypted-save, and backup rules as CLI writes.
-- [x] **BASE-SAFE-07**: Vault manager binds to loopback by default and uses session/write-safety controls for state-changing requests.
-
-### Project Session Design Baseline
-
-- [x] **SES-01**: Project activation/deactivation was analyzed under `shelf project` and intentionally left unimplemented for now.
-- [x] **SES-02**: Project shell entry was analyzed under `shelf project` and intentionally left unimplemented for now.
-- [x] **SES-03**: Activation/deactivation design records restore semantics if hooks are ever implemented later.
-- [x] **SES-04**: Activation design records that current-shell mutation requires a shell hook/function.
+- [x] **BOUND-01**: v0.1.1 does not introduce fine-grained CLI metadata-editing command groups such as `secret meta` or `secret tag`; full editing remains centered in the manager and existing compact secret commands.
+- [x] **BOUND-02**: v0.1.1 keeps the current age-encrypted JSON vault format and does not implement or spike SQLite; storage redesign is deferred to v0.2.0 planning.
+- [x] **REL-011-01**: v0.1.1 release readiness is checked only after architecture and documentation cleanup are complete.
 
 ## Deferred Requirements
 
 Tracked for future releases. These are not current implementation commitments.
+
+### Storage v0.2.0 Candidates
+
+- **V2-STORE-01**: Reconsider SQLite or another storage model only in v0.2.0 planning, after defining the threat model, artifact leakage checklist, migration path, and release-build impact.
+- **V2-STORE-02**: If SQLite is reconsidered, compare plaintext SQLite, SQLCipher/encrypted SQLite, and age-wrapped in-memory SQLite against portability, WAL/journal/temp leakage, and chezmoi sync constraints before implementation.
 
 ### Project Sessions
 
@@ -119,13 +68,17 @@ Tracked for future releases. These are not current implementation commitments.
 - **V2-VAULT-02**: User can manage multiple vaults or profiles.
 - **V2-VAULT-03**: User can inspect non-secret age recipient metadata from a vault.
 - **V2-VAULT-04**: User gets better merge/conflict handling for git-managed encrypted vault updates.
-- **V2-VAULT-05**: Shelf can spike SQLite as a future encrypted vault payload or metadata/search storage option when schema/query pressure justifies it; any design must preserve encrypted-at-rest vault safety and avoid plaintext WAL/journal/temp files.
 
 ### Integrations and Editing
 
 - **V2-INT-01**: Shelf can offer optional direct chezmoi helper commands.
 - **V2-INT-02**: Shelf can support hardware-key or age plugin workflows if users need them.
 - **V2-UI-01**: Shelf can provide a TUI or improved field-specific editor when that improves local editing speed without weakening vault safety.
+
+### Release and Distribution
+
+- **V2-REL-01**: Shelf can add optional package-manager distribution after initial usage validates demand.
+- **V2-REL-02**: Shelf can add native Windows smoke tests for setup, secret set/get, and project run on a real Windows runner.
 
 ## Out of Scope
 
@@ -135,40 +88,38 @@ Explicitly excluded. Documented to prevent scope creep.
 |---------|--------|
 | Team sharing | The current product is for solo developers; sharing requires identity, permissions, revocation, audit, and conflict semantics. |
 | Hosted sync service | Shelf should stay local-first and portable instead of requiring a backend account. |
-| Permanent daemon | Core CLI workflows should not depend on a long-running process; the vault manager should be short-lived/on-demand. |
+| Permanent daemon | Core CLI workflows should not depend on a long-running process; the manager should be short-lived/on-demand. |
 | Browser extension or autofill | Shelf is focused on developer secrets and env workflows, not general password-manager replacement. |
 | Plain `.env` as source of truth | `.env` files may be generated/exported, but Shelf's source of truth is the encrypted vault plus project manifests. |
 | New dotenv export format | Existing `shell` output is already sourceable; adding another format increases surface area without enough value. |
 | Hook-based project activation in current scope | Shell hooks mutate parent-shell state implicitly and add complexity; explicit export/source workflows are preferred for now. |
-| Backward-compatible pre-release aliases | The project has not been published; simpler command cutover is more valuable than compatibility shims. |
 | Dedicated vault restore command | Current backups are ordinary encrypted vault files and single-slot only; a command adds surface area without enough value. Manual copy plus `shelf vault status` is simpler. |
-| Immediate SQLite backend | SQLite remains a future spike candidate; this milestone only improves architecture boundaries needed for future evolution. |
+| SQLite in v0.1.1 | v0.1.1 is about editing UX and tag workflows; storage model redesign is deferred to v0.2.0. |
+| Fine-grained CLI metadata edit subcommands | The manager is the primary editing surface; CLI should stay compact and focus on scriptable application workflows. |
 | Broad one-file-per-command CLI split | `internal/cli` should stay command-family oriented rather than becoming a large directory of tiny files. |
+| Release hardening as next phase | Architecture and docs cleanup must happen before v0.1.1 release readiness. |
+| Compatibility alias for old manager command | The project is pre-release; keeping both `shelf manager` and `shelf vault open` would make one feature have two names. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REL-01..REL-04 | Phase 16 | Complete |
-| ARCH-01..ARCH-03 | Phase 13 | Complete |
-| ARCH-04..ARCH-05 | Phase 14 | Complete |
-| ARCH-06..ARCH-08 | Phase 15 | Complete |
-| PUX-01..PUX-03 | Phase 9 | Complete |
-| VREC-01..VREC-03 | Phase 10 | Complete |
-| SAFE-EDIT-01, SAFE-MGR-01, SAFE-DOC-01 | Phase 11 | Complete |
-| CMD-01..CMD-08 | Phase 6 | Complete |
-| VUX-01..VUX-04 | Phase 7 | Complete |
-| SES-01..SES-04 | Phase 8 | Complete |
-| BASE-VAULT-01..09 | Completed encrypted-vault milestone | Complete |
-| BASE-CLI-01..05 | Completed encrypted-vault milestone | Complete |
-| BASE-SAFE-01..07 | Completed encrypted-vault milestone | Complete |
+| WEB-01..WEB-06 | Phase 17, Phase 18 | Complete |
+| TAG-01..TAG-02 | Phase 19 | Complete |
+| TAG-03..TAG-05 | Phase 20 | Complete |
+| OPS-01..OPS-03 | Phase 21 | Complete |
+| ARCH-01..ARCH-02 | Phase 22 | Complete |
+| DOC-01..DOC-02 | Phase 23 | Complete |
+| BOUND-01 | Phase 17..Phase 24 | Complete |
+| BOUND-02 | Phase 17..Phase 24 | Complete |
+| REL-011-01 | Phase 24 | Complete |
 
 **Coverage:**
-- Current requirements: 12 total
-- Mapped to phases: 12
+- Current requirements: 23 total
+- Mapped to phases: 23
 - Unmapped: 0
-- Deferred storage spike: SQLite only; Dolt is not a current vault-storage candidate.
-- Deferred manager UI redesign: post-0.1 visual and UX improvement for `shelf vault open`.
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
+- Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-25 after completing Phase 16 first release readiness*
+*Last updated: 2026-06-27 after completing v0.1.1 release hardening*

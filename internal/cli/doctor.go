@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/version"
 )
 
 func newDoctorCmd() *cobra.Command {
@@ -26,7 +26,7 @@ func newDoctorCmd() *cobra.Command {
 				return report.err("doctor")
 			}
 			report.ok("config resolves", runtime.ConfigPath)
-			report.ok("version", version.String())
+			report.ok("version", app.String())
 
 			report.write(vaultsvc.Doctor(runtime))
 			checkCompletion(report)

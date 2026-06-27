@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/render"
+	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
 	secretsvc "github.com/zhongyangchuwu/shelf-go/internal/secret"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 	"golang.org/x/term"
 )
 
@@ -43,7 +43,7 @@ func newSecretAddCmd() *cobra.Command {
 			if !secretAddIsTerminal(int(os.Stdin.Fd())) {
 				return fmt.Errorf("secret add requires a terminal; use `shelf secret set` for scripts")
 			}
-			return updateVault(cmd, func(st *store.Store) error {
+			return updateVault(cmd, func(st *vault.Store) error {
 				prompt := newSecretAddPrompt(cmd.InOrStdin(), cmd.OutOrStdout(), st)
 				path, secret, force, err := prompt.collect(args)
 				if err != nil {
@@ -63,54 +63,54 @@ func newSecretAddCmd() *cobra.Command {
 type secretAddPrompt struct {
 	in  *bufio.Reader
 	out io.Writer
-	st  *store.Store
+	st  *vault.Store
 }
 
-func newSecretAddPrompt(in io.Reader, out io.Writer, st *store.Store) secretAddPrompt {
+func newSecretAddPrompt(in io.Reader, out io.Writer, st *vault.Store) secretAddPrompt {
 	return secretAddPrompt{in: bufio.NewReader(in), out: out, st: st}
 }
 
-func (p secretAddPrompt) collect(args []string) (string, store.Secret, bool, error) {
+func (p secretAddPrompt) collect(args []string) (string, vault.Secret, bool, error) {
 	p.printGroupHints()
 	path, err := p.collectPath(args)
 	if err != nil {
-		return "", store.Secret{}, false, err
+		return "", vault.Secret{}, false, err
 	}
 	force := false
 	if _, exists := p.st.Get(path); exists {
 		overwrite, err := p.confirm("secret exists; overwrite? [y/N]: ")
 		if err != nil {
-			return "", store.Secret{}, false, err
+			return "", vault.Secret{}, false, err
 		}
 		if !overwrite {
-			return "", store.Secret{}, false, fmt.Errorf("secret already exists: %s", path)
+			return "", vault.Secret{}, false, fmt.Errorf("secret already exists: %s", path)
 		}
 		force = true
 	}
 	value, err := p.password("value: ")
 	if err != nil {
-		return "", store.Secret{}, false, err
+		return "", vault.Secret{}, false, err
 	}
 	if value == "" {
-		return "", store.Secret{}, false, fmt.Errorf("secret value is required")
+		return "", vault.Secret{}, false, fmt.Errorf("secret value is required")
 	}
 	envName, err := p.line("env (optional): ")
 	if err != nil {
-		return "", store.Secret{}, false, err
+		return "", vault.Secret{}, false, err
 	}
 	description, err := p.line("description (optional): ")
 	if err != nil {
-		return "", store.Secret{}, false, err
+		return "", vault.Secret{}, false, err
 	}
 	tagText, err := p.line("tags comma-separated (optional): ")
 	if err != nil {
-		return "", store.Secret{}, false, err
+		return "", vault.Secret{}, false, err
 	}
-	raw, err := store.ParseValue(value)
+	raw, err := vault.ParseValue(value)
 	if err != nil {
-		return "", store.Secret{}, false, err
+		return "", vault.Secret{}, false, err
 	}
-	secret := store.Secret{Value: raw, Env: strings.TrimSpace(envName), Description: strings.TrimSpace(description), Tags: parsePromptTags(tagText)}
+	secret := vault.Secret{Value: raw, Env: strings.TrimSpace(envName), Description: strings.TrimSpace(description), Tags: parsePromptTags(tagText)}
 	return path, secret, force, nil
 }
 
@@ -225,12 +225,12 @@ func newSecretSetCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(2),
 		ValidArgsFunction: completeSecretSetPathArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return updateVault(cmd, func(st *store.Store) error {
-				value, err := store.ParseValue(args[1])
+			return updateVault(cmd, func(st *vault.Store) error {
+				value, err := vault.ParseValue(args[1])
 				if err != nil {
 					return err
 				}
-				secret := store.Secret{Value: value, Env: envName, Description: description, Tags: tags}
+				secret := vault.Secret{Value: value, Env: envName, Description: description, Tags: tags}
 				return st.Set(args[0], secret, force)
 			})
 		},
@@ -260,7 +260,7 @@ func newSecretGetCmd() *cobra.Command {
 			if !ok {
 				return fmt.Errorf("secret not found: %s", args[0])
 			}
-			value, err := render.ValueString(secret.Value)
+			value, err := exportfmt.ValueString(secret.Value)
 			if err != nil {
 				return err
 			}
@@ -272,6 +272,7 @@ func newSecretGetCmd() *cobra.Command {
 }
 
 func newSecretListCmd() *cobra.Command {
+	var tags []string
 	cmd := &cobra.Command{
 		Use:               "list [prefix]",
 		Short:             "List secret paths",
@@ -286,12 +287,14 @@ func newSecretListCmd() *cobra.Command {
 			if len(args) > 0 {
 				prefix = args[0]
 			}
-			for _, path := range st.List(prefix) {
+			for _, path := range st.ListByTags(prefix, tags) {
 				fmt.Fprintln(cmd.OutOrStdout(), path)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().StringArrayVar(&tags, "tag", nil, "Select secrets with tag; repeat for AND matching")
+	_ = cmd.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 	return cmd
 }
 
@@ -328,11 +331,11 @@ func newSecretEditCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeSecretPaths,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			runtime, vault, err := loadVault(cmd)
+			runtime, v, err := loadVault(cmd)
 			if err != nil {
 				return err
 			}
-			return vault.Update(func(st *store.Store) error {
+			return v.Update(func(st *vault.Store) error {
 				return secretsvc.Edit(st, secretsvc.EditRequest{
 					Path:   args[0],
 					Editor: runtime.Editor,
@@ -455,7 +458,7 @@ func newSecretRmCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeSecretPaths,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return updateVault(cmd, func(st *store.Store) error {
+			return updateVault(cmd, func(st *vault.Store) error {
 				if !st.Delete(args[0]) {
 					return fmt.Errorf("secret not found: %s", args[0])
 				}

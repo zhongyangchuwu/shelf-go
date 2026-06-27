@@ -172,7 +172,7 @@ func setupProjectTest(t *testing.T) (dir, data string) {
 		t.Fatalf("git init: %v", err)
 	}
 	data = filepath.Join(dir, "secrets.json")
-	// Init the project manifest.
+	// Init the project project.
 	if _, err := runShelf(t, "project", "init"); err != nil {
 		t.Fatalf("project init: %v", err)
 	}

@@ -21,7 +21,6 @@ func newVaultCmd() *cobra.Command {
 	cmd.AddCommand(newVaultInitCmd())
 	cmd.AddCommand(newMigrateCmd())
 	cmd.AddCommand(newVaultStatusCmd())
-	cmd.AddCommand(newVaultOpenCmd())
 	return cmd
 }
 
@@ -47,15 +46,11 @@ func newVaultStatusCmd() *cobra.Command {
 	}
 }
 
-func newVaultOpenCmd() *cobra.Command {
-	return newManagerCmdWithUse("open")
-}
-
-func newManagerCmdWithUse(use string) *cobra.Command {
+func newManagerCmd() *cobra.Command {
 	var addr string
 	cmd := &cobra.Command{
-		Use:   use,
-		Short: "Open a localhost vault manager",
+		Use:   "manager",
+		Short: "Open the local Shelf manager",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, vault, err := loadVault(cmd)

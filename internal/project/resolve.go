@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/manifest"
-	"github.com/zhongyangchuwu/shelf-go/internal/render"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
+	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 type Binding struct {
@@ -21,7 +20,7 @@ type Diagnostic struct {
 	Message string
 }
 
-func ResolveEntries(m manifest.Manifest, st *store.Store) ([]Binding, []Diagnostic) {
+func ResolveEntries(m Manifest, st *vault.Store) ([]Binding, []Diagnostic) {
 	entries := make([]Binding, 0)
 	diagnostics := make([]Diagnostic, 0)
 	envOwners := map[string]string{}
@@ -31,6 +30,27 @@ func ResolveEntries(m manifest.Manifest, st *store.Store) ([]Binding, []Diagnost
 			matches := st.List(entry.Prefix)
 			if len(matches) == 0 {
 				path := entry.Prefix + " (prefix)"
+				if entry.IsRequired() {
+					diagnostics = append(diagnostics, Diagnostic{Status: "fail", Path: path, Message: "no matches required"})
+				} else {
+					diagnostics = append(diagnostics, Diagnostic{Status: "warn", Path: path, Message: "no matches optional"})
+				}
+				continue
+			}
+			for _, path := range matches {
+				secret, ok := st.Get(path)
+				if !ok {
+					continue
+				}
+				appendResolvedEntry(&entries, &diagnostics, envOwners, path, secret, "")
+			}
+			continue
+		}
+
+		if entry.IsTag() {
+			matches := st.ListByTags("", entry.Tags)
+			if len(matches) == 0 {
+				path := entry.Key() + " (tags)"
 				if entry.IsRequired() {
 					diagnostics = append(diagnostics, Diagnostic{Status: "fail", Path: path, Message: "no matches required"})
 				} else {
@@ -63,11 +83,11 @@ func ResolveEntries(m manifest.Manifest, st *store.Store) ([]Binding, []Diagnost
 	return entries, diagnostics
 }
 
-func appendResolvedEntry(entries *[]Binding, diagnostics *[]Diagnostic, envOwners map[string]string, path string, secret store.Secret, envOverride string) {
+func appendResolvedEntry(entries *[]Binding, diagnostics *[]Diagnostic, envOwners map[string]string, path string, secret vault.Secret, envOverride string) {
 	envName := envOverride
 	if envName == "" {
 		var err error
-		envName, err = render.EnvName(path, secret)
+		envName, err = exportfmt.EnvName(path, secret)
 		if err != nil {
 			*diagnostics = append(*diagnostics, Diagnostic{Status: "fail", Path: path, Message: err.Error()})
 			return
@@ -78,7 +98,7 @@ func appendResolvedEntry(entries *[]Binding, diagnostics *[]Diagnostic, envOwner
 		return
 	}
 	envOwners[envName] = path
-	value, err := render.ValueString(secret.Value)
+	value, err := exportfmt.ValueString(secret.Value)
 	if err != nil {
 		*diagnostics = append(*diagnostics, Diagnostic{Status: "fail", Path: path, Message: err.Error()})
 		return
@@ -101,10 +121,10 @@ func RenderDiagnostics(w io.Writer, diagnostics []Diagnostic) {
 	}
 }
 
-func BindingsForRender(entries []Binding) []render.Binding {
-	bindings := make([]render.Binding, 0, len(entries))
+func BindingsForRender(entries []Binding) []exportfmt.Binding {
+	bindings := make([]exportfmt.Binding, 0, len(entries))
 	for _, entry := range entries {
-		bindings = append(bindings, render.Binding{EnvName: entry.EnvName, Value: entry.Value})
+		bindings = append(bindings, exportfmt.Binding{EnvName: entry.EnvName, Value: entry.Value})
 	}
 	return bindings
 }

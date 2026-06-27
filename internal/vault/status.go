@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/store"
 )
 
 type Level string
@@ -112,15 +111,15 @@ func MissingRecipientsDetail() string {
 	return "no age recipients configured; run shelf vault init --force --recipient AGE_RECIPIENT --identity PATH before creating or updating secrets"
 }
 
-func FormatDetail(format store.FileFormat, path string) string {
+func FormatDetail(format FileFormat, path string) string {
 	switch format {
-	case store.FileFormatMissing:
+	case FileFormatMissing:
 		return path + " is missing; run shelf vault init or write a secret after configuring recipients"
-	case store.FileFormatEmpty:
+	case FileFormatEmpty:
 		return path + " is empty; run shelf vault init or write a secret after configuring recipients"
-	case store.FileFormatPlaintextStore:
+	case FileFormatPlaintextStore:
 		return "plaintext JSON store; run shelf vault migrate --from " + path + " --to <vault.age>, update config, then move/delete/archive the plaintext source"
-	case store.FileFormatUnsupportedVault:
+	case FileFormatUnsupportedVault:
 		return "unsupported shelf vault format; upgrade Shelf if this vault came from a newer version, or restore a compatible encrypted backup"
 	default:
 		return "unsupported file content; choose a valid vault path or restore a compatible encrypted backup"
@@ -148,29 +147,29 @@ func LoadErrorDetail(err error) string {
 }
 
 func checkLoads(report *Report, runtime config.Runtime) {
-	format, err := store.DetectFileFormat(runtime.VaultPath)
+	format, err := DetectFileFormat(runtime.VaultPath)
 	if err != nil {
 		report.Fail("vault format", err.Error())
 		return
 	}
 	switch format {
-	case store.FileFormatMissing:
+	case FileFormatMissing:
 		report.Warn("vault format", FormatDetail(format, runtime.VaultPath))
-	case store.FileFormatEmpty:
+	case FileFormatEmpty:
 		report.Warn("vault format", FormatDetail(format, runtime.VaultPath))
-	case store.FileFormatEncryptedVault:
+	case FileFormatEncryptedVault:
 		report.OK("vault format", "encrypted shelf-vault/v1")
-	case store.FileFormatPlaintextStore:
+	case FileFormatPlaintextStore:
 		report.Fail("vault format", FormatDetail(format, runtime.VaultPath))
 		return
-	case store.FileFormatUnsupportedVault:
+	case FileFormatUnsupportedVault:
 		report.Fail("vault format", FormatDetail(format, runtime.VaultPath))
 		return
 	default:
 		report.Fail("vault format", FormatDetail(format, runtime.VaultPath))
 		return
 	}
-	vault, err := store.NewVault(runtime.VaultPath, store.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	vault, err := NewVault(runtime.VaultPath, VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 	if err != nil {
 		report.Fail("vault loads", LoadErrorDetail(err))
 		return
@@ -183,7 +182,7 @@ func checkLoads(report *Report, runtime config.Runtime) {
 }
 
 func checkTracking(report *Report, vaultPath string) {
-	format, formatErr := store.DetectFileFormat(vaultPath)
+	format, formatErr := DetectFileFormat(vaultPath)
 	abs, err := filepath.Abs(vaultPath)
 	if err != nil {
 		report.Warn("git tracking", err.Error())
@@ -205,11 +204,11 @@ func checkTracking(report *Report, vaultPath string) {
 		report.Warn("git tracking", formatErr.Error())
 		return
 	}
-	if tracked && format == store.FileFormatPlaintextStore {
+	if tracked && format == FileFormatPlaintextStore {
 		report.Fail("git tracking", "tracked plaintext secret store is unsafe: "+rel)
 		return
 	}
-	if tracked && format == store.FileFormatEncryptedVault {
+	if tracked && format == FileFormatEncryptedVault {
 		report.OK("git tracking", "tracked vault is encrypted: "+rel)
 		return
 	}

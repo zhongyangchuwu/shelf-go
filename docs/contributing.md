@@ -34,15 +34,19 @@ just test
 
 ## Install locally
 
-```bash
-go install ./cmd/shelf
-```
-
-The `just install` recipe also installs zsh completion to `~/.zfunc/_shelf`:
+Use the reusable install script:
 
 ```bash
-just install
+./scripts/install.sh
 ```
+
+It runs `go install ./cmd/shelf` and writes zsh completion. Optional environment overrides:
+
+- `GOBIN`
+- `SHELF_COMPLETION_DIR`
+- `SHELF_COMPLETION_FILE`
+
+The `just install` recipe delegates to the same script.
 
 ## Project layout
 
@@ -50,20 +54,18 @@ just install
 cmd/shelf/           process entry point
 
 internal/cli/        Cobra commands and CLI orchestration
-internal/manager/    localhost vault manager UI
+internal/manager/    local manager surface, currently loopback HTTP/Web
 
-internal/app/        runtime and vault construction helpers
-internal/project/    project identity and manifest binding resolution
+internal/app/        runtime, vault construction, and version composition
+internal/project/    project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/     reusable secret workflows such as editor-based updates
-internal/vault/      vault status/check/doctor diagnostics
 
-internal/atomicfile/ atomic write primitive
 internal/config/     runtime config resolution
-internal/store/      secret model, path grammar, JSON codec, age vault persistence, locking
-internal/manifest/   .shelf.json model, validation, and IO
-internal/render/     env/shell/JSON rendering
-internal/version/    version string
+internal/vault/      encrypted vault core, persistence, locking, diagnostics
+internal/exportfmt/  env/shell/JSON export formatting
 ```
+
+`docs/architecture.md` is the source of truth for dependency direction. Keep `internal/cli` command-family oriented; reusable behavior belongs in the feature/base packages above.
 
 ## Documentation policy
 
@@ -93,9 +95,12 @@ internal/version/    version string
 
 Use `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and phase directories for planning state. Public `docs/` should describe current behavior, not internal phase history.
 
-Release automation uses GoReleaser for GitHub Release binaries and checksums. For 0.1.x, package-manager distribution is intentionally deferred; validate release config locally before tagging:
+Release automation uses GoReleaser for GitHub Release binaries and checksums. For 0.1.x, package-manager distribution is intentionally deferred. Use the consolidated release script instead of remembered manual commands:
 
 ```bash
-goreleaser check
-goreleaser release --clean --snapshot
+./scripts/release.sh check
+./scripts/release.sh snapshot
+./scripts/release.sh tag 0.1.1
 ```
+
+The `just release-check`, `just release-snapshot`, and `just tag <version>` recipes are thin wrappers around `scripts/release.sh`.
