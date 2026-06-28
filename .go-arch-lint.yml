@@ -61,7 +61,6 @@ deps:
       - project
       - secret
       - exportfmt
-      - manager
     canUse:
       - age
 

@@ -2,10 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
@@ -49,46 +45,13 @@ func newManagerCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			_, vault, err := app.LoadVault(configPath, vaultPath)
+			runtime, err := manager.Open(configPath, vaultPath, addr)
 			if err != nil {
 				return err
 			}
-			service, err := app.NewManagerService(vault)
-			if err != nil {
-				return err
-			}
-			listener, err := app.ListenLoopback(addr)
-			if err != nil {
-				return err
-			}
-			defer listener.Close()
-			token, err := app.ManagerToken()
-			if err != nil {
-				return err
-			}
-			server, err := manager.NewServer(service, token, listener.Addr().String())
-			if err != nil {
-				return err
-			}
-			httpServer := &http.Server{Handler: server.Handler()}
-			errCh := make(chan error, 1)
-			go func() {
-				if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
-					errCh <- err
-					return
-				}
-				errCh <- nil
-			}()
-			fmt.Fprintf(cmd.OutOrStdout(), "manager: http://%s/?token=%s\n", listener.Addr().String(), token)
-			sigCh := make(chan os.Signal, 1)
-			signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-			defer signal.Stop(sigCh)
-			select {
-			case err := <-errCh:
-				return err
-			case <-sigCh:
-				return httpServer.Close()
-			}
+			defer runtime.Close()
+			fmt.Fprintf(cmd.OutOrStdout(), "manager: http://%s/?token=%s\n", runtime.Addr(), runtime.Token())
+			return runtime.ServeUntilSignal(cmd.Context())
 		},
 	}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:0", "Loopback address to listen on")
