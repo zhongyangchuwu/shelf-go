@@ -3,7 +3,7 @@
 ## Current Position
 - Phase: v0.1.1 Release Ready
 - Status: ready-to-tag
-- Active Artifact: .planning/phases/027-cli-test-rebalancing-and-boundary-verification/VERIFICATION.md
+- Active Artifact: .planning/phases/028-architecture-boundary-lint-and-cli-adapter-slimming/VERIFICATION.md
 - Next Action: Review the release-ready commits, then tag and push v0.1.1 with `./scripts/release.sh tag 0.1.1` and `git push origin v0.1.1`.
 
 ## Blockers
@@ -31,6 +31,7 @@
 - Phase 25 completed project/session boundary refactor: project entry construction, child env merge, and env override warnings now live in `internal/project`; `go test ./internal/project`, `go test ./internal/cli -run 'Test(Project|Run)'`, and `go test ./...` passed.
 - Phase 26 completed app service extraction: direct export, plaintext migration, setup file helpers, and manager loopback/token helpers now live in `internal/app`; `go test ./internal/app`, focused CLI tests, and `go test ./...` passed.
 - Phase 27 completed CLI test rebalancing and boundary verification: CLI tests were narrowed to command contracts and smoke paths, domain/app tests own behavior rules, boundary greps passed, and `go test ./internal/project`, `go test ./internal/app`, `go test ./internal/cli`, and `go test ./...` passed.
+- Phase 28 completed architecture boundary lint and CLI adapter slimming: `.go-arch-lint.yml` passes, `internal/cli` no longer imports low-level config/vault/secret/export formatting packages, vault no longer imports config, and `go test ./...` passed.
 
 ## Updated
 - 2026-06-28

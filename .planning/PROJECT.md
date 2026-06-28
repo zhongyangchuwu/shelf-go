@@ -26,6 +26,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 Phase 25 moved project selector entry construction and project environment/session rules from CLI into `internal/project` while preserving project/run CLI behavior.
 - [x] v0.1.1 Phase 26 moved direct export, setup helper, migration, and manager helper orchestration from CLI into `internal/app` while preserving command behavior.
 - [x] v0.1.1 Phase 27 rebalanced tests so CLI covers command contracts while project/app/domain packages own reusable behavior-rule coverage.
+- [x] v0.1.1 Phase 28 added `go-arch-lint` enforcement and moved remaining project/secret/status orchestration out of CLI while preserving command behavior.
 
 ### Active
 
@@ -45,7 +46,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 The repository is a Go CLI using Cobra. The display layer lives in `cmd/shelf`, `internal/cli`, and `internal/manager`. Feature support lives in `internal/app`, `internal/project`, and `internal/secret`; base support lives in `internal/config`, `internal/vault`, and `internal/exportfmt`.
 
-The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, architecture repartitioning, documentation alignment, and release hardening are complete; the release is ready to tag and publish after review, unless the optional CLI boundary refactor phases are selected before tagging.
+The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, architecture repartitioning, documentation alignment, release hardening, CLI boundary refactors, and architecture lint enforcement are complete; the release is ready to tag and publish after review.
 
 ## Constraints
 
@@ -75,9 +76,10 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, revocation, audit, and conflict handling before the solo workflow is solid. | Kept out of scope. |
 | Prefer explicit export/source over shell hooks | Hook-based activation mutates parent-shell state implicitly and adds restore complexity; sourceable shell output keeps behavior visible and easy to audit. | `project export` defaults to shell output; activate/deactivate/shell remains deferred. |
 | Defer storage-engine changes | JSON inside an age-encrypted vault keeps the security and portability model simple. SQLite is worth future discussion but not part of editing UX delivery. | Current storage remains age-encrypted JSON through v0.1.1; SQLite moves to v0.2.0 consideration. |
-| Keep reusable workflows out of `internal/cli` | CLI files should stay command-family oriented and not own behavior needed by tests, manager, or future UX. | `internal/cli` is being narrowed to a Cobra adapter; Phase 25..27 move remaining reusable project/app logic and behavior-rule tests into owning packages. |
+| Keep reusable workflows out of `internal/cli` | CLI files should stay command-family oriented and not own behavior needed by tests, manager, or future UX. | `internal/cli` is narrowed to a Cobra adapter; Phase 28 enforces package boundaries with `go-arch-lint`. |
 | Keep CLI editing compact | Fine-grained `meta`/`tag` edit commands increase command surface while WebUI is the intended editing surface. | v0.1.1 does not add `secret meta` or `secret tag`; CLI focuses on list/export/project tag application flows. |
 | Release hardening is final, not next | Install/tag/release scripts, docs, and architecture naming cleanup are prerequisites for a maintainable release. | Completed in Phase 24; v0.1.1 is ready to tag after review. |
+| Enforce package dependency direction | Architecture notes drift unless import boundaries are executable. | `.go-arch-lint.yml` now checks the light adapter/app/domain package boundary. |
 
 ## Evolution
 
@@ -91,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-28 after completing Phase 27 CLI test rebalancing*
+*Last updated: 2026-06-28 after completing Phase 28 architecture boundary lint*

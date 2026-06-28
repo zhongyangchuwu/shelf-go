@@ -9,9 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/manager"
-	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newVaultCmd() *cobra.Command {
@@ -30,15 +28,14 @@ func newVaultStatusCmd() *cobra.Command {
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report := newDiagnosticReport(cmd.OutOrStdout())
-			configPath, _ := cmd.Flags().GetString("config")
-			vaultPath, _ := cmd.Flags().GetString("vault")
-			runtime, err := config.Resolve(configPath, vaultPath)
+			configPath, vaultPath := runtimePaths(cmd)
+			reportChecks, err := app.ResolveStatus(configPath, vaultPath)
 			if err != nil {
 				report.fail("config", err.Error())
 				return report.err("vault status")
 			}
 
-			report.write(vaultsvc.Status(runtime))
+			report.write(reportChecks)
 			return report.err("vault status")
 		},
 	}
@@ -51,7 +48,12 @@ func newManagerCmd() *cobra.Command {
 		Short: "Open the local Shelf manager",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, vault, err := loadVault(cmd)
+			configPath, vaultPath := runtimePaths(cmd)
+			_, vault, err := app.LoadVault(configPath, vaultPath)
+			if err != nil {
+				return err
+			}
+			service, err := app.NewManagerService(vault)
 			if err != nil {
 				return err
 			}
@@ -64,7 +66,7 @@ func newManagerCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			server, err := manager.NewServer(vault, token, listener.Addr().String())
+			server, err := manager.NewServer(service, token, listener.Addr().String())
 			if err != nil {
 				return err
 			}

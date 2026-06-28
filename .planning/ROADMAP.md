@@ -21,6 +21,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 25: CLI Project Boundary Refactor
 - [x] Phase 26: App Service Extraction
 - [x] Phase 27: CLI Test Rebalancing and Boundary Verification
+- [x] Phase 28: Architecture Boundary Lint and CLI Adapter Slimming
 
 ## Phase Details
 
@@ -177,6 +178,22 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
 **Plan:** `.planning/phases/027-cli-test-rebalancing-and-boundary-verification/PLAN.md`
 
+### Phase 28: Architecture Boundary Lint and CLI Adapter Slimming
+
+**Goal:** Clarify internal package dependency direction, enforce it with go-arch-lint, and finish slimming CLI command files into adapters over app/domain services.
+
+**Depends on:** Phase 27 complete.
+
+**Requirements:** ARCH-05, ARCH-07, BOUND-01, BOUND-02
+
+**Success Criteria:**
+1. `.go-arch-lint.yml` encodes the intended package import boundaries.
+2. `go-arch-lint check --arch-file .go-arch-lint.yml --project-path ./` passes.
+3. `internal/cli` does not import low-level behavior packages for reusable command logic.
+4. Project/secret/manager/status orchestration lives outside CLI where reusable.
+
+**Plan:** `.planning/phases/028-architecture-boundary-lint-and-cli-adapter-slimming/PLAN.md`
+
 ## Future Candidates
 
 - SQLite/storage redesign for v0.2.0: reconsider only after defining threat model, artifact leakage checklist, migration path, and release-build impact.
@@ -213,10 +230,11 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 25: CLI Project Boundary Refactor | Complete | ARCH-03, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/025-cli-project-boundary-refactor/PLAN.md` | 2026-06-28 |
 | Phase 26: App Service Extraction | Complete | ARCH-04, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/026-app-service-extraction/PLAN.md` | 2026-06-28 |
 | Phase 27: CLI Test Rebalancing and Boundary Verification | Complete | ARCH-05..ARCH-06, BOUND-01..BOUND-02 | `.planning/phases/027-cli-test-rebalancing-and-boundary-verification/PLAN.md` | 2026-06-28 |
+| Phase 28: Architecture Boundary Lint and CLI Adapter Slimming | Complete | ARCH-05, ARCH-07, BOUND-01..BOUND-02 | `.planning/phases/028-architecture-boundary-lint-and-cli-adapter-slimming/PLAN.md` | 2026-06-28 |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-28 after completing Phase 27 CLI test rebalancing*
+*Last updated: 2026-06-28 after completing Phase 28 architecture boundary lint*

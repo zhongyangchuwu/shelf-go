@@ -55,6 +55,10 @@ func EnsureInitIdentity(path string) (*age.X25519Identity, error) {
 	return identity, nil
 }
 
+func EnsureVaultForRuntime(runtime Runtime) (bool, error) {
+	return EnsureVaultFile(runtime.VaultPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+}
+
 func EnsureVaultFile(vaultPath string, options vault.VaultOptions) (bool, error) {
 	if _, err := os.Stat(vaultPath); err == nil {
 		return false, nil

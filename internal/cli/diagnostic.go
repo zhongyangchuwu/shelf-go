@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 type diagnosticReport struct {
@@ -29,14 +29,14 @@ func (r *diagnosticReport) fail(check, detail string) {
 	r.line("fail", check, detail)
 }
 
-func (r *diagnosticReport) write(report vaultsvc.Report) {
+func (r *diagnosticReport) write(report app.Report) {
 	for _, check := range report {
 		switch check.Level {
-		case vaultsvc.LevelOK:
+		case app.LevelOK:
 			r.ok(check.Name, check.Detail)
-		case vaultsvc.LevelWarn:
+		case app.LevelWarn:
 			r.warn(check.Name, check.Detail)
-		case vaultsvc.LevelFail:
+		case app.LevelFail:
 			r.fail(check.Name, check.Detail)
 		}
 	}

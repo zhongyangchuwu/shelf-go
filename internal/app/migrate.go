@@ -8,6 +8,24 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
+func MigratePlaintextStoreForRuntime(configPathFlag, vaultPathFlag, sourcePath, targetPath string, force bool) (string, error) {
+	runtime, configuredVault, err := LoadVault(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	targetVault := configuredVault
+	if targetPath != "" && targetPath != runtime.VaultPath {
+		targetVault, err = vault.NewVault(targetPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+		if err != nil {
+			return "", err
+		}
+	}
+	if err := MigratePlaintextStore(sourcePath, targetVault, force); err != nil {
+		return "", err
+	}
+	return targetVault.Path(), nil
+}
+
 func MigratePlaintextStore(sourcePath string, targetVault *vault.Vault, force bool) error {
 	before, err := os.ReadFile(sourcePath)
 	if err != nil {

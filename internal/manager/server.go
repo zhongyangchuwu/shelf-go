@@ -7,28 +7,19 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sort"
-	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 const sessionCookie = "shelf_manager_token"
 
 type Server struct {
-	vault *vault.Vault
-	token string
-	host  string
+	service *app.ManagerService
+	token   string
+	host    string
 }
 
-type SecretInfo struct {
-	Path        string   `json:"path"`
-	Env         string   `json:"env,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Tags        []string `json:"tags"`
-	ValueSet    bool     `json:"value_set"`
-}
+type SecretInfo = app.ManagerSecretInfo
 
 type secretPayload struct {
 	OldPath     string   `json:"old_path,omitempty"`
@@ -44,9 +35,9 @@ type pathPayload struct {
 	Path string `json:"path"`
 }
 
-func NewServer(vault *vault.Vault, token, host string) (*Server, error) {
-	if vault == nil {
-		return nil, fmt.Errorf("vault is required")
+func NewServer(service *app.ManagerService, token, host string) (*Server, error) {
+	if service == nil {
+		return nil, fmt.Errorf("manager service is required")
 	}
 	if token == "" {
 		return nil, fmt.Errorf("token is required")
@@ -54,7 +45,7 @@ func NewServer(vault *vault.Vault, token, host string) (*Server, error) {
 	if host == "" {
 		return nil, fmt.Errorf("host is required")
 	}
-	return &Server{vault: vault, token: token, host: host}, nil
+	return &Server{service: service, token: token, host: host}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -128,15 +119,7 @@ func (s *Server) handleSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
 	}
-	var info SecretInfo
-	err := s.vault.Read(func(st *vault.Store) error {
-		secret, ok := st.Get(path)
-		if !ok {
-			return fmt.Errorf("secret not found: %s", path)
-		}
-		info = newSecretInfo(path, secret)
-		return nil
-	})
+	info, err := s.service.SecretInfo(path)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -145,21 +128,7 @@ func (s *Server) handleSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listSecrets(w http.ResponseWriter, r *http.Request) {
-	query := strings.ToLower(r.URL.Query().Get("q"))
-	var items []SecretInfo
-	err := s.vault.Read(func(st *vault.Store) error {
-		paths := st.List("")
-		items = make([]SecretInfo, 0, len(paths))
-		for _, path := range paths {
-			secret, ok := st.Get(path)
-			if !ok || query != "" && !matchesSecret(query, path, secret) {
-				continue
-			}
-			items = append(items, newSecretInfo(path, secret))
-		}
-		sort.Slice(items, func(i, j int) bool { return items[i].Path < items[j].Path })
-		return nil
-	})
+	items, err := s.service.ListSecrets(r.URL.Query().Get("q"))
 	if err != nil {
 		serverError(w, err)
 		return
@@ -181,19 +150,7 @@ func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
 	}
-	var value string
-	err := s.vault.Read(func(st *vault.Store) error {
-		secret, ok := st.Get(payload.Path)
-		if !ok {
-			return fmt.Errorf("secret not found: %s", payload.Path)
-		}
-		v, err := exportfmt.ValueString(secret.Value)
-		if err != nil {
-			return err
-		}
-		value = v
-		return nil
-	})
+	value, err := s.service.RevealSecret(payload.Path)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -215,37 +172,14 @@ func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "value is required", http.StatusBadRequest)
 		return
 	}
-	err := s.vault.Update(func(st *vault.Store) error {
-		secret := vault.Secret{Env: payload.Env, Description: payload.Description, Tags: payload.Tags}
-		if r.Method == http.MethodPut {
-			oldPath := payload.OldPath
-			if oldPath == "" {
-				oldPath = payload.Path
-			}
-			existing, ok := st.Get(oldPath)
-			if !ok {
-				return fmt.Errorf("secret not found: %s", oldPath)
-			}
-			secret.Value = existing.Value
-			if payload.Value != nil {
-				value, err := vault.ParseValue(*payload.Value)
-				if err != nil {
-					return err
-				}
-				secret.Value = value
-			}
-			id, err := vault.ParseSecretID(payload.Path)
-			if err != nil {
-				return err
-			}
-			return st.Update(oldPath, id, secret)
-		}
-		value, err := vault.ParseValue(*payload.Value)
-		if err != nil {
-			return err
-		}
-		secret.Value = value
-		return st.Set(payload.Path, secret, payload.Force)
+	err := s.service.WriteSecret(r.Method == http.MethodPut, app.ManagerWriteSecretRequest{
+		OldPath:     payload.OldPath,
+		Path:        payload.Path,
+		Value:       payload.Value,
+		Env:         payload.Env,
+		Description: payload.Description,
+		Tags:        payload.Tags,
+		Force:       payload.Force,
 	})
 	if err != nil {
 		serverError(w, err)
@@ -260,12 +194,7 @@ func (s *Server) deleteSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
 	}
-	err := s.vault.Update(func(st *vault.Store) error {
-		if !st.Delete(path) {
-			return fmt.Errorf("secret not found: %s", path)
-		}
-		return nil
-	})
+	err := s.service.DeleteSecret(path)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -318,22 +247,6 @@ func (s *Server) validOrigin(r *http.Request) bool {
 
 func isUnsafe(method string) bool {
 	return method != http.MethodGet && method != http.MethodHead && method != http.MethodOptions
-}
-
-func newSecretInfo(path string, secret vault.Secret) SecretInfo {
-	return SecretInfo{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0}
-}
-
-func matchesSecret(query, path string, secret vault.Secret) bool {
-	if strings.Contains(strings.ToLower(path), query) || strings.Contains(strings.ToLower(secret.Env), query) || strings.Contains(strings.ToLower(secret.Description), query) {
-		return true
-	}
-	for _, tag := range secret.Tags {
-		if strings.Contains(strings.ToLower(tag), query) {
-			return true
-		}
-	}
-	return false
 }
 
 func methodNotAllowed(w http.ResponseWriter) {

@@ -40,6 +40,7 @@ Requirements for v0.1.1 editing experience, tag-based workflows, workflow script
 - [x] **ARCH-04**: Cross-package command orchestration that composes config, vault, export, setup, migrate, and manager helper behavior moves into `internal/app` services while CLI keeps prompts, flags, output routing, completions, and process lifecycle.
 - [x] **ARCH-05**: `internal/cli` remains a Cobra adapter layer and does not own reusable behavior needed by tests, the manager, or future UX surfaces.
 - [x] **ARCH-06**: Tests are rebalanced so behavior-rule coverage lives beside the owning domain/app package, while CLI tests cover command contracts, completions, output channels, error wording, and a small number of smoke workflows.
+- [x] **ARCH-07**: Internal package dependency direction is enforced by `go-arch-lint`, keeping adapters (`internal/cli`, `internal/manager`) pointed at app/domain services and preventing vault/config boundary regressions.
 
 ### Documentation Cleanup
 
@@ -119,16 +120,17 @@ Explicitly excluded. Documented to prevent scope creep.
 | ARCH-04 | Phase 26 | Complete |
 | ARCH-05 | Phase 25..Phase 27 | Complete |
 | ARCH-06 | Phase 27 | Complete |
+| ARCH-07 | Phase 28 | Complete |
 | BOUND-01 | Phase 17..Phase 27 | Complete |
 | BOUND-02 | Phase 17..Phase 27 | Complete |
 | REL-011-01 | Phase 24 | Complete |
 
 **Coverage:**
-- Current requirements: 27 total
-- Mapped to phases: 27
+- Current requirements: 28 total
+- Mapped to phases: 28
 - Unmapped: 0
-- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-06, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-07, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-28 after completing Phase 27 CLI test rebalancing*
+*Last updated: 2026-06-28 after completing Phase 28 architecture boundary lint*

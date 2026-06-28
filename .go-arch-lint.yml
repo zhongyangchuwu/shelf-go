@@ -1,0 +1,90 @@
+version: 3
+workdir: internal
+
+allow:
+  depOnAnyVendor: false
+  deepScan: true
+
+excludeFiles:
+  - "^.*_test\\.go$"
+
+vendors:
+  cobra:
+    in: github.com/spf13/cobra
+  term:
+    in: golang.org/x/term
+  yaml:
+    in: gopkg.in/yaml.v3
+  age:
+    in:
+      - filippo.io/age
+      - filippo.io/age/**
+  flock:
+    in: github.com/gofrs/flock
+
+components:
+  cli:
+    in: cli
+  app:
+    in: app
+  manager:
+    in: manager
+  config:
+    in: config
+  vault:
+    in: vault
+  project:
+    in: project
+  secret:
+    in: secret
+  exportfmt:
+    in: exportfmt
+
+deps:
+  cli:
+    mayDependOn:
+      - app
+      - project
+      - manager
+    canUse:
+      - cobra
+      - term
+
+  manager:
+    mayDependOn:
+      - app
+
+  app:
+    mayDependOn:
+      - config
+      - vault
+      - project
+      - secret
+      - exportfmt
+      - manager
+    canUse:
+      - age
+
+  project:
+    mayDependOn:
+      - vault
+      - exportfmt
+
+  secret:
+    mayDependOn:
+      - vault
+
+  exportfmt:
+    mayDependOn:
+      - vault
+
+  vault:
+    mayDependOn: []
+    canUse:
+      - age
+      - flock
+
+  config:
+    mayDependOn: []
+    canUse:
+      - yaml

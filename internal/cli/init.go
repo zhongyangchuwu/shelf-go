@@ -9,8 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newSetupCmd() *cobra.Command {
@@ -51,11 +49,11 @@ func newInitFilesCmd(use, short string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			runtime, err := config.Resolve(configPath, "")
+			runtime, err := app.ResolveRuntime(configPath, "")
 			if err != nil {
 				return err
 			}
-			vaultCreated, err := app.EnsureVaultFile(runtime.VaultPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+			vaultCreated, err := app.EnsureVaultForRuntime(runtime)
 			if err != nil {
 				return err
 			}
@@ -89,7 +87,7 @@ type initConfig struct {
 }
 
 func (c *initConfig) fill(cmd *cobra.Command, configPath string) error {
-	if runtime, err := config.Resolve(configPath, ""); err == nil {
+	if runtime, err := app.ResolveRuntime(configPath, ""); err == nil {
 		if c.VaultPath == "" {
 			c.VaultPath = runtime.VaultPath
 		}
@@ -101,7 +99,7 @@ func (c *initConfig) fill(cmd *cobra.Command, configPath string) error {
 		}
 	}
 	if c.VaultPath == "" {
-		c.VaultPath = promptDefault(cmd, "Vault path", config.DefaultVaultPath)
+		c.VaultPath = promptDefault(cmd, "Vault path", app.DefaultVaultPath())
 	}
 	if len(c.IdentityPaths) == 0 {
 		identityPath := promptDefault(cmd, "Age identity path", filepath.Join(filepath.Dir(configPath), "identity.txt"))

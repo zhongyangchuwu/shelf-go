@@ -5,10 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-
-	"github.com/zhongyangchuwu/shelf-go/internal/config"
 )
 
 type Level string
@@ -26,23 +23,6 @@ type Check struct {
 }
 
 type Report []Check
-
-func Status(runtime config.Runtime) Report {
-	var report Report
-	report.OK("config", runtime.ConfigPath)
-	report.OK("vault path", runtime.VaultPath)
-	checkRecipients(&report, runtime)
-	checkLoads(&report, runtime)
-	return report
-}
-
-func Doctor(runtime config.Runtime) Report {
-	var report Report
-	checkFile(&report, runtime.VaultPath)
-	checkLoads(&report, runtime)
-	checkTracking(&report, runtime.VaultPath)
-	return report
-}
 
 func (r *Report) OK(name, detail string) {
 	*r = append(*r, Check{Level: LevelOK, Name: name, Detail: detail})
@@ -65,7 +45,7 @@ func HasFailures(report Report) bool {
 	return false
 }
 
-func checkFile(report *Report, vaultPath string) {
+func CheckFile(report *Report, vaultPath string) {
 	info, err := os.Stat(vaultPath)
 	if os.IsNotExist(err) {
 		report.Warn("vault file exists", vaultPath+" will be created on first write")
@@ -97,14 +77,6 @@ func fileModeDetail(info os.FileInfo) (string, bool) {
 		return mode.String(), true
 	}
 	return mode.String() + " is broader than 0600", false
-}
-
-func checkRecipients(report *Report, runtime config.Runtime) {
-	if len(runtime.Recipients) == 0 {
-		report.Fail("vault recipients", MissingRecipientsDetail())
-		return
-	}
-	report.OK("vault recipients", strconv.Itoa(len(runtime.Recipients))+" configured")
 }
 
 func MissingRecipientsDetail() string {
@@ -146,42 +118,7 @@ func LoadErrorDetail(err error) string {
 	}
 }
 
-func checkLoads(report *Report, runtime config.Runtime) {
-	format, err := DetectFileFormat(runtime.VaultPath)
-	if err != nil {
-		report.Fail("vault format", err.Error())
-		return
-	}
-	switch format {
-	case FileFormatMissing:
-		report.Warn("vault format", FormatDetail(format, runtime.VaultPath))
-	case FileFormatEmpty:
-		report.Warn("vault format", FormatDetail(format, runtime.VaultPath))
-	case FileFormatEncryptedVault:
-		report.OK("vault format", "encrypted shelf-vault/v1")
-	case FileFormatPlaintextStore:
-		report.Fail("vault format", FormatDetail(format, runtime.VaultPath))
-		return
-	case FileFormatUnsupportedVault:
-		report.Fail("vault format", FormatDetail(format, runtime.VaultPath))
-		return
-	default:
-		report.Fail("vault format", FormatDetail(format, runtime.VaultPath))
-		return
-	}
-	vault, err := NewVault(runtime.VaultPath, VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
-	if err != nil {
-		report.Fail("vault loads", LoadErrorDetail(err))
-		return
-	}
-	if _, err := vault.Load(); err != nil {
-		report.Fail("vault loads", LoadErrorDetail(err))
-		return
-	}
-	report.OK("vault loads", runtime.VaultPath)
-}
-
-func checkTracking(report *Report, vaultPath string) {
+func CheckTracking(report *Report, vaultPath string) {
 	format, formatErr := DetectFileFormat(vaultPath)
 	abs, err := filepath.Abs(vaultPath)
 	if err != nil {

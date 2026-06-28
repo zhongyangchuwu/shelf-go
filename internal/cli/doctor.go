@@ -7,8 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newDoctorCmd() *cobra.Command {
@@ -18,9 +16,8 @@ func newDoctorCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report := newDiagnosticReport(cmd.OutOrStdout())
-			configPath, _ := cmd.Flags().GetString("config")
-			vaultPath, _ := cmd.Flags().GetString("vault")
-			runtime, err := config.Resolve(configPath, vaultPath)
+			configPath, vaultPath := runtimePaths(cmd)
+			runtime, reportChecks, err := app.ResolveDoctor(configPath, vaultPath)
 			if err != nil {
 				report.fail("config resolves", err.Error())
 				return report.err("doctor")
@@ -28,7 +25,7 @@ func newDoctorCmd() *cobra.Command {
 			report.ok("config resolves", runtime.ConfigPath)
 			report.ok("version", app.String())
 
-			report.write(vaultsvc.Doctor(runtime))
+			report.write(reportChecks)
 			checkCompletion(report)
 
 			return report.err("doctor")

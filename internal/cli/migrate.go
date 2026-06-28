@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func newMigrateCmd() *cobra.Command {
@@ -20,21 +19,12 @@ func newMigrateCmd() *cobra.Command {
 			if sourcePath == "" {
 				return fmt.Errorf("--from is required")
 			}
-			runtime, configuredVault, err := loadVault(cmd)
+			configPath, vaultPath := runtimePaths(cmd)
+			targetVaultPath, err := app.MigratePlaintextStoreForRuntime(configPath, vaultPath, sourcePath, targetPath, force)
 			if err != nil {
 				return err
 			}
-			targetVault := configuredVault
-			if targetPath != "" && targetPath != runtime.VaultPath {
-				targetVault, err = vault.NewVault(targetPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
-				if err != nil {
-					return err
-				}
-			}
-			if err := app.MigratePlaintextStore(sourcePath, targetVault, force); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "migrated plaintext store %s to encrypted vault %s\n", sourcePath, targetVault.Path())
+			fmt.Fprintf(cmd.OutOrStdout(), "migrated plaintext store %s to encrypted vault %s\n", sourcePath, targetVaultPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "plaintext source preserved at %s; move, delete, or archive it after confirming your new config\n", sourcePath)
 			return nil
 		},

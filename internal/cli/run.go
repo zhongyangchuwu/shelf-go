@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
@@ -59,7 +60,8 @@ func newRunCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, st, err := loadRuntime(cmd)
+			configPath, vaultPath := runtimePaths(cmd)
+			_, st, err := app.LoadRuntime(configPath, vaultPath)
 			if err != nil {
 				return err
 			}

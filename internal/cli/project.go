@@ -1,15 +1,11 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
-	"github.com/zhongyangchuwu/shelf-go/internal/project"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 func newProjectCmd() *cobra.Command {
@@ -31,7 +27,7 @@ func newProjectIDCmd() *cobra.Command {
 		Short: "Print current Git project identity",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := project.ID()
+			id, err := app.ProjectID()
 			if err != nil {
 				return err
 			}
@@ -48,25 +44,11 @@ func newProjectInitCmd() *cobra.Command {
 		Short: "Initialize project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
+			out, err := app.ProjectInit(force)
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, project.FileName)
-			existed := false
-			if _, err := os.Stat(manifestPath); err == nil {
-				existed = true
-				if !force {
-					return fmt.Errorf("%s already exists (use --force to overwrite)", project.FileName)
-				}
-			} else if !errors.Is(err, os.ErrNotExist) {
-				return err
-			}
-			if err := project.Save(manifestPath, project.New()); err != nil {
-				return err
-			}
-			label := map[bool]string{true: "overwritten", false: "created"}
-			fmt.Fprintf(cmd.OutOrStdout(), "manifest: %s (%s)\n", manifestPath, label[existed])
+			fmt.Fprint(cmd.OutOrStdout(), out)
 			return nil
 		},
 	}
@@ -80,40 +62,13 @@ func newProjectExplainCmd() *cobra.Command {
 		Short: "Explain project manifest resolution",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
-			if err != nil {
-				return err
+			configPath, _ := cmd.Flags().GetString("config")
+			vaultPath, _ := cmd.Flags().GetString("vault")
+			out, err := app.ProjectExplain(configPath, vaultPath, os.Environ())
+			if out != "" {
+				fmt.Fprint(cmd.OutOrStdout(), out)
 			}
-			manifestPath := filepath.Join(root, project.FileName)
-			m, err := project.Load(manifestPath)
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
-			}
-			if err != nil {
-				return err
-			}
-
-			projectID := project.IDBestEffort(root)
-			fmt.Fprintf(cmd.OutOrStdout(), "project: %s\n", projectID)
-			fmt.Fprintf(cmd.OutOrStdout(), "root:    %s\n", root)
-			fmt.Fprintf(cmd.OutOrStdout(), "config:  %s\n\n", project.FileName)
-
-			_, st, err := loadRuntime(cmd)
-			if err != nil {
-				return err
-			}
-			resolvedEntries, diagnostics := project.ResolveEntries(m, st)
-			project.RenderDiagnostics(cmd.OutOrStdout(), diagnostics)
-			for _, entry := range resolvedEntries {
-				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.Path, entry.EnvName)
-			}
-			for _, warning := range project.EnvOverrideWarnings(resolvedEntries, os.Environ()) {
-				fmt.Fprintln(cmd.OutOrStdout(), warning)
-			}
-			if project.HasFailures(diagnostics) {
-				return fmt.Errorf("project manifest check failed")
-			}
-			return nil
+			return err
 		},
 	}
 }
@@ -128,40 +83,18 @@ func newProjectAddCmd() *cobra.Command {
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completeProjectAddArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
-			if err != nil {
-				return err
-			}
-			manifestPath := filepath.Join(root, project.FileName)
-			if _, err := os.Stat(manifestPath); errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found; run `shelf project init` first", project.FileName)
-			} else if err != nil {
-				return err
-			}
-
 			selector := ""
 			if len(args) > 0 {
 				selector = args[0]
 			}
 
-			_, st, err := loadRuntime(cmd)
+			configPath, _ := cmd.Flags().GetString("config")
+			vaultPath, _ := cmd.Flags().GetString("vault")
+			out, err := app.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: selector, Env: envName, Optional: optional, Tags: tags})
 			if err != nil {
 				return err
 			}
-
-			m, err := project.Load(manifestPath)
-			if err != nil {
-				return err
-			}
-			m, entry, err := project.AddEntry(m, st, project.AddEntryRequest{Selector: selector, Env: envName, Optional: optional, Tags: tags})
-			if err != nil {
-				return err
-			}
-
-			if err := project.Save(manifestPath, m); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "added %s\n", entry.Key())
+			fmt.Fprint(cmd.OutOrStdout(), out)
 			return nil
 		},
 	}
@@ -180,25 +113,11 @@ func newProjectRmCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProjectEntries,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
+			out, err := app.ProjectRm(args[0])
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, project.FileName)
-			m, err := project.Load(manifestPath)
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found", project.FileName)
-			}
-			if err != nil {
-				return err
-			}
-			if !m.RemoveEntry(args[0]) {
-				return fmt.Errorf("entry not found: %s", args[0])
-			}
-			if err := project.Save(manifestPath, m); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "removed %s\n", args[0])
+			fmt.Fprint(cmd.OutOrStdout(), out)
 			return nil
 		},
 	}
@@ -209,33 +128,27 @@ func completeProjectAddArg(cmd *cobra.Command, args []string, toComplete string)
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	_, st, err := loadRuntime(cmd)
+	configPath, vaultPath := runtimePaths(cmd)
+	paths, err := app.AllSecretPaths(configPath, vaultPath)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	return completeSecretSetPath(st.List(""), toComplete)
+	return completeSecretSetPath(paths, toComplete)
 }
 
 func completeProjectEntries(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	root, err := project.Root()
+	comps, err := app.ProjectEntryCompletions(toComplete)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	m, err := project.Load(filepath.Join(root, project.FileName))
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveNoFileComp
+	completions := make([]cobra.Completion, 0, len(comps))
+	for _, comp := range comps {
+		completions = append(completions, cobra.Completion(comp))
 	}
-	comps := make([]cobra.Completion, 0, len(m.Secrets))
-	for _, entry := range m.Secrets {
-		key := entry.Key()
-		if strings.HasPrefix(key, toComplete) {
-			comps = append(comps, cobra.Completion(key))
-		}
-	}
-	return comps, cobra.ShellCompDirectiveNoFileComp
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func newProjectListCmd() *cobra.Command {
@@ -244,33 +157,11 @@ func newProjectListCmd() *cobra.Command {
 		Short: "List project manifest entries",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
+			out, err := app.ProjectList()
 			if err != nil {
 				return err
 			}
-			manifestPath := filepath.Join(root, project.FileName)
-			m, err := project.Load(manifestPath)
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found", project.FileName)
-			}
-			if err != nil {
-				return err
-			}
-			for _, entry := range m.Secrets {
-				req := "required"
-				if !entry.IsRequired() {
-					req = "optional"
-				}
-				if entry.IsPrefix() {
-					fmt.Fprintf(cmd.OutOrStdout(), "prefix %s (%s)\n", entry.Prefix, req)
-				} else if entry.IsTag() {
-					fmt.Fprintf(cmd.OutOrStdout(), "tag    %s (%s)\n", entry.Key(), req)
-				} else if entry.Env != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "path   %s -> %s (%s)\n", entry.Path, entry.Env, req)
-				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "path   %s (%s)\n", entry.Path, req)
-				}
-			}
+			fmt.Fprint(cmd.OutOrStdout(), out)
 			return nil
 		},
 	}
@@ -283,43 +174,17 @@ func newProjectExportCmd() *cobra.Command {
 		Short: "Export environment variables from project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
-			if err != nil {
-				return err
-			}
-			manifestPath := filepath.Join(root, project.FileName)
-			m, err := project.Load(manifestPath)
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found", project.FileName)
+			configPath, _ := cmd.Flags().GetString("config")
+			vaultPath, _ := cmd.Flags().GetString("vault")
+			result, err := app.ProjectExport(configPath, vaultPath, format)
+			if result.Diagnostics != "" {
+				fmt.Fprint(cmd.OutOrStderr(), result.Diagnostics)
 			}
 			if err != nil {
 				return err
 			}
-
-			_, st, err := loadRuntime(cmd)
-			if err != nil {
-				return err
-			}
-
-			resolvedEntries, diagnostics := project.ResolveEntries(m, st)
-			project.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
-			if project.HasFailures(diagnostics) {
-				return fmt.Errorf("project export failed")
-			}
-			if len(resolvedEntries) == 0 {
-				return fmt.Errorf("no secrets to export")
-			}
-
-			switch format {
-			case "env":
-				return renderProjectExportEnv(cmd, resolvedEntries)
-			case "shell":
-				return renderProjectExportShell(cmd, resolvedEntries)
-			case "json":
-				return renderProjectExportJSON(cmd, resolvedEntries)
-			default:
-				return fmt.Errorf("unsupported format: %s", format)
-			}
+			fmt.Fprint(cmd.OutOrStdout(), result.Output)
+			return nil
 		},
 	}
 	cmd.Flags().StringVar(&format, "format", "shell", "Output format")
@@ -327,31 +192,4 @@ func newProjectExportCmd() *cobra.Command {
 		return []cobra.Completion{"env", "shell", "json"}, cobra.ShellCompDirectiveNoFileComp
 	})
 	return cmd
-}
-
-func renderProjectExportEnv(cmd *cobra.Command, entries []project.Binding) error {
-	out, err := exportfmt.EnvBindings(project.BindingsForRender(entries))
-	if err != nil {
-		return err
-	}
-	fmt.Fprint(cmd.OutOrStdout(), out)
-	return nil
-}
-
-func renderProjectExportShell(cmd *cobra.Command, entries []project.Binding) error {
-	out, err := exportfmt.ShellBindings(project.BindingsForRender(entries))
-	if err != nil {
-		return err
-	}
-	fmt.Fprint(cmd.OutOrStdout(), out)
-	return nil
-}
-
-func renderProjectExportJSON(cmd *cobra.Command, entries []project.Binding) error {
-	out, err := exportfmt.JSONBindings(project.BindingsForRender(entries))
-	if err != nil {
-		return err
-	}
-	fmt.Fprint(cmd.OutOrStdout(), out)
-	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"filippo.io/age"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
@@ -32,7 +33,11 @@ func newTestServer(t *testing.T) (*Server, string) {
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
-	server, err := NewServer(v, testToken, "127.0.0.1:4321")
+	service, err := app.NewManagerService(v)
+	if err != nil {
+		t.Fatalf("new manager service: %v", err)
+	}
+	server, err := NewServer(service, testToken, "127.0.0.1:4321")
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}

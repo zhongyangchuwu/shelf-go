@@ -16,15 +16,12 @@ func newExportCmd() *cobra.Command {
 		Short: "Export secret values",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, st, err := loadRuntime(cmd)
-			if err != nil {
-				return err
-			}
 			selector := ""
 			if len(args) > 0 {
 				selector = args[0]
 			}
-			out, err := app.ExportSecrets(st, app.ExportRequest{Selector: selector, Tags: tags, All: all, Format: format})
+			configPath, vaultPath := runtimePaths(cmd)
+			out, err := app.ExportSecretsForRuntime(configPath, vaultPath, app.ExportRequest{Selector: selector, Tags: tags, All: all, Format: format})
 			if err != nil {
 				return err
 			}

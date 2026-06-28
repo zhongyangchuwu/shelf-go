@@ -15,6 +15,14 @@ type ExportRequest struct {
 	Format   string
 }
 
+func ExportSecretsForRuntime(configPathFlag, vaultPathFlag string, req ExportRequest) (string, error) {
+	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	return ExportSecrets(st, req)
+}
+
 func ExportSecrets(st *vault.Store, req ExportRequest) (string, error) {
 	var paths []string
 	if req.Selector != "" {
