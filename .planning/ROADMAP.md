@@ -19,7 +19,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 23: Documentation and Usage Alignment
 - [x] Phase 24: v0.1.1 Release Hardening
 - [x] Phase 25: CLI Project Boundary Refactor
-- [ ] Phase 26: App Service Extraction
+- [x] Phase 26: App Service Extraction
 - [ ] Phase 27: CLI Test Rebalancing and Boundary Verification
 
 ## Phase Details
@@ -158,7 +158,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 4. CLI handlers call app services and print returned outputs/errors without owning reusable business rules.
 5. Existing setup, vault, export, migrate, manager, and doctor behavior remains unchanged.
 
-**Plan:** TBD
+**Plan:** `.planning/phases/026-app-service-extraction/PLAN.md`
 
 ### Phase 27: CLI Test Rebalancing and Boundary Verification
 
@@ -211,12 +211,12 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 23: Documentation and Usage Alignment | Complete | DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/023-documentation-and-usage-alignment/PLAN.md` | 2026-06-27 |
 | Phase 24: v0.1.1 Release Hardening | Complete | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | `.planning/phases/024-v0.1.1-release-hardening/PLAN.md` | 2026-06-27 |
 | Phase 25: CLI Project Boundary Refactor | Complete | ARCH-03, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/025-cli-project-boundary-refactor/PLAN.md` | 2026-06-28 |
-| Phase 26: App Service Extraction | Planning | ARCH-04, ARCH-05, BOUND-01..BOUND-02 | TBD | - |
-| Phase 27: CLI Test Rebalancing and Boundary Verification | Not Started | ARCH-05..ARCH-06, BOUND-01..BOUND-02 | TBD | - |
+| Phase 26: App Service Extraction | Complete | ARCH-04, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/026-app-service-extraction/PLAN.md` | 2026-06-28 |
+| Phase 27: CLI Test Rebalancing and Boundary Verification | Planning | ARCH-05..ARCH-06, BOUND-01..BOUND-02 | TBD | - |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-28 after completing Phase 25 CLI project boundary refactor*
+*Last updated: 2026-06-28 after completing Phase 26 app service extraction*

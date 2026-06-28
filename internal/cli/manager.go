@@ -1,16 +1,14 @@
 package cli
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/manager"
 	vaultsvc "github.com/zhongyangchuwu/shelf-go/internal/vault"
@@ -57,12 +55,12 @@ func newManagerCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			listener, err := listenLoopback(addr)
+			listener, err := app.ListenLoopback(addr)
 			if err != nil {
 				return err
 			}
 			defer listener.Close()
-			token, err := managerToken()
+			token, err := app.ManagerToken()
 			if err != nil {
 				return err
 			}
@@ -93,24 +91,4 @@ func newManagerCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:0", "Loopback address to listen on")
 	return cmd
-}
-
-func listenLoopback(addr string) (net.Listener, error) {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
-	}
-	ip := net.ParseIP(host)
-	if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-		return nil, fmt.Errorf("manager address must be loopback: %s", addr)
-	}
-	return net.Listen("tcp", addr)
-}
-
-func managerToken() (string, error) {
-	var bytes [32]byte
-	if _, err := rand.Read(bytes[:]); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(bytes[:]), nil
 }

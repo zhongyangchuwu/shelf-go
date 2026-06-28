@@ -2,11 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 func newExportCmd() *cobra.Command {
@@ -22,51 +20,11 @@ func newExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var paths []string
-			prefix := ""
+			selector := ""
 			if len(args) > 0 {
-				prefix = args[0]
-				if len(tags) == 0 {
-					if _, ok := st.Get(prefix); ok {
-						paths = []string{prefix}
-					} else {
-						paths = st.List(prefix)
-					}
-				} else if secret, ok := st.Get(prefix); ok {
-					if vault.HasTags(secret, tags) {
-						paths = []string{prefix}
-					}
-				} else {
-					paths = st.ListByTags(prefix, tags)
-				}
-			} else if len(tags) > 0 {
-				paths = st.ListByTags("", tags)
-			} else {
-				return fmt.Errorf("path, prefix, or --tag is required")
+				selector = args[0]
 			}
-			if !all {
-				filtered := make([]string, 0, len(paths))
-				for _, p := range paths {
-					if s, ok := st.Data.Secrets[p]; ok && s.Env != "" {
-						filtered = append(filtered, p)
-					}
-				}
-				paths = filtered
-			}
-			if len(paths) == 0 {
-				return fmt.Errorf("no secrets matched: %s", exportSelector(prefix, tags))
-			}
-			var out string
-			switch format {
-			case "json":
-				out, err = exportfmt.JSON(paths, st.Data.Secrets)
-			case "env":
-				out, err = exportfmt.Env(paths, st.Data.Secrets)
-			case "shell":
-				out, err = exportfmt.Shell(paths, st.Data.Secrets)
-			default:
-				return fmt.Errorf("unsupported format: %s", format)
-			}
+			out, err := app.ExportSecrets(st, app.ExportRequest{Selector: selector, Tags: tags, All: all, Format: format})
 			if err != nil {
 				return err
 			}
@@ -82,14 +40,4 @@ func newExportCmd() *cobra.Command {
 	})
 	cmd.ValidArgsFunction = completeSecretPaths
 	return cmd
-}
-
-func exportSelector(prefix string, tags []string) string {
-	if prefix == "" {
-		return "tag " + strings.Join(tags, ",")
-	}
-	if len(tags) == 0 {
-		return prefix
-	}
-	return prefix + " with tag " + strings.Join(tags, ",")
 }
