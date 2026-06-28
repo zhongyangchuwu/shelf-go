@@ -4,6 +4,9 @@ All notable user-facing changes will be recorded here.
 
 ## Unreleased
 
+- Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
+- Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.
+
 ## 0.1.1 - 2026-06-27
 
 - Replaced the local manager entrypoint with `shelf manager` and removed the pre-release `shelf vault open` command.

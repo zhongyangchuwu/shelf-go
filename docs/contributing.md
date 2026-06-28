@@ -23,7 +23,7 @@ just build
 ## Test
 
 ```bash
-go test ./...
+./scripts/test.sh
 ```
 
 Or:
@@ -53,12 +53,12 @@ The `just install` recipe delegates to the same script.
 ```text
 cmd/shelf/           process entry point
 
-internal/cli/        Cobra commands and CLI orchestration
+internal/cli/        Cobra command surface, flags, completions, and output routing
 internal/manager/    local manager surface, currently loopback HTTP/Web
 
-internal/app/        runtime, vault construction, and version composition
+internal/app/        runtime, vault construction, app workflows, status, and version composition
 internal/project/    project identity, .shelf.json schema/IO/validation, and binding resolution
-internal/secret/     reusable secret workflows such as editor-based updates
+internal/secret/     reusable secret workflows such as interactive add and editor-based updates
 
 internal/config/     runtime config resolution
 internal/vault/      encrypted vault core, persistence, locking, diagnostics
@@ -103,4 +103,4 @@ Release automation uses GoReleaser for GitHub Release binaries and checksums. Fo
 ./scripts/release.sh tag 0.1.1
 ```
 
-The `just release-check`, `just release-snapshot`, and `just tag <version>` recipes are thin wrappers around `scripts/release.sh`.
+The `just tag <version>` recipe is a thin wrapper around `scripts/release.sh`. Local verification has one entrypoint: `just test` delegates to `scripts/test.sh`, which runs Go tests, `go vet`, and architecture lint.

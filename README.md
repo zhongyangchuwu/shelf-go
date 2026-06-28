@@ -168,11 +168,11 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 ## Development
 
 ```bash
-go test ./...
+./scripts/test.sh
 go build -o ./bin/shelf ./cmd/shelf
 ```
 
-Reusable local workflows live under `scripts/`; `justfile` is a thin wrapper:
+Reusable install/release workflows live under `scripts/`; `justfile` keeps one local verification entrypoint plus thin install/tag wrappers:
 
 ```bash
 ./scripts/install.sh

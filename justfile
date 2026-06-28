@@ -8,16 +8,7 @@ install:
     ./scripts/install.sh
 
 test:
-    go test ./...
-
-vet:
-    go vet ./...
-
-release-check:
-    ./scripts/release.sh check
-
-release-snapshot:
-    ./scripts/release.sh snapshot
+    ./scripts/test.sh
 
 tag version:
     ./scripts/release.sh tag {{version}}

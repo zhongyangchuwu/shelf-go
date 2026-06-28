@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+go vet ./...
+go test ./...
+go run github.com/fe3dback/go-arch-lint@latest check --arch-file .go-arch-lint.yml --project-path ./

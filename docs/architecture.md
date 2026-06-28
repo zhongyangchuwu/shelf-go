@@ -19,20 +19,20 @@ internal/vault/      encrypted vault core: model, path grammar, JSON codec, age 
 internal/exportfmt/  env/shell/JSON export formatting
 ```
 
-The intended dependency direction is display to feature support to base support:
+The intended dependency direction is local surface to workflow to kernel/support, enforced by `.go-arch-lint.yml`:
 
 ```text
-Display:
+Surface:
   cmd/shelf -> internal/cli
-  internal/cli -> app, project, secret, vault, manager, config, exportfmt
-  internal/manager -> vault, exportfmt
+  internal/cli -> app, project, manager
+  internal/manager -> app
 
-Feature support:
-  app -> config, vault
+Workflow:
+  app -> config, vault, project, secret, exportfmt
   project -> vault, exportfmt
   secret -> vault
 
-Base support:
+Kernel/support:
   exportfmt -> vault
   config -> standard library + YAML
   vault -> standard library + age/flock dependencies
@@ -112,13 +112,15 @@ Prefix and tag manifest entries may expand to multiple secrets and cannot carry 
 
 Safety boundaries:
 
-- loopback-only address validation in CLI before server start;
+- loopback-only address validation before server start;
 - tokenized URL with token removal from the visible URL after first load;
 - strict cookie, Host checks, and Origin checks;
 - no-store responses for manager pages and API responses;
 - metadata list/search/detail without values;
 - explicit POST reveal/copy flows for plaintext values;
 - embedded local HTML/CSS/JS assets, no CDN or permanent daemon requirement.
+
+Manager route handlers call app-layer secret workflows instead of mutating vault state directly.
 
 ## Public documentation boundary
 
