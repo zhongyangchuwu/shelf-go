@@ -9,11 +9,11 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-type ManagerService struct {
+type SecretService struct {
 	vault *vault.Vault
 }
 
-type ManagerSecretInfo struct {
+type SecretSummary struct {
 	Path        string   `json:"path"`
 	Env         string   `json:"env,omitempty"`
 	Description string   `json:"description,omitempty"`
@@ -21,7 +21,7 @@ type ManagerSecretInfo struct {
 	ValueSet    bool     `json:"value_set"`
 }
 
-type ManagerWriteSecretRequest struct {
+type WriteSecretRequest struct {
 	OldPath     string
 	Path        string
 	Value       *string
@@ -31,38 +31,38 @@ type ManagerWriteSecretRequest struct {
 	Force       bool
 }
 
-func NewManagerService(vault *vault.Vault) (*ManagerService, error) {
+func NewSecretService(vault *vault.Vault) (*SecretService, error) {
 	if vault == nil {
 		return nil, fmt.Errorf("vault is required")
 	}
-	return &ManagerService{vault: vault}, nil
+	return &SecretService{vault: vault}, nil
 }
 
-func (s *ManagerService) SecretInfo(path string) (ManagerSecretInfo, error) {
-	var info ManagerSecretInfo
+func (s *SecretService) SecretInfo(path string) (SecretSummary, error) {
+	var info SecretSummary
 	err := s.vault.Read(func(st *vault.Store) error {
 		secret, ok := st.Get(path)
 		if !ok {
 			return fmt.Errorf("secret not found: %s", path)
 		}
-		info = newManagerSecretInfo(path, secret)
+		info = newSecretSummary(path, secret)
 		return nil
 	})
 	return info, err
 }
 
-func (s *ManagerService) ListSecrets(query string) ([]ManagerSecretInfo, error) {
+func (s *SecretService) ListSecrets(query string) ([]SecretSummary, error) {
 	query = strings.ToLower(query)
-	var items []ManagerSecretInfo
+	var items []SecretSummary
 	err := s.vault.Read(func(st *vault.Store) error {
 		paths := st.List("")
-		items = make([]ManagerSecretInfo, 0, len(paths))
+		items = make([]SecretSummary, 0, len(paths))
 		for _, path := range paths {
 			secret, ok := st.Get(path)
-			if !ok || query != "" && !matchesManagerSecret(query, path, secret) {
+			if !ok || query != "" && !matchesSecretSummary(query, path, secret) {
 				continue
 			}
-			items = append(items, newManagerSecretInfo(path, secret))
+			items = append(items, newSecretSummary(path, secret))
 		}
 		sort.Slice(items, func(i, j int) bool { return items[i].Path < items[j].Path })
 		return nil
@@ -70,7 +70,7 @@ func (s *ManagerService) ListSecrets(query string) ([]ManagerSecretInfo, error) 
 	return items, err
 }
 
-func (s *ManagerService) RevealSecret(path string) (string, error) {
+func (s *SecretService) RevealSecret(path string) (string, error) {
 	var value string
 	err := s.vault.Read(func(st *vault.Store) error {
 		secret, ok := st.Get(path)
@@ -87,7 +87,7 @@ func (s *ManagerService) RevealSecret(path string) (string, error) {
 	return value, err
 }
 
-func (s *ManagerService) WriteSecret(update bool, req ManagerWriteSecretRequest) error {
+func (s *SecretService) WriteSecret(update bool, req WriteSecretRequest) error {
 	return s.vault.Update(func(st *vault.Store) error {
 		secret := vault.Secret{Env: req.Env, Description: req.Description, Tags: req.Tags}
 		if update {
@@ -122,7 +122,7 @@ func (s *ManagerService) WriteSecret(update bool, req ManagerWriteSecretRequest)
 	})
 }
 
-func (s *ManagerService) DeleteSecret(path string) error {
+func (s *SecretService) DeleteSecret(path string) error {
 	return s.vault.Update(func(st *vault.Store) error {
 		if !st.Delete(path) {
 			return fmt.Errorf("secret not found: %s", path)
@@ -131,11 +131,11 @@ func (s *ManagerService) DeleteSecret(path string) error {
 	})
 }
 
-func newManagerSecretInfo(path string, secret vault.Secret) ManagerSecretInfo {
-	return ManagerSecretInfo{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0}
+func newSecretSummary(path string, secret vault.Secret) SecretSummary {
+	return SecretSummary{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0}
 }
 
-func matchesManagerSecret(query, path string, secret vault.Secret) bool {
+func matchesSecretSummary(query, path string, secret vault.Secret) bool {
 	if strings.Contains(strings.ToLower(path), query) || strings.Contains(strings.ToLower(secret.Env), query) || strings.Contains(strings.ToLower(secret.Description), query) {
 		return true
 	}

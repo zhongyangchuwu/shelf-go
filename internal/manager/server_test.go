@@ -33,7 +33,7 @@ func newTestServer(t *testing.T) (*Server, string) {
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
-	service, err := app.NewManagerService(v)
+	service, err := app.NewSecretService(v)
 	if err != nil {
 		t.Fatalf("new manager service: %v", err)
 	}

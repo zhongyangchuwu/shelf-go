@@ -25,7 +25,7 @@ func Open(configPathFlag, vaultPathFlag, addr string) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
-	service, err := app.NewManagerService(vaultHandle)
+	service, err := app.NewSecretService(vaultHandle)
 	if err != nil {
 		return nil, err
 	}

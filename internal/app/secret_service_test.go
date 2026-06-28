@@ -8,18 +8,18 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-func TestManagerServiceWritesListsAndReveals(t *testing.T) {
+func TestSecretServiceWritesListsAndReveals(t *testing.T) {
 	dir := t.TempDir()
 	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	service, err := newTestManagerService(filepath.Join(dir, "vault.age"), []string{identity.Recipient().String()}, []string{filepath.Join(dir, "identity.txt")})
+	service, err := newTestSecretService(filepath.Join(dir, "vault.age"), []string{identity.Recipient().String()}, []string{filepath.Join(dir, "identity.txt")})
 	if err != nil {
 		t.Fatalf("new manager service: %v", err)
 	}
 	value := "secret-value"
-	if err := service.WriteSecret(false, ManagerWriteSecretRequest{Path: "app:token", Value: &value, Env: "APP_TOKEN", Description: "primary token", Tags: []string{"api"}}); err != nil {
+	if err := service.WriteSecret(false, WriteSecretRequest{Path: "app:token", Value: &value, Env: "APP_TOKEN", Description: "primary token", Tags: []string{"api"}}); err != nil {
 		t.Fatalf("write secret: %v", err)
 	}
 	items, err := service.ListSecrets("api")
@@ -38,7 +38,7 @@ func TestManagerServiceWritesListsAndReveals(t *testing.T) {
 	}
 }
 
-func newTestManagerService(vaultPath string, recipients, identityPaths []string) (*ManagerService, error) {
+func newTestSecretService(vaultPath string, recipients, identityPaths []string) (*SecretService, error) {
 	if err := os.MkdirAll(filepath.Dir(vaultPath), 0o700); err != nil {
 		return nil, err
 	}
@@ -46,5 +46,5 @@ func newTestManagerService(vaultPath string, recipients, identityPaths []string)
 	if err != nil {
 		return nil, err
 	}
-	return NewManagerService(v)
+	return NewSecretService(v)
 }

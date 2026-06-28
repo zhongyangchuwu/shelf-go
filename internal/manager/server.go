@@ -14,12 +14,12 @@ import (
 const sessionCookie = "shelf_manager_token"
 
 type Server struct {
-	service *app.ManagerService
+	service *app.SecretService
 	token   string
 	host    string
 }
 
-type SecretInfo = app.ManagerSecretInfo
+type SecretInfo = app.SecretSummary
 
 type secretPayload struct {
 	OldPath     string   `json:"old_path,omitempty"`
@@ -35,7 +35,7 @@ type pathPayload struct {
 	Path string `json:"path"`
 }
 
-func NewServer(service *app.ManagerService, token, host string) (*Server, error) {
+func NewServer(service *app.SecretService, token, host string) (*Server, error) {
 	if service == nil {
 		return nil, fmt.Errorf("manager service is required")
 	}
@@ -172,7 +172,7 @@ func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "value is required", http.StatusBadRequest)
 		return
 	}
-	err := s.service.WriteSecret(r.Method == http.MethodPut, app.ManagerWriteSecretRequest{
+	err := s.service.WriteSecret(r.Method == http.MethodPut, app.WriteSecretRequest{
 		OldPath:     payload.OldPath,
 		Path:        payload.Path,
 		Value:       payload.Value,
