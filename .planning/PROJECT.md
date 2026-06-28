@@ -25,11 +25,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 release hardening passed tests, vet, release check, and snapshot release through consolidated scripts.
 - [x] v0.1.1 Phase 25 moved project selector entry construction and project environment/session rules from CLI into `internal/project` while preserving project/run CLI behavior.
 - [x] v0.1.1 Phase 26 moved direct export, setup helper, migration, and manager helper orchestration from CLI into `internal/app` while preserving command behavior.
+- [x] v0.1.1 Phase 27 rebalanced tests so CLI covers command contracts while project/app/domain packages own reusable behavior-rule coverage.
 
 ### Active
 
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
-- [ ] v0.1.1 optional pre-tag boundary refactor keeps CLI as a Cobra adapter while moving behavior-rule tests into owning domain packages.
 
 ### Out of Scope
 
@@ -91,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-28 after completing Phase 26 app service extraction*
+*Last updated: 2026-06-28 after completing Phase 27 CLI test rebalancing*

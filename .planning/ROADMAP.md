@@ -20,7 +20,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 24: v0.1.1 Release Hardening
 - [x] Phase 25: CLI Project Boundary Refactor
 - [x] Phase 26: App Service Extraction
-- [ ] Phase 27: CLI Test Rebalancing and Boundary Verification
+- [x] Phase 27: CLI Test Rebalancing and Boundary Verification
 
 ## Phase Details
 
@@ -175,7 +175,7 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 4. Full verification confirms no user-visible CLI behavior, vault format, manifest format, or manager route changes.
 5. Planning capture records the final package boundary and test ownership model.
 
-**Plan:** TBD
+**Plan:** `.planning/phases/027-cli-test-rebalancing-and-boundary-verification/PLAN.md`
 
 ## Future Candidates
 
@@ -212,11 +212,11 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 24: v0.1.1 Release Hardening | Complete | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | `.planning/phases/024-v0.1.1-release-hardening/PLAN.md` | 2026-06-27 |
 | Phase 25: CLI Project Boundary Refactor | Complete | ARCH-03, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/025-cli-project-boundary-refactor/PLAN.md` | 2026-06-28 |
 | Phase 26: App Service Extraction | Complete | ARCH-04, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/026-app-service-extraction/PLAN.md` | 2026-06-28 |
-| Phase 27: CLI Test Rebalancing and Boundary Verification | Planning | ARCH-05..ARCH-06, BOUND-01..BOUND-02 | TBD | - |
+| Phase 27: CLI Test Rebalancing and Boundary Verification | Complete | ARCH-05..ARCH-06, BOUND-01..BOUND-02 | `.planning/phases/027-cli-test-rebalancing-and-boundary-verification/PLAN.md` | 2026-06-28 |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-28 after completing Phase 26 app service extraction*
+*Last updated: 2026-06-28 after completing Phase 27 CLI test rebalancing*

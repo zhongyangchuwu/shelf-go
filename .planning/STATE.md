@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Phase 27 CLI Test Rebalancing and Boundary Verification
-- Status: planning
-- Active Artifact: .planning/ROADMAP.md
-- Next Action: Create Phase 27 CONTEXT.md and PLAN.md, then rebalance CLI tests against project/app/domain coverage and verify package boundaries.
+- Phase: v0.1.1 Release Ready
+- Status: ready-to-tag
+- Active Artifact: .planning/phases/027-cli-test-rebalancing-and-boundary-verification/VERIFICATION.md
+- Next Action: Review the release-ready commits, then tag and push v0.1.1 with `./scripts/release.sh tag 0.1.1` and `git push origin v0.1.1`.
 
 ## Blockers
 - None
@@ -30,6 +30,7 @@
 - Phase 25 planning added optional pre-tag CLI boundary refactor scope: project/session business rules move into `internal/project`, later app orchestration extraction moves into `internal/app`, and CLI tests narrow to command contracts.
 - Phase 25 completed project/session boundary refactor: project entry construction, child env merge, and env override warnings now live in `internal/project`; `go test ./internal/project`, `go test ./internal/cli -run 'Test(Project|Run)'`, and `go test ./...` passed.
 - Phase 26 completed app service extraction: direct export, plaintext migration, setup file helpers, and manager loopback/token helpers now live in `internal/app`; `go test ./internal/app`, focused CLI tests, and `go test ./...` passed.
+- Phase 27 completed CLI test rebalancing and boundary verification: CLI tests were narrowed to command contracts and smoke paths, domain/app tests own behavior rules, boundary greps passed, and `go test ./internal/project`, `go test ./internal/app`, `go test ./internal/cli`, and `go test ./...` passed.
 
 ## Updated
 - 2026-06-28
