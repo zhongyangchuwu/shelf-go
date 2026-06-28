@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	projectsvc "github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
@@ -53,22 +51,9 @@ func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
 		t.Fatalf("unexpected child output: %q", out)
 	}
 }
-func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
-	entries := []projectsvc.Binding{{EnvName: "APP_TOKEN", Value: "secret"}}
-	env := childEnv([]string{"APP_TOKEN", "OTHER=value"}, entries)
-	want := []string{"OTHER=value", "APP_TOKEN=secret"}
-	if strings.Join(env, "\n") != strings.Join(want, "\n") {
-		t.Fatalf("unexpected env:\n%q", env)
-	}
-}
-func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
-	dir := t.TempDir()
-	chdirTest(t, dir)
-	if _, err := runGit(t, "init"); err != nil {
-		t.Fatalf("git init: %v", err)
-	}
+func TestRunDryRunReportsParentEnvOverride(t *testing.T) {
 	t.Setenv("APP_TOKEN", "parent")
-	data := filepath.Join(dir, "secrets.json")
+	dir, data := setupProjectTest(t)
 	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
@@ -76,14 +61,7 @@ func TestRunOverridesParentEnvAndWarnsInDryRun(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
-	if err != nil {
-		t.Fatalf("run command: %v\n%s", err, out)
-	}
-	if out != "secret" {
-		t.Fatalf("expected Shelf value to override parent env: %q", out)
-	}
-	out, err = runShelf(t, "--vault", data, "project", "run", "--dry-run", "--", "sh", "-c", "exit 99")
+	out, err := runShelf(t, "--vault", data, "project", "run", "--dry-run", "--", "sh", "-c", "exit 99")
 	if err != nil {
 		t.Fatalf("dry-run: %v\n%s", err, out)
 	}

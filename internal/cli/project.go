@@ -107,7 +107,7 @@ func newProjectExplainCmd() *cobra.Command {
 			for _, entry := range resolvedEntries {
 				fmt.Fprintf(cmd.OutOrStdout(), "ok   %s -> %s\n", entry.Path, entry.EnvName)
 			}
-			for _, warning := range envOverrideWarnings(resolvedEntries, os.Environ()) {
+			for _, warning := range project.EnvOverrideWarnings(resolvedEntries, os.Environ()) {
 				fmt.Fprintln(cmd.OutOrStdout(), warning)
 			}
 			if project.HasFailures(diagnostics) {
@@ -139,15 +139,9 @@ func newProjectAddCmd() *cobra.Command {
 				return err
 			}
 
-			isTag := len(tags) > 0
-			if isTag && len(args) > 0 {
-				return fmt.Errorf("path-or-prefix must not be set with --tag")
-			}
-			if !isTag && len(args) == 0 {
-				return fmt.Errorf("path-or-prefix or --tag is required")
-			}
-			if isTag && envName != "" {
-				return fmt.Errorf("--env is only valid for path entries")
+			selector := ""
+			if len(args) > 0 {
+				selector = args[0]
 			}
 
 			_, st, err := loadRuntime(cmd)
@@ -155,45 +149,15 @@ func newProjectAddCmd() *cobra.Command {
 				return err
 			}
 
-			entry := project.Entry{}
-			if isTag {
-				if len(st.ListByTags("", tags)) == 0 {
-					return fmt.Errorf("no secrets match tags: %s", strings.Join(tags, ","))
-				}
-				entry.Tags = tags
-			} else {
-				input := args[0]
-				isPrefix := !strings.Contains(input, ":")
-				if isPrefix && envName != "" {
-					return fmt.Errorf("--env is only valid for path entries")
-				}
-				if isPrefix {
-					matches := st.List(input)
-					if len(matches) == 0 {
-						return fmt.Errorf("no secrets match prefix: %s", input)
-					}
-					entry.Prefix = input
-				} else {
-					if _, ok := st.Get(input); !ok {
-						return fmt.Errorf("secret not found: %s", input)
-					}
-					entry.Path = input
-					if envName != "" {
-						entry.Env = envName
-					}
-				}
-			}
-			if optional {
-				entry.Required = new(bool)
-			}
-
 			m, err := project.Load(manifestPath)
 			if err != nil {
 				return err
 			}
-			if err := m.AddEntry(entry); err != nil {
+			m, entry, err := project.AddEntry(m, st, project.AddEntryRequest{Selector: selector, Env: envName, Optional: optional, Tags: tags})
+			if err != nil {
 				return err
 			}
+
 			if err := project.Save(manifestPath, m); err != nil {
 				return err
 			}

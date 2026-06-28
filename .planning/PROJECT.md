@@ -23,10 +23,12 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 repartitions internal packages and uses `shelf manager` as the single local manager entrypoint.
 - [x] v0.1.1 updates user and developer docs for Web manager editing, tag workflows, scripted workflows, and final package layout.
 - [x] v0.1.1 release hardening passed tests, vet, release check, and snapshot release through consolidated scripts.
+- [x] v0.1.1 Phase 25 moved project selector entry construction and project environment/session rules from CLI into `internal/project` while preserving project/run CLI behavior.
 
 ### Active
 
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
+- [ ] v0.1.1 optional pre-tag boundary refactor keeps CLI as a Cobra adapter while moving app orchestration and behavior-rule tests into `internal/app` and owning domain packages.
 
 ### Out of Scope
 
@@ -42,7 +44,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 The repository is a Go CLI using Cobra. The display layer lives in `cmd/shelf`, `internal/cli`, and `internal/manager`. Feature support lives in `internal/app`, `internal/project`, and `internal/secret`; base support lives in `internal/config`, `internal/vault`, and `internal/exportfmt`.
 
-The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, architecture repartitioning, documentation alignment, and release hardening are complete; the release is ready to tag and publish after review.
+The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, architecture repartitioning, documentation alignment, and release hardening are complete; the release is ready to tag and publish after review, unless the optional CLI boundary refactor phases are selected before tagging.
 
 ## Constraints
 
@@ -54,7 +56,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 - **Local-first:** Shelf should not require a hosted backend, account, CDN, or daemon for core CLI/Web manager workflows.
 - **Usability:** CLI workflows must stay scriptable; full editing should be comfortable in the local Web manager.
 - **Non-secret config:** Shelf config and `.shelf.json` project manifests must not contain secret values.
-- **Brownfield architecture:** Keep command orchestration in `internal/cli`, reusable feature workflows in feature packages, encrypted vault core in `internal/vault`, project manifest behavior in `internal/project`, export formatting in `internal/exportfmt`, local manager behavior in `internal/manager`, and config resolution in `internal/config`.
+- **Brownfield architecture:** Keep `internal/cli` as a Cobra adapter for command wiring, flags, completions, terminal interaction, stdout/stderr routing, and child process lifecycle; keep reusable application orchestration in `internal/app`, project manifest/session behavior in `internal/project`, secret editing workflows in `internal/secret`, encrypted vault core in `internal/vault`, export formatting in `internal/exportfmt`, local manager behavior in `internal/manager`, and config resolution in `internal/config`.
 - **Workflow automation:** Common install, tag, and release flows should live in scripts instead of only in `justfile` or remembered manual commands.
 
 ## Key Decisions
@@ -72,7 +74,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Exclude team sharing from v1 | Team sharing would force identity, permissions, revocation, audit, and conflict handling before the solo workflow is solid. | Kept out of scope. |
 | Prefer explicit export/source over shell hooks | Hook-based activation mutates parent-shell state implicitly and adds restore complexity; sourceable shell output keeps behavior visible and easy to audit. | `project export` defaults to shell output; activate/deactivate/shell remains deferred. |
 | Defer storage-engine changes | JSON inside an age-encrypted vault keeps the security and portability model simple. SQLite is worth future discussion but not part of editing UX delivery. | Current storage remains age-encrypted JSON through v0.1.1; SQLite moves to v0.2.0 consideration. |
-| Keep reusable workflows out of `internal/cli` | CLI files should stay command-family oriented and not own behavior needed by tests, manager, or future UX. | `internal/app`, `internal/project`, `internal/vault`, `internal/secret`, `internal/manager`, and `internal/exportfmt` own reusable behavior outside CLI. |
+| Keep reusable workflows out of `internal/cli` | CLI files should stay command-family oriented and not own behavior needed by tests, manager, or future UX. | `internal/cli` is being narrowed to a Cobra adapter; Phase 25..27 move remaining reusable project/app logic and behavior-rule tests into owning packages. |
 | Keep CLI editing compact | Fine-grained `meta`/`tag` edit commands increase command surface while WebUI is the intended editing surface. | v0.1.1 does not add `secret meta` or `secret tag`; CLI focuses on list/export/project tag application flows. |
 | Release hardening is final, not next | Install/tag/release scripts, docs, and architecture naming cleanup are prerequisites for a maintainable release. | Completed in Phase 24; v0.1.1 is ready to tag after review. |
 
@@ -88,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-27 after completing v0.1.1 release hardening*
+*Last updated: 2026-06-28 after completing Phase 25 CLI project boundary refactor*

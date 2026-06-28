@@ -4,7 +4,7 @@
 
 Shelf Go v0.1.1 improves the day-to-day editing and selection experience without changing the storage model. The release adds a local manager surface, tag-based secret selection for CLI exports, and project tag bindings while keeping secret values out of manifests.
 
-Before release, v0.1.1 still needs architecture repartitioning, documentation updates, and release hardening. Release hardening is intentionally the final phase.
+v0.1.1 release hardening is complete and remains ready for review/tagging. The newly added boundary-refactor phases are behavior-preserving internal cleanup that should run only if selected before the next tag/release; they keep the current age-encrypted JSON vault model and do not add user-visible features.
 
 SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
@@ -18,6 +18,9 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - [x] Phase 22: Architecture Repartition Core
 - [x] Phase 23: Documentation and Usage Alignment
 - [x] Phase 24: v0.1.1 Release Hardening
+- [x] Phase 25: CLI Project Boundary Refactor
+- [ ] Phase 26: App Service Extraction
+- [ ] Phase 27: CLI Test Rebalancing and Boundary Verification
 
 ## Phase Details
 
@@ -123,6 +126,57 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 
 **Plan:** `.planning/phases/024-v0.1.1-release-hardening/PLAN.md`
 
+### Phase 25: CLI Project Boundary Refactor
+
+**Goal:** Move project/session business rules out of `internal/cli` so CLI project commands become thin Cobra adapters over `internal/project` domain services.
+
+**Depends on:** Phase 24 complete, unless the release-ready commit is tagged first and this work moves to the next milestone.
+
+**Requirements:** ARCH-03, ARCH-05, BOUND-01, BOUND-02
+
+**Success Criteria:**
+1. `internal/project` owns project entry construction for path, prefix, and tag selectors, including optional/required state and validation against the vault store.
+2. `internal/project` owns project environment utilities currently in CLI, including child env merging and parent env override warnings.
+3. `internal/cli/project.go` and `internal/cli/run.go` keep Cobra wiring, flags, completions, output routing, and child process execution only.
+4. Project-domain tests cover selector, diagnostic, env conflict, prefix/tag expansion, and environment-merge rules without invoking Cobra.
+5. Existing project/run CLI behavior remains unchanged.
+
+**Plan:** `.planning/phases/025-cli-project-boundary-refactor/PLAN.md`
+
+### Phase 26: App Service Extraction
+
+**Goal:** Move command orchestration that composes config, vault, project, export, setup, migrate, and manager helpers into `internal/app` services with result structs or strings returned to CLI.
+
+**Depends on:** Phase 25 complete.
+
+**Requirements:** ARCH-04, ARCH-05, BOUND-01, BOUND-02
+
+**Success Criteria:**
+1. `secret export` selection/filter/format orchestration lives behind an `internal/app` service and no longer reads vault internals directly from CLI.
+2. Setup/vault init reusable file-creation and identity/vault/config orchestration live outside CLI while interactive prompts remain in CLI.
+3. Migration and manager helper logic that does not depend on Cobra moves out of CLI.
+4. CLI handlers call app services and print returned outputs/errors without owning reusable business rules.
+5. Existing setup, vault, export, migrate, manager, and doctor behavior remains unchanged.
+
+**Plan:** TBD
+
+### Phase 27: CLI Test Rebalancing and Boundary Verification
+
+**Goal:** Rebalance tests so `internal/cli` protects command contracts while domain/app packages own behavior-rule coverage.
+
+**Depends on:** Phase 26 complete.
+
+**Requirements:** ARCH-05, ARCH-06, BOUND-01, BOUND-02
+
+**Success Criteria:**
+1. CLI tests cover command wiring, flags, completions, stdout/stderr contracts, error wording, and a small number of end-to-end smoke workflows.
+2. Project/app/secret/vault tests cover reusable behavior directly without temp git repositories or Cobra unless those boundaries are required.
+3. No behavior-only test remains in `internal/cli` solely because the implementation currently lives there.
+4. Full verification confirms no user-visible CLI behavior, vault format, manifest format, or manager route changes.
+5. Planning capture records the final package boundary and test ownership model.
+
+**Plan:** TBD
+
 ## Future Candidates
 
 - SQLite/storage redesign for v0.2.0: reconsider only after defining threat model, artifact leakage checklist, migration path, and release-build impact.
@@ -156,10 +210,13 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 | Phase 22: Architecture Repartition Core | Complete | ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/022-architecture-repartition-core/PLAN.md` | 2026-06-27 |
 | Phase 23: Documentation and Usage Alignment | Complete | DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02 | `.planning/phases/023-documentation-and-usage-alignment/PLAN.md` | 2026-06-27 |
 | Phase 24: v0.1.1 Release Hardening | Complete | WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, DOC-01..DOC-02, ARCH-01..ARCH-02, BOUND-01..BOUND-02, REL-011-01 | `.planning/phases/024-v0.1.1-release-hardening/PLAN.md` | 2026-06-27 |
+| Phase 25: CLI Project Boundary Refactor | Complete | ARCH-03, ARCH-05, BOUND-01..BOUND-02 | `.planning/phases/025-cli-project-boundary-refactor/PLAN.md` | 2026-06-28 |
+| Phase 26: App Service Extraction | Planning | ARCH-04, ARCH-05, BOUND-01..BOUND-02 | TBD | - |
+| Phase 27: CLI Test Rebalancing and Boundary Verification | Not Started | ARCH-05..ARCH-06, BOUND-01..BOUND-02 | TBD | - |
 
 ## Archived Releases
 
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-27 after completing v0.1.1 release hardening*
+*Last updated: 2026-06-28 after completing Phase 25 CLI project boundary refactor*

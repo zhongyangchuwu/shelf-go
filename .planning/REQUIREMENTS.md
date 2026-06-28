@@ -1,12 +1,12 @@
 # Requirements: Shelf Go
 
 **Defined:** 2026-06-16
-**Revised:** 2026-06-27
+**Revised:** 2026-06-28
 **Core Value:** A developer can safely manage project secrets in an encrypted local vault and use them through explicit CLI, file, and child-process workflows without treating plaintext `.env` files as the source of truth.
 
 ## Current Requirements
 
-Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, architecture cleanup, documentation, and release preparation. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, architecture cleanup, documentation, release preparation, and the optional pre-tag CLI boundary refactor. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
 
 ### Web Manager Editing
 
@@ -35,6 +35,11 @@ Requirements for v0.1.1 editing experience, tag-based workflows, workflow script
 
 - [x] **ARCH-01**: The manager entrypoint is renamed to `shelf manager`, and the vault-scoped `shelf vault open` command is removed before release.
 - [x] **ARCH-02**: The internal package layout is repartitioned so vault core, project manifest handling, application composition, and export formatting have clear package names and dependency direction.
+
+- [x] **ARCH-03**: Project/session business rules currently embedded in `internal/cli/project.go` and `internal/cli/run.go` move into `internal/project`, including selector entry construction, diagnostics-adjacent rules, environment merging, and override warnings.
+- [ ] **ARCH-04**: Cross-package command orchestration that composes config, vault, export, setup, migrate, and manager helper behavior moves into `internal/app` services while CLI keeps prompts, flags, output routing, completions, and process lifecycle.
+- [ ] **ARCH-05**: `internal/cli` remains a Cobra adapter layer and does not own reusable behavior needed by tests, the manager, or future UX surfaces.
+- [ ] **ARCH-06**: Tests are rebalanced so behavior-rule coverage lives beside the owning domain/app package, while CLI tests cover command contracts, completions, output channels, error wording, and a small number of smoke workflows.
 
 ### Documentation Cleanup
 
@@ -110,16 +115,20 @@ Explicitly excluded. Documented to prevent scope creep.
 | OPS-01..OPS-03 | Phase 21 | Complete |
 | ARCH-01..ARCH-02 | Phase 22 | Complete |
 | DOC-01..DOC-02 | Phase 23 | Complete |
-| BOUND-01 | Phase 17..Phase 24 | Complete |
-| BOUND-02 | Phase 17..Phase 24 | Complete |
+| ARCH-03 | Phase 25 | Complete |
+| ARCH-04 | Phase 26 | Planned |
+| ARCH-05 | Phase 25..Phase 27 | Planned |
+| ARCH-06 | Phase 27 | Planned |
+| BOUND-01 | Phase 17..Phase 27 | Complete |
+| BOUND-02 | Phase 17..Phase 27 | Complete |
 | REL-011-01 | Phase 24 | Complete |
 
 **Coverage:**
-- Current requirements: 23 total
-- Mapped to phases: 23
+- Current requirements: 27 total
+- Mapped to phases: 27
 - Unmapped: 0
-- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-02, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
+- Completed in v0.1.1 so far: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-03, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-27 after completing v0.1.1 release hardening*
+*Last updated: 2026-06-28 after completing Phase 25 CLI project boundary refactor*

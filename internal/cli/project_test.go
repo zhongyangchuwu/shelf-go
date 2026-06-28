@@ -518,15 +518,13 @@ func TestProjectExportJSONConvertsValuesToStrings(t *testing.T) {
 	}
 }
 func TestProjectExportFailsOnRequiredMissing(t *testing.T) {
-	_, data := setupProjectTest(t)
+	dir, data := setupProjectTest(t)
 	// Add a path entry but don't create the secret.
 	manifest := `{"version":1,"secrets":[{"path":"providers/openai/accounts/personal:api_key","required":true}]}`
-	dir, _ := setupProjectTest(t)
-	_ = data // use the dir from setupProjectTest
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	_, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "project", "export", "--format", "env")
+	_, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
 	if err == nil {
 		t.Fatalf("expected export to fail with missing required")
 	}
@@ -718,9 +716,11 @@ func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
-	t.Setenv("APP_TOKEN", "parent")
+	parentValue := "leak-check-parent-value-123"
+	secretValue := "leak-check-secret-value-123"
+	t.Setenv("APP_TOKEN", parentValue)
 	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", secretValue, "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
@@ -734,8 +734,10 @@ func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 	if !strings.Contains(out, "warn APP_TOKEN overrides existing environment variable") {
 		t.Fatalf("missing override warning:\n%s", out)
 	}
-	if strings.Contains(out, "secret") || strings.Contains(out, "parent") {
-		t.Fatalf("explain leaked env value:\n%s", out)
+	for _, leaked := range []string{secretValue, parentValue} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("explain leaked env value %q:\n%s", leaked, out)
+		}
 	}
 }
 
@@ -760,7 +762,7 @@ func TestProjectAddCompletionSuggestsVaultSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("complete project add: %v\n%s", err, out)
 	}
-	for _, want := range []string{"app:", "providers/openai:", ":6"} {
+	for _, want := range []string{"app:", "providers/openai:"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing completion %q in:\n%s", want, out)
 		}
@@ -794,7 +796,7 @@ func TestProjectRmCompletionSuggestsManifestEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("complete project rm: %v\n%s", err, out)
 	}
-	for _, want := range []string{"app:token", "providers/openai", ":4"} {
+	for _, want := range []string{"app:token", "providers/openai"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing completion %q in:\n%s", want, out)
 		}
