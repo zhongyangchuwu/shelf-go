@@ -9,7 +9,6 @@ import (
 
 	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
 	"github.com/zhongyangchuwu/shelf-go/internal/project"
-	"github.com/zhongyangchuwu/shelf-go/internal/source"
 )
 
 type ProjectAddRequest struct {
@@ -63,11 +62,11 @@ func ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (s
 	fmt.Fprintf(&out, "root:    %s\n", root)
 	fmt.Fprintf(&out, "config:  %s\n\n", project.FileName)
 
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	reader, err := LoadSecretReader(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return out.String(), err
 	}
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, source.NewVaultReader(st))
+	resolvedEntries, diagnostics := project.ResolveEntries(manifest, reader)
 	writeProjectDiagnostics(&out, diagnostics)
 	for _, entry := range resolvedEntries {
 		fmt.Fprintf(&out, "ok   %s -> %s\n", entry.Path, entry.EnvName)
@@ -92,7 +91,7 @@ func ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (st
 	} else if err != nil {
 		return "", err
 	}
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	reader, err := LoadSecretReader(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +100,7 @@ func ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (st
 	if err != nil {
 		return "", err
 	}
-	manifest, entry, err := project.AddEntry(manifest, source.NewVaultReader(st), project.AddEntryRequest{Selector: req.Selector, Env: req.Env, Optional: req.Optional, Tags: req.Tags})
+	manifest, entry, err := project.AddEntry(manifest, reader, project.AddEntryRequest{Selector: req.Selector, Env: req.Env, Optional: req.Optional, Tags: req.Tags})
 	if err != nil {
 		return "", err
 	}
@@ -164,12 +163,12 @@ func ProjectExport(configPathFlag, vaultPathFlag, format string) (ProjectExportR
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	reader, err := LoadSecretReader(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
 
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, source.NewVaultReader(st))
+	resolvedEntries, diagnostics := project.ResolveEntries(manifest, reader)
 	var diagnosticsOut strings.Builder
 	writeProjectDiagnostics(&diagnosticsOut, diagnostics)
 	result := ProjectExportResult{Diagnostics: diagnosticsOut.String()}

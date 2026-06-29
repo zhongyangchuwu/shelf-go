@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"filippo.io/age"
+	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
@@ -100,7 +101,7 @@ func EnsureConfigFile(configPath string, cfg InitConfig, force bool) (bool, erro
 	for _, path := range identityPaths {
 		fmt.Fprintf(&b, "  - %s\n", path)
 	}
-	return true, vault.Write(configPath, []byte(b.String()), vault.Options{FileMode: 0o600, DirMode: 0o700})
+	return true, atomicfile.Write(configPath, []byte(b.String()), atomicfile.Options{FileMode: 0o600, DirMode: 0o700})
 }
 
 func ExpandInitPath(path string) (string, error) {

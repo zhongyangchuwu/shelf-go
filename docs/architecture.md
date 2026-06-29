@@ -14,8 +14,10 @@ internal/app/       runtime, vault/source construction, and version composition
 internal/project/   project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/    reusable secret workflows such as editor-based updates
 
+internal/source/     backend-neutral secret reader contract
+internal/adapters/   concrete source adapters such as Shelf's local vault reader
 internal/config/     runtime config resolution
-internal/source/     backend-neutral secret reader contract and Shelf vault adapter
+internal/atomicfile/ generic atomic file replacement primitive
 internal/vault/      encrypted vault core: model, JSON codec, age persistence, locking, diagnostics
 internal/exportfmt/  env/shell/JSON export formatting
 ```
@@ -29,12 +31,14 @@ Surface:
   internal/manager -> app
 
 Workflow:
-  app -> config, vault, source, project, secret, exportfmt
-  project -> source, vault, exportfmt
-  source -> vault
+  app -> config, vault, source, adapters, project, secret, exportfmt, atomicfile
+  project -> source, atomicfile, exportfmt
+  adapters -> source, vault
   secret -> vault
 
 Kernel/support:
+  source -> standard library
+  atomicfile -> standard library
   exportfmt -> vault
   config -> standard library + YAML
   vault -> standard library + age/flock dependencies
@@ -71,9 +75,9 @@ This keeps command files independent from vault construction and build-info deta
 
 ## Source boundary
 
-`internal/source` defines the read-side contract for project env resolution. `source.Reader` exposes only exact lookup, prefix listing, and tag listing; it returns backend-neutral `source.Secret` values with string material plus optional env/description/tag metadata.
+`internal/source` defines the read-side contract for project env resolution. `source.Reader` exposes only exact lookup, prefix listing, and tag listing; it returns backend-neutral `source.Secret` values with string material plus optional env/description/tag metadata. This package must stay provider-neutral and must not import concrete backends.
 
-The current implementation is `source.VaultReader`, an adapter over `internal/vault.Store`. Future gopass, 1Password, or Bitwarden integrations should enter through this package so `internal/project` keeps resolving manifests without knowing the provider.
+The current implementation is `internal/adapters/shelfvault.Reader`, an adapter over `internal/vault.Store`. Future gopass, 1Password, or Bitwarden integrations should enter under `internal/adapters/` so `internal/project` keeps resolving manifests without knowing the provider.
 
 ## Vault core and persistence
 
@@ -92,7 +96,7 @@ Current file responsibilities:
 - `lock.go`: file locking for vault writes;
 - `status.go`: typed status records for vault status/check/doctor diagnostics.
 
-Atomic replacement remains in `internal/vault` for now because existing project manifest and config write paths reuse that primitive; it should move only with a dedicated write-primitive refactor.
+Atomic replacement lives in `internal/atomicfile`; vault, project manifest, and config write paths use that primitive directly.
 
 There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`, with the current age-encrypted JSON vault provided through a Shelf vault adapter. Additional read-only providers such as gopass, 1Password, or Bitwarden should implement that source boundary before any broader write/sync backend abstraction is introduced.
 

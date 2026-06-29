@@ -33,6 +33,8 @@ components:
     in: source
   atomicfile:
     in: atomicfile
+  shelfvault:
+    in: adapters/shelfvault
   config:
     in: config
   vault:
@@ -66,23 +68,28 @@ deps:
       - secret
       - exportfmt
       - source
+      - shelfvault
+      - atomicfile
     canUse:
       - age
 
   project:
     mayDependOn:
       - source
-      - vault
       - atomicfile
       - exportfmt
+
   source:
+    anyProjectDeps: true
+
+  shelfvault:
     mayDependOn:
+      - source
       - vault
 
 
   atomicfile:
-    mayDependOn:
-      - config
+    anyProjectDeps: true
   secret:
     mayDependOn:
       - vault
