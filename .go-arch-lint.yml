@@ -29,22 +29,20 @@ components:
     in: app
   manager:
     in: manager
-  source:
-    in: source
-  atomicfile:
-    in: atomicfile
-  shelfvault:
-    in: adapters/shelfvault
-  config:
-    in: config
-  vault:
-    in: vault
   project:
     in: project
   secret:
     in: secret
-  exportfmt:
-    in: exportfmt
+  source:
+    in: source
+  shelfvault:
+    in: adapters/shelfvault
+  cryptoage:
+    in: crypto/age
+  config:
+    in: config
+  util:
+    in: util
 
 deps:
   cli:
@@ -63,46 +61,37 @@ deps:
   app:
     mayDependOn:
       - config
-      - vault
       - project
       - secret
-      - exportfmt
       - source
       - shelfvault
-      - atomicfile
-    canUse:
-      - age
+      - cryptoage
+      - util
 
   project:
     mayDependOn:
       - source
-      - atomicfile
-      - exportfmt
+      - util
+
+  secret:
+    mayDependOn:
+      - shelfvault
 
   source:
-    anyProjectDeps: true
+    mayDependOn:
+      - util
 
   shelfvault:
     mayDependOn:
       - source
-      - vault
+      - cryptoage
+      - util
+    canUse:
+      - flock
 
-
-  atomicfile:
-    anyProjectDeps: true
-  secret:
-    mayDependOn:
-      - vault
-
-  exportfmt:
-    mayDependOn:
-      - vault
-  vault:
-    mayDependOn:
-      - atomicfile
+  cryptoage:
     canUse:
       - age
-      - flock
 
   config:
     mayDependOn: []

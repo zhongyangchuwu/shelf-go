@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	secretsvc "github.com/zhongyangchuwu/shelf-go/internal/secret"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 type AddSecretRequest struct {
@@ -19,7 +19,7 @@ type AddSecretRequest struct {
 
 func AddSecret(configPathFlag, vaultPathFlag string, req AddSecretRequest) (string, error) {
 	var path string
-	err := UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
+	err := UpdateVault(configPathFlag, vaultPathFlag, func(st *shelfvault.Store) error {
 		addedPath, err := secretsvc.Add(st, secretsvc.AddRequest{Args: req.Args, In: req.In, Out: req.Out, ReadPassword: req.ReadPassword})
 		if err != nil {
 			return err
@@ -39,27 +39,27 @@ type SetSecretRequest struct {
 	Force       bool
 }
 
-func SetSecretInStore(st *vault.Store, req SetSecretRequest) error {
-	value, err := vault.ParseValue(req.Value)
+func SetSecretInStore(st *shelfvault.Store, req SetSecretRequest) error {
+	value, err := shelfvault.ParseValue(req.Value)
 	if err != nil {
 		return err
 	}
-	secret := vault.Secret{Value: value, Env: req.Env, Description: req.Description, Tags: req.Tags}
+	secret := shelfvault.Secret{Value: value, Env: req.Env, Description: req.Description, Tags: req.Tags}
 	return st.Set(req.Path, secret, req.Force)
 }
 
 func SetSecret(configPathFlag, vaultPathFlag string, req SetSecretRequest) error {
-	return UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
+	return UpdateVault(configPathFlag, vaultPathFlag, func(st *shelfvault.Store) error {
 		return SetSecretInStore(st, req)
 	})
 }
 
-func GetSecretValueFromStore(st *vault.Store, path string) (string, error) {
+func GetSecretValueFromStore(st *shelfvault.Store, path string) (string, error) {
 	secret, ok := st.Get(path)
 	if !ok {
 		return "", fmt.Errorf("secret not found: %s", path)
 	}
-	return exportfmt.ValueString(secret.Value)
+	return util.ValueString(secret.Value)
 }
 
 func GetSecretValue(configPathFlag, vaultPathFlag, path string) (string, error) {
@@ -75,7 +75,7 @@ type ListSecretsRequest struct {
 	Tags   []string
 }
 
-func ListSecretPathsInStore(st *vault.Store, req ListSecretsRequest) []string {
+func ListSecretPathsInStore(st *shelfvault.Store, req ListSecretsRequest) []string {
 	return st.ListByTags(req.Prefix, req.Tags)
 }
 
@@ -102,7 +102,7 @@ func SecretPaths(configPathFlag, vaultPathFlag, prefix string) ([]string, error)
 	}
 	return st.List(prefix), nil
 }
-func SecretInfoJSONFromStore(st *vault.Store, path string) (string, error) {
+func SecretInfoJSONFromStore(st *shelfvault.Store, path string) (string, error) {
 	info, ok := st.Info(path)
 	if !ok {
 		return "", fmt.Errorf("secret not found: %s", path)
@@ -122,7 +122,7 @@ func SecretInfoJSON(configPathFlag, vaultPathFlag, path string) (string, error) 
 	return SecretInfoJSONFromStore(st, path)
 }
 
-func RemoveSecretFromStore(st *vault.Store, path string) error {
+func RemoveSecretFromStore(st *shelfvault.Store, path string) error {
 	if !st.Delete(path) {
 		return fmt.Errorf("secret not found: %s", path)
 	}
@@ -130,7 +130,7 @@ func RemoveSecretFromStore(st *vault.Store, path string) error {
 }
 
 func RemoveSecret(configPathFlag, vaultPathFlag, path string) error {
-	return UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
+	return UpdateVault(configPathFlag, vaultPathFlag, func(st *shelfvault.Store) error {
 		return RemoveSecretFromStore(st, path)
 	})
 }
@@ -147,7 +147,7 @@ func EditSecret(configPathFlag, vaultPathFlag string, req EditSecretRequest) err
 	if err != nil {
 		return err
 	}
-	return v.Update(func(st *vault.Store) error {
+	return v.Update(func(st *shelfvault.Store) error {
 		return secretsvc.Edit(st, secretsvc.EditRequest{Path: req.Path, Editor: runtime.Editor, Stdin: req.Stdin, Stdout: req.Stdout, Stderr: req.Stderr})
 	})
 }

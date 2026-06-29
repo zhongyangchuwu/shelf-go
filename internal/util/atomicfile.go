@@ -1,4 +1,4 @@
-package atomicfile
+package util
 
 import (
 	"errors"
@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 )
 
-type Options struct {
+type AtomicWriteOptions struct {
 	FileMode os.FileMode
 	DirMode  os.FileMode
 	Sync     bool
 	Backup   bool
 }
 
-func Write(path string, content []byte, opts Options) error {
+func AtomicWrite(path string, content []byte, opts AtomicWriteOptions) error {
 	fileMode := opts.FileMode
 	if fileMode == 0 {
 		fileMode = 0o600

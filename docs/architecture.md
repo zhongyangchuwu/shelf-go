@@ -1,25 +1,24 @@
 # Architecture
 
-Shelf Go is a local-first Go CLI. The durable store is an age-encrypted vault file; project bindings are value-free JSON manifests; the local manager is an on-demand loopback surface over the same vault operations.
+Shelf Go is a local-first Go CLI. The durable store is an age-encrypted Shelf vault file; project bindings are value-free JSON manifests; the local manager is an on-demand loopback surface over the same application services.
 
 ## Package layers
 
 ```text
-cmd/shelf/          process entry point
+cmd/shelf/                    process entry point
 
-internal/cli/       Cobra command tree, flags, argument validation, and text rendering
-internal/manager/   local manager surface, currently loopback HTTP/Web
+internal/cli/                 Cobra command tree, flags, argument validation, and text rendering
+internal/manager/             local manager surface, currently loopback HTTP/Web
 
-internal/app/       runtime, vault/source construction, and version composition
-internal/project/   project identity, .shelf.json schema/IO/validation, and binding resolution
-internal/secret/    reusable secret workflows such as editor-based updates
+internal/app/                 runtime construction, workflow orchestration, and version composition
+internal/project/             project identity, .shelf.json schema/IO/validation, and binding resolution
+internal/secret/              reusable secret workflows such as editor-based updates
 
-internal/source/     backend-neutral secret reader contract
-internal/adapters/   concrete source adapters such as Shelf's local vault reader
-internal/config/     runtime config resolution
-internal/atomicfile/ generic atomic file replacement primitive
-internal/vault/      encrypted vault core: model, JSON codec, age persistence, locking, diagnostics
-internal/exportfmt/  env/shell/JSON export formatting
+internal/source/              backend-neutral secret reader contract
+internal/adapters/shelfvault/ current local encrypted Shelf vault adapter and repository
+internal/crypto/age/          age encryption, decryption, and identity helpers
+internal/config/              runtime config resolution
+internal/util/                small shared primitives: atomic write and env/shell/JSON binding formatting
 ```
 
 The intended dependency direction is local surface to workflow to kernel/support, enforced by `.go-arch-lint.yml`:
@@ -31,17 +30,16 @@ Surface:
   internal/manager -> app
 
 Workflow:
-  app -> config, vault, source, adapters, project, secret, exportfmt, atomicfile
-  project -> source, atomicfile, exportfmt
-  adapters -> source, vault
-  secret -> vault
+  app -> config, project, secret, source, shelfvault, crypto/age, util
+  project -> source, util
+  secret -> shelfvault
 
-Kernel/support:
-  source -> standard library
-  atomicfile -> standard library
-  exportfmt -> vault
-  config -> standard library + YAML
-  vault -> standard library + age/flock dependencies
+Adapters/support:
+  adapters/shelfvault -> source, crypto/age, util, flock
+  crypto/age -> filippo.io/age
+  source -> util
+  config -> YAML
+  util -> standard library
 ```
 
 Base packages must not import `internal/cli` or `internal/manager`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
@@ -58,17 +56,17 @@ Base packages must not import `internal/cli` or `internal/manager`. Feature pack
 - `doctor`;
 - shell completion.
 
-Command handlers should stay thin: parse flags, call feature/base packages, then render output through Cobra writers. Reusable behavior belongs outside `internal/cli` once it is not purely command presentation.
+Command handlers should stay thin: parse flags, call feature/base packages, then render output through Cobra writers. The package is broad because Cobra command construction is broad; splitting it before a concrete repeated command subsystem appears would mostly duplicate shared completion, diagnostic, runtime flag, and process-exit helpers.
 
 ## Runtime and vault construction
 
-`internal/app` centralizes runtime, vault loading, and version composition:
+`internal/app` centralizes runtime, Shelf vault loading, and version composition:
 
-- `LoadVault(configPath, vaultPath)` resolves config and constructs `*vault.Vault`;
-- `LoadRuntime(configPath, vaultPath)` loads a decrypted vault store snapshot;
+- `LoadVault(configPath, vaultPath)` resolves config and constructs `*shelfvault.Vault`;
+- `LoadRuntime(configPath, vaultPath)` loads a decrypted Shelf vault store snapshot;
 - `LoadSecretReader(configPath, vaultPath)` adapts the current Shelf vault into the backend-neutral source reader used by project workflows;
 - `ReadVault(configPath, vaultPath, fn)` runs read-only vault work;
-- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `vault.Vault.Update`;
+- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `shelfvault.Vault.Update`;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 This keeps command files independent from vault construction and build-info details.
@@ -77,11 +75,11 @@ This keeps command files independent from vault construction and build-info deta
 
 `internal/source` defines the read-side contract for project env resolution. `source.Reader` exposes only exact lookup, prefix listing, and tag listing; it returns backend-neutral `source.Secret` values with string material plus optional env/description/tag metadata. This package must stay provider-neutral and must not import concrete backends.
 
-The current implementation is `internal/adapters/shelfvault.Reader`, an adapter over `internal/vault.Store`. Future gopass, 1Password, or Bitwarden integrations should enter under `internal/adapters/` so `internal/project` keeps resolving manifests without knowing the provider.
+The current implementation is `internal/adapters/shelfvault.Reader`, an adapter over the local Shelf vault store. Future gopass, 1Password, or Bitwarden integrations should enter under `internal/adapters/` so `internal/project` keeps resolving manifests without knowing the provider.
 
-## Vault core and persistence
+## Shelf vault adapter and persistence
 
-`internal/vault` owns the secret data model, encrypted vault persistence, and vault diagnostics.
+`internal/adapters/shelfvault` owns the current local encrypted JSON vault implementation. It is both a source adapter and the current concrete repository used by app/secret workflows.
 
 Current file responsibilities:
 
@@ -90,15 +88,18 @@ Current file responsibilities:
 - `validate.go`: secret validation and env-name validation;
 - `store.go`: decrypted in-memory `Store` snapshot methods;
 - `json.go`: strict JSON encode/decode for the plaintext model;
-- `age.go`: age recipient parsing, encryption, identity loading, and decryption;
+- `age.go`: Shelf vault file framing around `internal/crypto/age`;
 - `vault.go`: vault file format detection and encrypted vault orchestration;
 - `io.go`: legacy plaintext store load/save support used by migration tests and compatibility paths;
 - `lock.go`: file locking for vault writes;
+- `reader.go`: `source.Reader` implementation for project resolution;
 - `status.go`: typed status records for vault status/check/doctor diagnostics.
 
-Atomic replacement lives in `internal/atomicfile`; vault, project manifest, and config write paths use that primitive directly.
+There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`, with the current age-encrypted JSON vault provided through this Shelf vault adapter. Additional read-only providers such as gopass, 1Password, or Bitwarden should implement that source boundary before any broader write/sync backend abstraction is introduced.
 
-There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`, with the current age-encrypted JSON vault provided through a Shelf vault adapter. Additional read-only providers such as gopass, 1Password, or Bitwarden should implement that source boundary before any broader write/sync backend abstraction is introduced.
+## Crypto boundary
+
+`internal/crypto/age` owns direct `filippo.io/age` use: encrypt/decrypt helpers and X25519 identity read-or-create behavior. Shelf vault framing, headers, JSON decode, lock orchestration, and diagnostics stay in `internal/adapters/shelfvault`.
 
 ## Project workflows
 
@@ -116,9 +117,9 @@ Prefix and tag manifest entries may expand to multiple secrets and cannot carry 
 
 `internal/secret` owns reusable editor-based secret updates. It converts a stored secret into editable JSON, invokes the configured editor through the CLI seam, validates the edited object, and ensures the temporary plaintext file is removed on normal exits where possible.
 
-## Export formatting
+## Utilities
 
-`internal/exportfmt` formats vault secrets and project bindings as env, shell, or JSON output. It is not UI rendering; manager UI assets stay in `internal/manager`.
+`internal/util` holds small shared helpers that are not domain concepts yet: atomic file replacement and env/shell/JSON binding formatting. If either area grows into a cohesive subsystem again, split it back out with that concrete pressure.
 
 ## Local manager
 
@@ -131,11 +132,7 @@ Safety boundaries:
 - strict cookie, Host checks, and Origin checks;
 - no-store responses for manager pages and API responses;
 - metadata list/search/detail without values;
-- explicit POST reveal/copy flows for plaintext values;
-- embedded local HTML/CSS/JS assets, no CDN or permanent daemon requirement.
-
-Manager route handlers call app-layer secret workflows instead of mutating vault state directly.
-
-## Public documentation boundary
+- explicit reveal endpoint for plaintext secret values;
+- no external network dependency.
 
 Public docs describe current behavior only. Planning state, phase history, and architecture refactor records stay under `.planning/`.

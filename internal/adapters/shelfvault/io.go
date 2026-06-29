@@ -1,11 +1,11 @@
-package vault
+package shelfvault
 
 import (
 	"bytes"
 	"errors"
 	"os"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 func Load(path string) (*Store, error) {
@@ -35,5 +35,5 @@ func Save(path string, st *Store) error {
 }
 
 func writeStoreFile(path string, content []byte) error {
-	return atomicfile.Write(path, content, atomicfile.Options{FileMode: 0o600, DirMode: 0o700, Sync: true, Backup: true})
+	return util.AtomicWrite(path, content, util.AtomicWriteOptions{FileMode: 0o600, DirMode: 0o700, Sync: true, Backup: true})
 }

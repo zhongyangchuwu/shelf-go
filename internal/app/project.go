@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
 	"github.com/zhongyangchuwu/shelf-go/internal/project"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 type ProjectAddRequest struct {
@@ -182,11 +182,11 @@ func ProjectExport(configPathFlag, vaultPathFlag, format string) (ProjectExportR
 	bindings := project.BindingsForRender(resolvedEntries)
 	switch format {
 	case "env":
-		result.Output, err = exportfmt.EnvBindings(bindings)
+		result.Output, err = util.EnvBindings(bindings)
 	case "shell":
-		result.Output, err = exportfmt.ShellBindings(bindings)
+		result.Output, err = util.ShellBindings(bindings)
 	case "json":
-		result.Output, err = exportfmt.JSONBindings(bindings)
+		result.Output, err = util.JSONBindings(bindings)
 	default:
 		return result, fmt.Errorf("unsupported format: %s", format)
 	}

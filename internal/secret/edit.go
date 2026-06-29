@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 )
 
 type EditRequest struct {
@@ -27,19 +27,19 @@ type Editable struct {
 	Tags        []string        `json:"tags,omitempty"`
 }
 
-func NewEditable(path string, secret vault.Secret) (Editable, error) {
-	id, err := vault.ParseSecretID(path)
+func NewEditable(path string, secret shelfvault.Secret) (Editable, error) {
+	id, err := shelfvault.ParseSecretID(path)
 	if err != nil {
 		return Editable{}, err
 	}
 	return Editable{GroupPath: id.GroupPath, Key: id.Key, Value: secret.Value, Env: secret.Env, Description: secret.Description, Tags: secret.Tags}, nil
 }
 
-func (e Editable) Secret() (vault.SecretID, vault.Secret) {
-	return vault.SecretID{GroupPath: e.GroupPath, Key: e.Key}, vault.Secret{Value: e.Value, Env: e.Env, Description: e.Description, Tags: e.Tags}
+func (e Editable) Secret() (shelfvault.SecretID, shelfvault.Secret) {
+	return shelfvault.SecretID{GroupPath: e.GroupPath, Key: e.Key}, shelfvault.Secret{Value: e.Value, Env: e.Env, Description: e.Description, Tags: e.Tags}
 }
 
-func Edit(st *vault.Store, req EditRequest) error {
+func Edit(st *shelfvault.Store, req EditRequest) error {
 	secret, ok := st.Get(req.Path)
 	if !ok {
 		return fmt.Errorf("secret not found: %s", req.Path)

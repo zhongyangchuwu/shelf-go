@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"filippo.io/age"
-	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	agecrypt "github.com/zhongyangchuwu/shelf-go/internal/crypto/age"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 type InitConfig struct {
@@ -28,49 +28,25 @@ func ResolveInitConfigPath(flag string) (string, error) {
 	return ExpandInitPath(config.DefaultConfigPath)
 }
 
-func EnsureInitIdentity(path string) (*age.X25519Identity, error) {
-	if bytes, err := os.ReadFile(path); err == nil {
-		identities, err := age.ParseIdentities(strings.NewReader(string(bytes)))
-		if err != nil {
-			return nil, fmt.Errorf("parse age identity %s: %w", path, err)
-		}
-		for _, identity := range identities {
-			if x25519, ok := identity.(*age.X25519Identity); ok {
-				return x25519, nil
-			}
-		}
-		return nil, fmt.Errorf("age identity %s contains no X25519 identity", path)
-	} else if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("read age identity %s: %w", path, err)
-	}
-	identity, err := age.GenerateX25519Identity()
-	if err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return nil, err
-	}
-	if err := os.WriteFile(path, []byte(identity.String()+"\n"), 0o600); err != nil {
-		return nil, err
-	}
-	return identity, nil
+func EnsureInitIdentity(path string) (agecrypt.Identity, error) {
+	return agecrypt.ReadOrCreateIdentity(path)
 }
 
 func EnsureVaultForRuntime(runtime Runtime) (bool, error) {
-	return EnsureVaultFile(runtime.VaultPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	return EnsureVaultFile(runtime.VaultPath, shelfvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 }
 
-func EnsureVaultFile(vaultPath string, options vault.VaultOptions) (bool, error) {
+func EnsureVaultFile(vaultPath string, options shelfvault.VaultOptions) (bool, error) {
 	if _, err := os.Stat(vaultPath); err == nil {
 		return false, nil
 	} else if err != nil && !os.IsNotExist(err) {
 		return false, err
 	}
-	v, err := vault.NewVault(vaultPath, options)
+	v, err := shelfvault.NewVault(vaultPath, options)
 	if err != nil {
 		return false, err
 	}
-	if err := v.Save(&vault.Store{Data: vault.NewData()}); err != nil {
+	if err := v.Save(&shelfvault.Store{Data: shelfvault.NewData()}); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -101,7 +77,7 @@ func EnsureConfigFile(configPath string, cfg InitConfig, force bool) (bool, erro
 	for _, path := range identityPaths {
 		fmt.Fprintf(&b, "  - %s\n", path)
 	}
-	return true, atomicfile.Write(configPath, []byte(b.String()), atomicfile.Options{FileMode: 0o600, DirMode: 0o700})
+	return true, util.AtomicWrite(configPath, []byte(b.String()), util.AtomicWriteOptions{FileMode: 0o600, DirMode: 0o700})
 }
 
 func ExpandInitPath(path string) (string, error) {

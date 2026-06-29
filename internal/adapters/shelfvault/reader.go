@@ -2,14 +2,13 @@ package shelfvault
 
 import (
 	"github.com/zhongyangchuwu/shelf-go/internal/source"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 type Reader struct {
-	Store *vault.Store
+	Store *Store
 }
 
-func NewReader(st *vault.Store) Reader {
+func NewReader(st *Store) Reader {
 	return Reader{Store: st}
 }
 

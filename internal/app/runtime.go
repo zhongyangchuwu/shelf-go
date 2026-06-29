@@ -4,7 +4,6 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/source"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 type Runtime = config.Runtime
@@ -17,19 +16,19 @@ func DefaultVaultPath() string {
 	return config.DefaultVaultPath
 }
 
-func LoadVault(configPathFlag, vaultPathFlag string) (Runtime, *vault.Vault, error) {
+func LoadVault(configPathFlag, vaultPathFlag string) (Runtime, *shelfvault.Vault, error) {
 	runtime, err := config.Resolve(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return Runtime{}, nil, err
 	}
-	v, err := vault.NewVault(runtime.VaultPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	v, err := shelfvault.NewVault(runtime.VaultPath, shelfvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 	if err != nil {
 		return Runtime{}, nil, err
 	}
 	return runtime, v, nil
 }
 
-func LoadRuntime(configPathFlag, vaultPathFlag string) (Runtime, *vault.Store, error) {
+func LoadRuntime(configPathFlag, vaultPathFlag string) (Runtime, *shelfvault.Store, error) {
 	runtime, v, err := LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return Runtime{}, nil, err
@@ -49,7 +48,7 @@ func LoadSecretReader(configPathFlag, vaultPathFlag string) (source.Reader, erro
 	return shelfvault.NewReader(st), nil
 }
 
-func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*vault.Store) error) error {
+func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*shelfvault.Store) error) error {
 	_, v, err := LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err
@@ -57,7 +56,7 @@ func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*vault.Store) err
 	return v.Update(fn)
 }
 
-func ReadVault(configPathFlag, vaultPathFlag string, fn func(*vault.Store) error) error {
+func ReadVault(configPathFlag, vaultPathFlag string, fn func(*shelfvault.Store) error) error {
 	_, v, err := LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err

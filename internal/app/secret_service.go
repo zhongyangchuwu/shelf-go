@@ -5,12 +5,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 type SecretService struct {
-	vault *vault.Vault
+	vault *shelfvault.Vault
 }
 
 type SecretSummary struct {
@@ -31,7 +31,7 @@ type WriteSecretRequest struct {
 	Force       bool
 }
 
-func NewSecretService(vault *vault.Vault) (*SecretService, error) {
+func NewSecretService(vault *shelfvault.Vault) (*SecretService, error) {
 	if vault == nil {
 		return nil, fmt.Errorf("vault is required")
 	}
@@ -40,7 +40,7 @@ func NewSecretService(vault *vault.Vault) (*SecretService, error) {
 
 func (s *SecretService) SecretInfo(path string) (SecretSummary, error) {
 	var info SecretSummary
-	err := s.vault.Read(func(st *vault.Store) error {
+	err := s.vault.Read(func(st *shelfvault.Store) error {
 		secret, ok := st.Get(path)
 		if !ok {
 			return fmt.Errorf("secret not found: %s", path)
@@ -54,7 +54,7 @@ func (s *SecretService) SecretInfo(path string) (SecretSummary, error) {
 func (s *SecretService) ListSecrets(query string) ([]SecretSummary, error) {
 	query = strings.ToLower(query)
 	var items []SecretSummary
-	err := s.vault.Read(func(st *vault.Store) error {
+	err := s.vault.Read(func(st *shelfvault.Store) error {
 		paths := st.List("")
 		items = make([]SecretSummary, 0, len(paths))
 		for _, path := range paths {
@@ -72,12 +72,12 @@ func (s *SecretService) ListSecrets(query string) ([]SecretSummary, error) {
 
 func (s *SecretService) RevealSecret(path string) (string, error) {
 	var value string
-	err := s.vault.Read(func(st *vault.Store) error {
+	err := s.vault.Read(func(st *shelfvault.Store) error {
 		secret, ok := st.Get(path)
 		if !ok {
 			return fmt.Errorf("secret not found: %s", path)
 		}
-		v, err := exportfmt.ValueString(secret.Value)
+		v, err := util.ValueString(secret.Value)
 		if err != nil {
 			return err
 		}
@@ -88,8 +88,8 @@ func (s *SecretService) RevealSecret(path string) (string, error) {
 }
 
 func (s *SecretService) WriteSecret(update bool, req WriteSecretRequest) error {
-	return s.vault.Update(func(st *vault.Store) error {
-		secret := vault.Secret{Env: req.Env, Description: req.Description, Tags: req.Tags}
+	return s.vault.Update(func(st *shelfvault.Store) error {
+		secret := shelfvault.Secret{Env: req.Env, Description: req.Description, Tags: req.Tags}
 		if update {
 			oldPath := req.OldPath
 			if oldPath == "" {
@@ -101,19 +101,19 @@ func (s *SecretService) WriteSecret(update bool, req WriteSecretRequest) error {
 			}
 			secret.Value = existing.Value
 			if req.Value != nil {
-				value, err := vault.ParseValue(*req.Value)
+				value, err := shelfvault.ParseValue(*req.Value)
 				if err != nil {
 					return err
 				}
 				secret.Value = value
 			}
-			id, err := vault.ParseSecretID(req.Path)
+			id, err := shelfvault.ParseSecretID(req.Path)
 			if err != nil {
 				return err
 			}
 			return st.Update(oldPath, id, secret)
 		}
-		value, err := vault.ParseValue(*req.Value)
+		value, err := shelfvault.ParseValue(*req.Value)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (s *SecretService) WriteSecret(update bool, req WriteSecretRequest) error {
 }
 
 func (s *SecretService) DeleteSecret(path string) error {
-	return s.vault.Update(func(st *vault.Store) error {
+	return s.vault.Update(func(st *shelfvault.Store) error {
 		if !st.Delete(path) {
 			return fmt.Errorf("secret not found: %s", path)
 		}
@@ -131,11 +131,11 @@ func (s *SecretService) DeleteSecret(path string) error {
 	})
 }
 
-func newSecretSummary(path string, secret vault.Secret) SecretSummary {
+func newSecretSummary(path string, secret shelfvault.Secret) SecretSummary {
 	return SecretSummary{Path: path, Env: secret.Env, Description: secret.Description, Tags: append([]string(nil), secret.Tags...), ValueSet: len(secret.Value) > 0}
 }
 
-func matchesSecretSummary(query, path string, secret vault.Secret) bool {
+func matchesSecretSummary(query, path string, secret shelfvault.Secret) bool {
 	if strings.Contains(strings.ToLower(path), query) || strings.Contains(strings.ToLower(secret.Env), query) || strings.Contains(strings.ToLower(secret.Description), query) {
 		return true
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 )
 
 func TestEnsureConfigFileWritesRelativeDescendantPaths(t *testing.T) {
@@ -41,14 +41,14 @@ func TestEnsureVaultFileCreatesEncryptedVaultOnce(t *testing.T) {
 		t.Fatalf("ensure identity: %v", err)
 	}
 	vaultPath := filepath.Join(t.TempDir(), "vault.age")
-	created, err := EnsureVaultFile(vaultPath, vault.VaultOptions{Recipients: []string{identity.Recipient().String()}, IdentityPaths: []string{}})
+	created, err := EnsureVaultFile(vaultPath, shelfvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{}})
 	if err != nil {
 		t.Fatalf("ensure vault: %v", err)
 	}
 	if !created {
 		t.Fatalf("expected vault to be created")
 	}
-	created, err = EnsureVaultFile(vaultPath, vault.VaultOptions{Recipients: []string{identity.Recipient().String()}, IdentityPaths: []string{}})
+	created, err = EnsureVaultFile(vaultPath, shelfvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{}})
 	if err != nil {
 		t.Fatalf("ensure vault again: %v", err)
 	}

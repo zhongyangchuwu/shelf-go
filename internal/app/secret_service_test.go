@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 )
 
 func TestSecretServiceWritesListsAndReveals(t *testing.T) {
@@ -14,7 +14,7 @@ func TestSecretServiceWritesListsAndReveals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	service, err := newTestSecretService(filepath.Join(dir, "vault.age"), []string{identity.Recipient().String()}, []string{filepath.Join(dir, "identity.txt")})
+	service, err := newTestSecretService(filepath.Join(dir, "vault.age"), []string{identity.Recipient()}, []string{filepath.Join(dir, "identity.txt")})
 	if err != nil {
 		t.Fatalf("new manager service: %v", err)
 	}
@@ -42,7 +42,7 @@ func newTestSecretService(vaultPath string, recipients, identityPaths []string) 
 	if err := os.MkdirAll(filepath.Dir(vaultPath), 0o700); err != nil {
 		return nil, err
 	}
-	v, err := vault.NewVault(vaultPath, vault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
+	v, err := shelfvault.NewVault(vaultPath, shelfvault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
 	if err != nil {
 		return nil, err
 	}

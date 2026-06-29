@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/source"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 type ExportRequest struct {
@@ -23,7 +24,7 @@ func ExportSecretsForRuntime(configPathFlag, vaultPathFlag string, req ExportReq
 	return ExportSecrets(st, req)
 }
 
-func ExportSecrets(st *vault.Store, req ExportRequest) (string, error) {
+func ExportSecrets(st *shelfvault.Store, req ExportRequest) (string, error) {
 	var paths []string
 	if req.Selector != "" {
 		if len(req.Tags) == 0 {
@@ -33,7 +34,7 @@ func ExportSecrets(st *vault.Store, req ExportRequest) (string, error) {
 				paths = st.List(req.Selector)
 			}
 		} else if secret, ok := st.Get(req.Selector); ok {
-			if vault.HasTags(secret, req.Tags) {
+			if shelfvault.HasTags(secret, req.Tags) {
 				paths = []string{req.Selector}
 			}
 		} else {
@@ -57,16 +58,38 @@ func ExportSecrets(st *vault.Store, req ExportRequest) (string, error) {
 	if len(paths) == 0 {
 		return "", fmt.Errorf("no secrets matched: %s", exportSelector(req.Selector, req.Tags))
 	}
+	bindings, err := secretBindings(paths, st.Data.Secrets)
+	if err != nil {
+		return "", err
+	}
 	switch req.Format {
 	case "json":
-		return exportfmt.JSON(paths, st.Data.Secrets)
+		return util.JSONBindings(bindings)
 	case "env":
-		return exportfmt.Env(paths, st.Data.Secrets)
+		return util.EnvBindings(bindings)
 	case "shell":
-		return exportfmt.Shell(paths, st.Data.Secrets)
+		return util.ShellBindings(bindings)
 	default:
 		return "", fmt.Errorf("unsupported format: %s", req.Format)
 	}
+}
+
+func secretBindings(paths []string, secrets map[string]shelfvault.Secret) ([]util.Binding, error) {
+	bindings := make([]util.Binding, 0, len(paths))
+	for _, path := range paths {
+		secret := secrets[path]
+		wrapped := source.Secret{Path: path, Env: secret.Env}
+		envName, err := source.EnvName(path, wrapped)
+		if err != nil {
+			return nil, err
+		}
+		value, err := util.ValueString(secret.Value)
+		if err != nil {
+			return nil, err
+		}
+		bindings = append(bindings, util.Binding{EnvName: envName, Value: value})
+	}
+	return bindings, nil
 }
 
 func exportSelector(selector string, tags []string) string {

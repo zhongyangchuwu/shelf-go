@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/atomicfile"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 func Load(path string) (Manifest, error) {
@@ -42,5 +42,5 @@ func Save(path string, manifest Manifest) error {
 		return err
 	}
 	content = append(content, '\n')
-	return atomicfile.Write(path, content, atomicfile.Options{FileMode: 0o644, DirMode: 0o700, Sync: true})
+	return util.AtomicWrite(path, content, util.AtomicWriteOptions{FileMode: 0o644, DirMode: 0o700, Sync: true})
 }

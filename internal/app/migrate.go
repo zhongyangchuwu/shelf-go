@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 )
 
 func MigratePlaintextStoreForRuntime(configPathFlag, vaultPathFlag, sourcePath, targetPath string, force bool) (string, error) {
@@ -15,7 +15,7 @@ func MigratePlaintextStoreForRuntime(configPathFlag, vaultPathFlag, sourcePath, 
 	}
 	targetVault := configuredVault
 	if targetPath != "" && targetPath != runtime.VaultPath {
-		targetVault, err = vault.NewVault(targetPath, vault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+		targetVault, err = shelfvault.NewVault(targetPath, shelfvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 		if err != nil {
 			return "", err
 		}
@@ -26,23 +26,23 @@ func MigratePlaintextStoreForRuntime(configPathFlag, vaultPathFlag, sourcePath, 
 	return targetVault.Path(), nil
 }
 
-func MigratePlaintextStore(sourcePath string, targetVault *vault.Vault, force bool) error {
+func MigratePlaintextStore(sourcePath string, targetVault *shelfvault.Vault, force bool) error {
 	before, err := os.ReadFile(sourcePath)
 	if err != nil {
 		return fmt.Errorf("read plaintext source: %w", err)
 	}
-	st, err := vault.Load(sourcePath)
+	st, err := shelfvault.Load(sourcePath)
 	if err != nil {
 		return fmt.Errorf("load plaintext source: %w", err)
 	}
-	format, err := vault.DetectFileFormat(targetVault.Path())
+	format, err := shelfvault.DetectFileFormat(targetVault.Path())
 	if err != nil {
 		return fmt.Errorf("inspect target vault: %w", err)
 	}
-	if format != vault.FileFormatMissing && format != vault.FileFormatEmpty && !force {
+	if format != shelfvault.FileFormatMissing && format != shelfvault.FileFormatEmpty && !force {
 		return fmt.Errorf("target vault already exists; pass --force to replace %s", targetVault.Path())
 	}
-	if format == vault.FileFormatPlaintextStore {
+	if format == shelfvault.FileFormatPlaintextStore {
 		return fmt.Errorf("target vault is plaintext JSON; choose a different --to path or move it before migration")
 	}
 	if err := targetVault.Save(st); err != nil {

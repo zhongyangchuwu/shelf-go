@@ -1,4 +1,4 @@
-package vault
+package shelfvault
 
 import (
 	"path/filepath"

@@ -114,7 +114,7 @@ func (c *initConfig) fill(cmd *cobra.Command, configPath string) error {
 		if err != nil {
 			return err
 		}
-		c.Recipients = []string{identity.Recipient().String()}
+		c.Recipients = []string{identity.Recipient()}
 	}
 	if c.VaultPath == "" {
 		return fmt.Errorf("vault path is required")

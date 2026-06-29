@@ -1,29 +1,16 @@
-package exportfmt
+package util
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-var nonEnvChar = regexp.MustCompile(`[^A-Za-z0-9]+`)
-
-func EnvName(path string, secret vault.Secret) (string, error) {
-	if secret.Env != "" {
-		return secret.Env, nil
-	}
-	name := nonEnvChar.ReplaceAllString(path, "_")
-	name = strings.Trim(name, "_")
-	name = strings.ToUpper(name)
-	if !vault.IsEnvName(name) {
-		return "", fmt.Errorf("derived env name for %s is invalid: %s", path, name)
-	}
-	return name, nil
+type Binding struct {
+	EnvName string
+	Value   string
 }
 
 func ValueString(raw json.RawMessage) (string, error) {
@@ -39,52 +26,6 @@ func ValueString(raw json.RawMessage) (string, error) {
 		return "", nil
 	}
 	return compact.String(), nil
-}
-
-func Env(paths []string, secrets map[string]vault.Secret) (string, error) {
-	entries, err := Bindings(paths, secrets)
-	if err != nil {
-		return "", err
-	}
-	return EnvBindings(entries)
-}
-
-func Shell(paths []string, secrets map[string]vault.Secret) (string, error) {
-	entries, err := Bindings(paths, secrets)
-	if err != nil {
-		return "", err
-	}
-	return ShellBindings(entries)
-}
-
-func JSON(paths []string, secrets map[string]vault.Secret) (string, error) {
-	entries, err := Bindings(paths, secrets)
-	if err != nil {
-		return "", err
-	}
-	return JSONBindings(entries)
-}
-
-type Binding struct {
-	EnvName string
-	Value   string
-}
-
-func Bindings(paths []string, secrets map[string]vault.Secret) ([]Binding, error) {
-	entries := make([]Binding, 0, len(paths))
-	for _, path := range paths {
-		secret := secrets[path]
-		envName, err := EnvName(path, secret)
-		if err != nil {
-			return nil, err
-		}
-		value, err := ValueString(secret.Value)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, Binding{EnvName: envName, Value: value})
-	}
-	return entries, nil
 }
 
 func EnvBindings(entries []Binding) (string, error) {

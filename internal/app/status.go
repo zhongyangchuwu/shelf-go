@@ -3,17 +3,17 @@ package app
 import (
 	"strconv"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-type Report = vault.Report
-type Level = vault.Level
+type Report = shelfvault.Report
+type Level = shelfvault.Level
 
 const (
-	LevelOK   = vault.LevelOK
-	LevelWarn = vault.LevelWarn
-	LevelFail = vault.LevelFail
+	LevelOK   = shelfvault.LevelOK
+	LevelWarn = shelfvault.LevelWarn
+	LevelFail = shelfvault.LevelFail
 )
 
 func ResolveStatus(configPathFlag, vaultPathFlag string) (Report, error) {
@@ -32,8 +32,8 @@ func ResolveDoctor(configPathFlag, vaultPathFlag string) (Runtime, Report, error
 	return runtime, Doctor(runtime), nil
 }
 
-func Status(runtime config.Runtime) vault.Report {
-	var report vault.Report
+func Status(runtime config.Runtime) shelfvault.Report {
+	var report shelfvault.Report
 	report.OK("config", runtime.ConfigPath)
 	report.OK("vault path", runtime.VaultPath)
 	checkVaultRecipients(&report, runtime.Recipients)
@@ -41,52 +41,52 @@ func Status(runtime config.Runtime) vault.Report {
 	return report
 }
 
-func Doctor(runtime config.Runtime) vault.Report {
-	var report vault.Report
-	vault.CheckFile(&report, runtime.VaultPath)
+func Doctor(runtime config.Runtime) shelfvault.Report {
+	var report shelfvault.Report
+	shelfvault.CheckFile(&report, runtime.VaultPath)
 	checkVaultLoads(&report, runtime.VaultPath, runtime.Recipients, runtime.IdentityPaths)
-	vault.CheckTracking(&report, runtime.VaultPath)
+	shelfvault.CheckTracking(&report, runtime.VaultPath)
 	return report
 }
 
-func checkVaultRecipients(report *vault.Report, recipients []string) {
+func checkVaultRecipients(report *shelfvault.Report, recipients []string) {
 	if len(recipients) == 0 {
-		report.Fail("vault recipients", vault.MissingRecipientsDetail())
+		report.Fail("vault recipients", shelfvault.MissingRecipientsDetail())
 		return
 	}
 	report.OK("vault recipients", strconv.Itoa(len(recipients))+" configured")
 }
 
-func checkVaultLoads(report *vault.Report, vaultPath string, recipients, identityPaths []string) {
-	format, err := vault.DetectFileFormat(vaultPath)
+func checkVaultLoads(report *shelfvault.Report, vaultPath string, recipients, identityPaths []string) {
+	format, err := shelfvault.DetectFileFormat(vaultPath)
 	if err != nil {
 		report.Fail("vault format", err.Error())
 		return
 	}
 	switch format {
-	case vault.FileFormatMissing:
-		report.Warn("vault format", vault.FormatDetail(format, vaultPath))
-	case vault.FileFormatEmpty:
-		report.Warn("vault format", vault.FormatDetail(format, vaultPath))
-	case vault.FileFormatEncryptedVault:
+	case shelfvault.FileFormatMissing:
+		report.Warn("vault format", shelfvault.FormatDetail(format, vaultPath))
+	case shelfvault.FileFormatEmpty:
+		report.Warn("vault format", shelfvault.FormatDetail(format, vaultPath))
+	case shelfvault.FileFormatEncryptedVault:
 		report.OK("vault format", "encrypted shelf-vault/v1")
-	case vault.FileFormatPlaintextStore:
-		report.Fail("vault format", vault.FormatDetail(format, vaultPath))
+	case shelfvault.FileFormatPlaintextStore:
+		report.Fail("vault format", shelfvault.FormatDetail(format, vaultPath))
 		return
-	case vault.FileFormatUnsupportedVault:
-		report.Fail("vault format", vault.FormatDetail(format, vaultPath))
+	case shelfvault.FileFormatUnsupportedVault:
+		report.Fail("vault format", shelfvault.FormatDetail(format, vaultPath))
 		return
 	default:
-		report.Fail("vault format", vault.FormatDetail(format, vaultPath))
+		report.Fail("vault format", shelfvault.FormatDetail(format, vaultPath))
 		return
 	}
-	vaultHandle, err := vault.NewVault(vaultPath, vault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
+	vaultHandle, err := shelfvault.NewVault(vaultPath, shelfvault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
 	if err != nil {
-		report.Fail("vault loads", vault.LoadErrorDetail(err))
+		report.Fail("vault loads", shelfvault.LoadErrorDetail(err))
 		return
 	}
 	if _, err := vaultHandle.Load(); err != nil {
-		report.Fail("vault loads", vault.LoadErrorDetail(err))
+		report.Fail("vault loads", shelfvault.LoadErrorDetail(err))
 		return
 	}
 	report.OK("vault loads", vaultPath)

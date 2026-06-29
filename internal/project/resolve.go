@@ -6,8 +6,8 @@ import (
 
 	"errors"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/exportfmt"
 	"github.com/zhongyangchuwu/shelf-go/internal/source"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 type Binding struct {
@@ -138,10 +138,10 @@ func RenderDiagnostics(w io.Writer, diagnostics []Diagnostic) {
 	}
 }
 
-func BindingsForRender(entries []Binding) []exportfmt.Binding {
-	bindings := make([]exportfmt.Binding, 0, len(entries))
+func BindingsForRender(entries []Binding) []util.Binding {
+	bindings := make([]util.Binding, 0, len(entries))
 	for _, entry := range entries {
-		bindings = append(bindings, exportfmt.Binding{EnvName: entry.EnvName, Value: entry.Value})
+		bindings = append(bindings, util.Binding{EnvName: entry.EnvName, Value: entry.Value})
 	}
 	return bindings
 }

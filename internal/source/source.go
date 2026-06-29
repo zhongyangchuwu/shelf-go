@@ -1,13 +1,14 @@
 package source
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
 var (
@@ -121,18 +122,7 @@ func IsPathToken(s string) bool {
 	return true
 }
 func ValueString(raw json.RawMessage) (string, error) {
-	var text string
-	if err := json.Unmarshal(raw, &text); err == nil {
-		return text, nil
-	}
-	var compact bytes.Buffer
-	if err := json.Compact(&compact, raw); err != nil {
-		return "", err
-	}
-	if compact.String() == "null" {
-		return "", nil
-	}
-	return compact.String(), nil
+	return util.ValueString(raw)
 }
 
 type MemoryReader map[string]Secret
