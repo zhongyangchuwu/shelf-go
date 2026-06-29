@@ -37,6 +37,8 @@ components:
     in: source
   shelfvault:
     in: adapters/shelfvault
+  gopass:
+    in: adapters/gopass
   cryptoage:
     in: crypto/age
   config:
@@ -65,6 +67,7 @@ deps:
       - secret
       - source
       - shelfvault
+      - gopass
       - cryptoage
       - util
 
@@ -88,6 +91,10 @@ deps:
       - util
     canUse:
       - flock
+
+  gopass:
+    mayDependOn:
+      - source
 
   cryptoage:
     canUse:

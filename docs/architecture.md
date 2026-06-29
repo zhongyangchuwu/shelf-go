@@ -1,6 +1,6 @@
 # Architecture
 
-Shelf Go is a local-first Go CLI. The durable store is an age-encrypted Shelf vault file; project bindings are value-free JSON manifests; the local manager is an on-demand loopback surface over the same application services.
+Shelf Go is a local-first Go CLI. The default durable store is an age-encrypted Shelf vault file; project bindings are value-free JSON manifests; the local manager is an on-demand loopback surface over the same application services.
 
 ## Package layers
 
@@ -16,6 +16,7 @@ internal/secret/              reusable secret workflows such as editor-based upd
 
 internal/source/              backend-neutral secret reader contract
 internal/adapters/shelfvault/ current local encrypted Shelf vault adapter and repository
+internal/adapters/gopass/     read-only gopass source adapter for project workflows
 internal/crypto/age/          age encryption, decryption, and identity helpers
 internal/config/              runtime config resolution
 internal/util/                small shared primitives: atomic write and env/shell/JSON binding formatting
@@ -30,12 +31,13 @@ Surface:
   internal/manager -> app
 
 Workflow:
-  app -> config, project, secret, source, shelfvault, crypto/age, util
+  app -> config, project, secret, source, shelfvault, gopass, crypto/age, util
   project -> source, util
   secret -> shelfvault
 
 Adapters/support:
   adapters/shelfvault -> source, crypto/age, util, flock
+  adapters/gopass -> source
   crypto/age -> filippo.io/age
   source -> util
   config -> YAML
@@ -60,22 +62,27 @@ Command handlers should stay thin: parse flags, call feature/base packages, then
 
 ## Runtime and vault construction
 
-`internal/app` centralizes runtime, Shelf vault loading, and version composition:
+`internal/app` centralizes runtime, Shelf vault loading, source selection, and version composition:
 
 - `LoadVault(configPath, vaultPath)` resolves config and constructs `*shelfvault.Vault`;
 - `LoadRuntime(configPath, vaultPath)` loads a decrypted Shelf vault store snapshot;
-- `LoadSecretReader(configPath, vaultPath)` adapts the current Shelf vault into the backend-neutral source reader used by project workflows;
-- `ReadVault(configPath, vaultPath, fn)` runs read-only vault work;
+- `LoadSecretReader(configPath, vaultPath)` selects the configured read source for project workflows;
+- `ReadVault(configPath, vaultPath, fn)` runs read-only Shelf vault work;
 - `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `shelfvault.Vault.Update`;
 - `String()` returns the application version string from release ldflags or Go build info.
 
-This keeps command files independent from vault construction and build-info details.
+Only project workflows use non-Shelf sources today. Secret CRUD, manager editing, setup, status, and migration remain concrete Shelf vault workflows.
 
 ## Source boundary
 
 `internal/source` defines the read-side contract for project env resolution. `source.Reader` exposes only exact lookup, prefix listing, and tag listing; it returns backend-neutral `source.Secret` values with string material plus optional env/description/tag metadata. This package must stay provider-neutral and must not import concrete backends.
 
-The current implementation is `internal/adapters/shelfvault.Reader`, an adapter over the local Shelf vault store. Future gopass, 1Password, or Bitwarden integrations should enter under `internal/adapters/` so `internal/project` keeps resolving manifests without knowing the provider.
+Implemented source adapters:
+
+- `internal/adapters/shelfvault.Reader`: adapts the local Shelf vault store.
+- `internal/adapters/gopass.Reader`: shells out to the `gopass` CLI for read-only project workflows. It maps Shelf paths like `app:token` to gopass paths like `app/token`, derives env names from paths unless `.shelf.json` provides `env`, and currently reports tag selectors as unsupported.
+
+Future 1Password or Bitwarden integrations should enter under `internal/adapters/` so `internal/project` keeps resolving manifests without knowing the provider.
 
 ## Shelf vault adapter and persistence
 
@@ -95,7 +102,7 @@ Current file responsibilities:
 - `reader.go`: `source.Reader` implementation for project resolution;
 - `status.go`: typed status records for vault status/check/doctor diagnostics.
 
-There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`, with the current age-encrypted JSON vault provided through this Shelf vault adapter. Additional read-only providers such as gopass, 1Password, or Bitwarden should implement that source boundary before any broader write/sync backend abstraction is introduced.
+There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`; additional read-only providers should implement that source boundary before any broader write/sync backend abstraction is introduced.
 
 ## Crypto boundary
 
