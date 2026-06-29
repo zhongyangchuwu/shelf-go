@@ -10,12 +10,13 @@ cmd/shelf/          process entry point
 internal/cli/       Cobra command tree, flags, argument validation, and text rendering
 internal/manager/   local manager surface, currently loopback HTTP/Web
 
-internal/app/       runtime, vault construction, and version composition
+internal/app/       runtime, vault/source construction, and version composition
 internal/project/   project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/    reusable secret workflows such as editor-based updates
 
 internal/config/     runtime config resolution
-internal/vault/      encrypted vault core: model, path grammar, JSON codec, age persistence, locking, diagnostics
+internal/source/     backend-neutral secret reader contract and Shelf vault adapter
+internal/vault/      encrypted vault core: model, JSON codec, age persistence, locking, diagnostics
 internal/exportfmt/  env/shell/JSON export formatting
 ```
 
@@ -28,8 +29,9 @@ Surface:
   internal/manager -> app
 
 Workflow:
-  app -> config, vault, project, secret, exportfmt
-  project -> vault, exportfmt
+  app -> config, vault, source, project, secret, exportfmt
+  project -> source, vault, exportfmt
+  source -> vault
   secret -> vault
 
 Kernel/support:
@@ -60,11 +62,18 @@ Command handlers should stay thin: parse flags, call feature/base packages, then
 
 - `LoadVault(configPath, vaultPath)` resolves config and constructs `*vault.Vault`;
 - `LoadRuntime(configPath, vaultPath)` loads a decrypted vault store snapshot;
+- `LoadSecretReader(configPath, vaultPath)` adapts the current Shelf vault into the backend-neutral source reader used by project workflows;
 - `ReadVault(configPath, vaultPath, fn)` runs read-only vault work;
 - `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `vault.Vault.Update`;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 This keeps command files independent from vault construction and build-info details.
+
+## Source boundary
+
+`internal/source` defines the read-side contract for project env resolution. `source.Reader` exposes only exact lookup, prefix listing, and tag listing; it returns backend-neutral `source.Secret` values with string material plus optional env/description/tag metadata.
+
+The current implementation is `source.VaultReader`, an adapter over `internal/vault.Store`. Future gopass, 1Password, or Bitwarden integrations should enter through this package so `internal/project` keeps resolving manifests without knowing the provider.
 
 ## Vault core and persistence
 
@@ -81,10 +90,11 @@ Current file responsibilities:
 - `vault.go`: vault file format detection and encrypted vault orchestration;
 - `io.go`: legacy plaintext store load/save support used by migration tests and compatibility paths;
 - `lock.go`: file locking for vault writes;
-- `atomicfile.go`: atomic write primitive for vault/config/manifest writes;
 - `status.go`: typed status records for vault status/check/doctor diagnostics.
 
-There is intentionally no storage backend interface yet. v0.1.1 keeps JSON inside an age-encrypted vault; SQLite or another storage engine is deferred to v0.2.0 after a concrete threat model and artifact-leakage review.
+Atomic replacement remains in `internal/vault` for now because existing project manifest and config write paths reuse that primitive; it should move only with a dedicated write-primitive refactor.
+
+There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`, with the current age-encrypted JSON vault provided through a Shelf vault adapter. Additional read-only providers such as gopass, 1Password, or Bitwarden should implement that source boundary before any broader write/sync backend abstraction is introduced.
 
 ## Project workflows
 

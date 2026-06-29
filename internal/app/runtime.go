@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/source"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
@@ -37,6 +38,14 @@ func LoadRuntime(configPathFlag, vaultPathFlag string) (Runtime, *vault.Store, e
 		return Runtime{}, nil, err
 	}
 	return runtime, st, nil
+}
+
+func LoadSecretReader(configPathFlag, vaultPathFlag string) (source.Reader, error) {
+	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return nil, err
+	}
+	return source.NewVaultReader(st), nil
 }
 
 func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*vault.Store) error) error {

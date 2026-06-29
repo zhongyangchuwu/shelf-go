@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/source"
 )
 
 func TestResolveEntriesReportsStatuses(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai/accounts/personal:api_key":     {Value: projectTestValue(t, "sk-openai")},
-		"providers/openrouter/accounts/personal:api_key": {Value: projectTestValue(t, "sk-openrouter")},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai/accounts/personal:api_key":     {Value: "sk-openai"},
+		"providers/openrouter/accounts/personal:api_key": {Value: "sk-openrouter"},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{
 		{Path: "providers/openai/accounts/personal:api_key", Env: "OPENAI_API_KEY"},
@@ -18,7 +18,7 @@ func TestResolveEntriesReportsStatuses(t *testing.T) {
 		{Path: "providers/deepseek/accounts/personal:api_key"},
 		{Path: "providers/openrouter/accounts/personal:api_key", Env: "OPENAI_API_KEY"},
 	}}
-	bindings, diagnostics := ResolveEntries(m, st)
+	bindings, diagnostics := ResolveEntries(m, reader)
 	if len(bindings) != 1 || bindings[0].Path != "providers/openai/accounts/personal:api_key" || bindings[0].EnvName != "OPENAI_API_KEY" {
 		t.Fatalf("unexpected bindings: %+v", bindings)
 	}
@@ -37,12 +37,12 @@ func TestResolveEntriesReportsStatuses(t *testing.T) {
 }
 
 func TestResolveEntriesExpandsPrefixSorted(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai/accounts/work:api_key":     {Value: projectTestValue(t, "sk-work")},
-		"providers/openai/accounts/personal:api_key": {Value: projectTestValue(t, "sk-personal")},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai/accounts/work:api_key":     {Value: "sk-work"},
+		"providers/openai/accounts/personal:api_key": {Value: "sk-personal"},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{Prefix: "providers/openai/accounts"}}}
-	bindings, diagnostics := ResolveEntries(m, st)
+	bindings, diagnostics := ResolveEntries(m, reader)
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
 	}
@@ -57,15 +57,15 @@ func TestResolveEntriesExpandsPrefixSorted(t *testing.T) {
 }
 
 func TestResolveEntriesReportsEmptyPrefixByRequiredState(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"app:token": {Value: projectTestValue(t, "secret"), Env: "APP_TOKEN"},
+	reader := projectTestReader(map[string]source.Secret{
+		"app:token": {Value: "secret", Env: "APP_TOKEN"},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{
 		{Path: "app:token"},
 		{Prefix: "providers/required"},
 		{Prefix: "providers/optional", Required: boolPtr(false)},
 	}}
-	_, diagnostics := ResolveEntries(m, st)
+	_, diagnostics := ResolveEntries(m, reader)
 	for _, want := range []Diagnostic{
 		{Status: "fail", Path: "providers/required (prefix)", Message: "no matches required"},
 		{Status: "warn", Path: "providers/optional (prefix)", Message: "no matches optional"},
@@ -77,13 +77,13 @@ func TestResolveEntriesReportsEmptyPrefixByRequiredState(t *testing.T) {
 }
 
 func TestResolveEntriesExpandsTagSelector(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai:api_key":     {Value: projectTestValue(t, "sk-openai"), Tags: []string{"ai", "prod"}},
-		"providers/anthropic:api_key":  {Value: projectTestValue(t, "sk-anthropic"), Tags: []string{"ai"}},
-		"providers/openrouter:api_key": {Value: projectTestValue(t, "sk-openrouter"), Tags: []string{"ai", "prod"}},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai:api_key":     {Value: "sk-openai", Tags: []string{"ai", "prod"}},
+		"providers/anthropic:api_key":  {Value: "sk-anthropic", Tags: []string{"ai"}},
+		"providers/openrouter:api_key": {Value: "sk-openrouter", Tags: []string{"ai", "prod"}},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{Tags: []string{"ai", "prod"}}}}
-	bindings, diagnostics := ResolveEntries(m, st)
+	bindings, diagnostics := ResolveEntries(m, reader)
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
 	}

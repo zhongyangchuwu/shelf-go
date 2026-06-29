@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/source"
 )
 
 func TestBuildEntryCreatesPathEntry(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: projectTestValue(t, "sk-test")},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: "sk-test"},
 	})
-	entry, err := BuildEntry(st, AddEntryRequest{Selector: "providers/openai/accounts/personal:api_key", Env: "OPENAI_API_KEY"})
+	entry, err := BuildEntry(reader, AddEntryRequest{Selector: "providers/openai/accounts/personal:api_key", Env: "OPENAI_API_KEY"})
 	if err != nil {
 		t.Fatalf("build entry: %v", err)
 	}
@@ -24,10 +24,10 @@ func TestBuildEntryCreatesPathEntry(t *testing.T) {
 }
 
 func TestBuildEntryCreatesOptionalPrefixEntry(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: projectTestValue(t, "sk-test")},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: "sk-test"},
 	})
-	entry, err := BuildEntry(st, AddEntryRequest{Selector: "providers/openai/accounts/personal", Optional: true})
+	entry, err := BuildEntry(reader, AddEntryRequest{Selector: "providers/openai/accounts/personal", Optional: true})
 	if err != nil {
 		t.Fatalf("build entry: %v", err)
 	}
@@ -37,10 +37,10 @@ func TestBuildEntryCreatesOptionalPrefixEntry(t *testing.T) {
 }
 
 func TestBuildEntryCreatesTagEntry(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: projectTestValue(t, "sk-test"), Tags: []string{"ai", "prod"}},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: "sk-test", Tags: []string{"ai", "prod"}},
 	})
-	entry, err := BuildEntry(st, AddEntryRequest{Tags: []string{"ai", "prod"}})
+	entry, err := BuildEntry(reader, AddEntryRequest{Tags: []string{"ai", "prod"}})
 	if err != nil {
 		t.Fatalf("build entry: %v", err)
 	}
@@ -50,8 +50,8 @@ func TestBuildEntryCreatesTagEntry(t *testing.T) {
 }
 
 func TestBuildEntryRejectsInvalidRequests(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: projectTestValue(t, "sk-test"), Tags: []string{"ai"}},
+	reader := projectTestReader(map[string]source.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: "sk-test", Tags: []string{"ai"}},
 	})
 	tests := []struct {
 		name    string
@@ -68,7 +68,7 @@ func TestBuildEntryRejectsInvalidRequests(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := BuildEntry(st, tt.req)
+			_, err := BuildEntry(reader, tt.req)
 			if err == nil {
 				t.Fatalf("expected error")
 			}
@@ -80,11 +80,11 @@ func TestBuildEntryRejectsInvalidRequests(t *testing.T) {
 }
 
 func TestAddEntryRejectsDuplicate(t *testing.T) {
-	st := projectTestStore(t, map[string]vault.Secret{
-		"app:token": {Value: projectTestValue(t, "secret")},
+	reader := projectTestReader(map[string]source.Secret{
+		"app:token": {Value: "secret"},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{Path: "app:token"}}}
-	_, _, err := AddEntry(m, st, AddEntryRequest{Selector: "app:token"})
+	_, _, err := AddEntry(m, reader, AddEntryRequest{Selector: "app:token"})
 	if err == nil {
 		t.Fatalf("expected duplicate add to fail")
 	}
@@ -93,22 +93,6 @@ func TestAddEntryRejectsDuplicate(t *testing.T) {
 	}
 }
 
-func projectTestStore(t *testing.T, secrets map[string]vault.Secret) *vault.Store {
-	t.Helper()
-	st := &vault.Store{Data: vault.NewData()}
-	for path, secret := range secrets {
-		if err := st.Set(path, secret, false); err != nil {
-			t.Fatalf("set %s: %v", path, err)
-		}
-	}
-	return st
-}
-
-func projectTestValue(t *testing.T, value string) []byte {
-	t.Helper()
-	raw, err := vault.ParseValue(value)
-	if err != nil {
-		t.Fatalf("parse value: %v", err)
-	}
-	return raw
+func projectTestReader(secrets map[string]source.Secret) source.MemoryReader {
+	return source.MemoryReader(secrets)
 }

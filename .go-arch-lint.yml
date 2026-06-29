@@ -29,6 +29,10 @@ components:
     in: app
   manager:
     in: manager
+  source:
+    in: source
+  atomicfile:
+    in: atomicfile
   config:
     in: config
   vault:
@@ -61,14 +65,24 @@ deps:
       - project
       - secret
       - exportfmt
+      - source
     canUse:
       - age
 
   project:
     mayDependOn:
+      - source
       - vault
+      - atomicfile
       - exportfmt
+  source:
+    mayDependOn:
+      - vault
 
+
+  atomicfile:
+    mayDependOn:
+      - config
   secret:
     mayDependOn:
       - vault
@@ -76,9 +90,9 @@ deps:
   exportfmt:
     mayDependOn:
       - vault
-
   vault:
-    mayDependOn: []
+    mayDependOn:
+      - atomicfile
     canUse:
       - age
       - flock

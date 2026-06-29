@@ -61,12 +61,12 @@ func newRunCmd() *cobra.Command {
 				return err
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			_, st, err := app.LoadRuntime(configPath, vaultPath)
+			reader, err := app.LoadSecretReader(configPath, vaultPath)
 			if err != nil {
 				return err
 			}
 
-			resolvedEntries, diagnostics := project.ResolveEntries(m, st)
+			resolvedEntries, diagnostics := project.ResolveEntries(m, reader)
 			project.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
 			if project.HasFailures(diagnostics) {
 				return fmt.Errorf("project run failed")
