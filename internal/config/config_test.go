@@ -43,31 +43,4 @@ func TestResolveVaultConfigTemplate(t *testing.T) {
 	if runtime.Editor != "test-editor" {
 		t.Fatalf("unexpected editor: %s", runtime.Editor)
 	}
-	if runtime.Source.Type != SourceShelfVault {
-		t.Fatalf("unexpected source type: %s", runtime.Source.Type)
-	}
-}
-
-func TestResolveGopassSource(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.yaml")
-	content := `version: 1
-source:
-  type: gopass
-  gopass_command: gopass-test
-`
-	if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
-	runtime, err := Resolve(configPath, "")
-	if err != nil {
-		t.Fatalf("resolve: %v", err)
-	}
-	if runtime.Source.Type != SourceGopass {
-		t.Fatalf("unexpected source type: %s", runtime.Source.Type)
-	}
-	if runtime.Source.GopassCommand != "gopass-test" {
-		t.Fatalf("unexpected gopass command: %s", runtime.Source.GopassCommand)
-	}
 }

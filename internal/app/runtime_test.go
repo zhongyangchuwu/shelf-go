@@ -5,44 +5,43 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/gopass"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
-func TestLoadSecretReaderSelectsGopass(t *testing.T) {
+func TestLoadSecretReaderUsesLocalVault(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yaml")
-	content := `version: 1
-source:
-  type: gopass
-  gopass_command: gopass-test
-`
+	vaultPath := filepath.Join(dir, "vault.age")
+	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
+	if err != nil {
+		t.Fatalf("ensure identity: %v", err)
+	}
+	content := "version: 1\nvault_path: vault.age\nrecipients:\n  - " + identity.Recipient() + "\nidentity_paths:\n  - identity.txt\n"
 	if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
+	v, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	if err != nil {
+		t.Fatalf("new vault: %v", err)
+	}
+	st := &vault.Store{Data: vault.NewData()}
+	if err := st.Set("app:token", vault.Secret{Value: []byte(`"secret"`)}, false); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	if err := v.Save(st); err != nil {
+		t.Fatalf("save vault: %v", err)
+	}
+
 	reader, err := LoadSecretReader(configPath, "")
 	if err != nil {
 		t.Fatalf("load reader: %v", err)
 	}
-	gp, ok := reader.(gopass.Reader)
-	if !ok {
-		t.Fatalf("reader type = %T, want gopass.Reader", reader)
+	secret, err := reader.Get("app:token")
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
 	}
-	if gp.Binary != "gopass-test" {
-		t.Fatalf("binary = %s, want gopass-test", gp.Binary)
-	}
-}
-
-func TestLoadSecretReaderRejectsUnknownSource(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.yaml")
-	content := `version: 1
-source:
-  type: missing
-`
-	if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-	if _, err := LoadSecretReader(configPath, ""); err == nil {
-		t.Fatalf("expected unknown source error")
+	if secret.Value != "secret" {
+		t.Fatalf("value = %q, want secret", secret.Value)
 	}
 }

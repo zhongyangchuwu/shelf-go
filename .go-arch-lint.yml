@@ -35,12 +35,14 @@ components:
     in: secret
   source:
     in: source
-  shelfvault:
-    in: adapters/shelfvault
-  gopass:
-    in: adapters/gopass
-  cryptoage:
-    in: crypto/age
+  vault:
+    in: vault
+  vaultfile:
+    in: vaultfile
+  vaultcrypto:
+    in: vaultcrypto
+  importer_gopass:
+    in: importer/gopass
   config:
     in: config
   util:
@@ -66,10 +68,11 @@ deps:
       - project
       - secret
       - source
-      - shelfvault
-      - gopass
-      - cryptoage
+      - vault
+      - vaultfile
+      - importer_gopass
       - util
+      - vaultcrypto
 
   project:
     mayDependOn:
@@ -78,27 +81,29 @@ deps:
 
   secret:
     mayDependOn:
-      - shelfvault
+      - vault
 
   source:
     mayDependOn:
       - util
 
-  shelfvault:
+  vault:
     mayDependOn:
       - source
-      - cryptoage
+      - util
+
+  vaultfile:
+    mayDependOn:
+      - vault
+      - vaultcrypto
       - util
     canUse:
       - flock
 
-  gopass:
-    mayDependOn:
-      - source
-
-  cryptoage:
+  vaultcrypto:
     canUse:
       - age
+
 
   config:
     mayDependOn: []

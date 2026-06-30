@@ -1,12 +1,10 @@
 package app
 
 import (
-	"fmt"
-
-	gopassadapter "github.com/zhongyangchuwu/shelf-go/internal/adapters/gopass"
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/source"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type Runtime = config.Runtime
@@ -19,19 +17,19 @@ func DefaultVaultPath() string {
 	return config.DefaultVaultPath
 }
 
-func LoadVault(configPathFlag, vaultPathFlag string) (Runtime, *shelfvault.Vault, error) {
+func LoadVault(configPathFlag, vaultPathFlag string) (Runtime, *vaultfile.Vault, error) {
 	runtime, err := config.Resolve(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return Runtime{}, nil, err
 	}
-	v, err := shelfvault.NewVault(runtime.VaultPath, shelfvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	v, err := vaultfile.NewVault(runtime.VaultPath, vaultfile.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 	if err != nil {
 		return Runtime{}, nil, err
 	}
 	return runtime, v, nil
 }
 
-func LoadRuntime(configPathFlag, vaultPathFlag string) (Runtime, *shelfvault.Store, error) {
+func LoadRuntime(configPathFlag, vaultPathFlag string) (Runtime, *vault.Store, error) {
 	runtime, v, err := LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return Runtime{}, nil, err
@@ -44,29 +42,14 @@ func LoadRuntime(configPathFlag, vaultPathFlag string) (Runtime, *shelfvault.Sto
 }
 
 func LoadSecretReader(configPathFlag, vaultPathFlag string) (source.Reader, error) {
-	runtime, err := config.Resolve(configPathFlag, vaultPathFlag)
+	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}
-	switch runtime.Source.Type {
-	case config.SourceShelfVault:
-		v, err := shelfvault.NewVault(runtime.VaultPath, shelfvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
-		if err != nil {
-			return nil, err
-		}
-		st, err := v.Load()
-		if err != nil {
-			return nil, err
-		}
-		return shelfvault.NewReader(st), nil
-	case config.SourceGopass:
-		return gopassadapter.NewReader(runtime.Source.GopassCommand), nil
-	default:
-		return nil, fmt.Errorf("unsupported source type: %s", runtime.Source.Type)
-	}
+	return vault.NewReader(st), nil
 }
 
-func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*shelfvault.Store) error) error {
+func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*vault.Store) error) error {
 	_, v, err := LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err
@@ -74,7 +57,7 @@ func UpdateVault(configPathFlag, vaultPathFlag string, fn func(*shelfvault.Store
 	return v.Update(fn)
 }
 
-func ReadVault(configPathFlag, vaultPathFlag string, fn func(*shelfvault.Store) error) error {
+func ReadVault(configPathFlag, vaultPathFlag string, fn func(*vault.Store) error) error {
 	_, v, err := LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err

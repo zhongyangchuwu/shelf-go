@@ -1,6 +1,6 @@
 # Architecture
 
-Shelf Go is a local-first Go CLI. The default durable store is an age-encrypted Shelf vault file; project bindings are value-free JSON manifests; the local manager is an on-demand loopback surface over the same application services.
+Shelf Go is a local-first Go CLI. The runtime secret store is a local encrypted Shelf vault. External systems such as gopass are import sources, not runtime backends.
 
 ## Package layers
 
@@ -10,19 +10,20 @@ cmd/shelf/                    process entry point
 internal/cli/                 Cobra command tree, flags, argument validation, and text rendering
 internal/manager/             local manager surface, currently loopback HTTP/Web
 
-internal/app/                 runtime construction, workflow orchestration, and version composition
+internal/app/                 runtime construction, workflow orchestration, import services, and version composition
 internal/project/             project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/              reusable secret workflows such as editor-based updates
 
-internal/source/              backend-neutral secret reader contract
-internal/adapters/shelfvault/ current local encrypted Shelf vault adapter and repository
-internal/adapters/gopass/     read-only gopass source adapter for project workflows
-internal/crypto/age/          age encryption, decryption, and identity helpers
+internal/source/              project-resolution reader contract
+internal/vault/               Shelf vault domain model, path/env/tag rules, in-memory store, and local reader
+internal/vaultfile/           current encrypted JSON file vault implementation
+internal/vaultcrypto/         vault encryption helpers; currently age-specific
+internal/importer/gopass/     gopass CLI import client
 internal/config/              runtime config resolution
 internal/util/                small shared primitives: atomic write and env/shell/JSON binding formatting
 ```
 
-The intended dependency direction is local surface to workflow to kernel/support, enforced by `.go-arch-lint.yml`:
+The intended dependency direction is local surface to workflow to domain/persistence/support, enforced by `.go-arch-lint.yml`:
 
 ```text
 Surface:
@@ -31,20 +32,96 @@ Surface:
   internal/manager -> app
 
 Workflow:
-  app -> config, project, secret, source, shelfvault, gopass, crypto/age, util
+  app -> config, project, secret, source, vault, vaultfile, importer/gopass, util
   project -> source, util
-  secret -> shelfvault
+  secret -> vault
 
-Adapters/support:
-  adapters/shelfvault -> source, crypto/age, util, flock
-  adapters/gopass -> source
-  crypto/age -> filippo.io/age
-  source -> util
+Domain/persistence/support:
+  vault -> source, util
+  vaultfile -> vault, vaultcrypto, util, flock
+  vaultcrypto -> filippo.io/age
+  importer/gopass -> standard library
   config -> YAML
   util -> standard library
 ```
 
 Base packages must not import `internal/cli` or `internal/manager`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
+
+## Product data model
+
+Shelf's source of truth is the local Shelf vault. gopass, 1Password, Bitwarden, or other password managers should first enter as importers that copy data into the Shelf vault model.
+
+Runtime commands read local vault data only:
+
+- `secret` CRUD;
+- manager list/reveal/edit/delete;
+- `project explain/export`;
+- `shelf run`;
+- `secret export`.
+
+This avoids split-brain behavior where one command reads gopass while another command reads the local vault.
+
+## Vault domain
+
+`internal/vault` owns Shelf's vault data model and rules:
+
+- `Data`, `Secret`, `Info`, `CurrentVersion`, `NewData`;
+- `SecretID`, `ParseSecretID`, `ValidatePath`, `ValidateSecretID`;
+- `ValidateSecret`, `ParseValue`, env/tag validation;
+- in-memory `Store` mutation/list/query methods;
+- `Reader`, which adapts a local `Store` to `source.Reader` for project resolution.
+
+The domain package does not know how data is persisted or encrypted. Future SQL/NoSQL persistence should depend on `internal/vault`, not replace its model prematurely.
+
+## Vault file persistence
+
+`internal/vaultfile` owns the current file implementation:
+
+- strict JSON plaintext model encode/decode;
+- `shelf-vault/v1` encrypted file framing;
+- age sealing/opening through `internal/vaultcrypto`;
+- file format detection;
+- file lock and atomic write/backup behavior;
+- vault status/check diagnostics;
+- legacy plaintext store load/save used by migration paths.
+
+This is the current production repository for local vault data. It is not the entire Shelf vault concept.
+
+## Vault crypto
+
+`internal/vaultcrypto` owns vault encryption helpers. Current exports are age-specific:
+
+- `AgeIdentity`;
+- `ReadOrCreateAgeIdentity`;
+- `EncryptAge`;
+- `DecryptAge`.
+
+`vaultcrypto` does not own vault file headers, JSON format, locks, or status diagnostics. Those stay in `vaultfile`. Future GPG support should add GPG-specific helpers or a small crypto port after file-format framing is decided.
+
+## Importers
+
+`internal/importer/gopass` is a gopass CLI client for imports. It shells out to:
+
+- `gopass list --flat`;
+- `gopass show --password <path>`.
+
+It is not a runtime backend and does not implement `source.Reader`.
+
+`internal/app.ImportGopassForRuntime` maps gopass entries into the local Shelf vault:
+
+- gopass `a/b/c` maps to Shelf `a/b:c`;
+- entries without `/` are skipped as unmappable;
+- imported passwords are stored as JSON strings;
+- existing local secrets are skipped unless `--force` is passed;
+- read failures abort before writing to avoid partial imports.
+
+The CLI entrypoint is `shelf vault import gopass`.
+
+## Source boundary
+
+`internal/source` defines the read-side contract used by project env resolution. It exists so `internal/project` does not depend on the local vault store type. Today the runtime implementation is always the local vault reader from `internal/vault`.
+
+Do not add runtime external backends to `source.Reader` without a new product decision. External managers currently import into the local vault first.
 
 ## Command layer
 
@@ -52,61 +129,25 @@ Base packages must not import `internal/cli` or `internal/manager`. Feature pack
 
 - root command setup and global flags;
 - `setup` / `vault` lifecycle commands;
+- `vault import gopass`;
 - `manager` local manager command;
 - `secret` commands;
 - `project` commands;
 - `doctor`;
 - shell completion.
 
-Command handlers should stay thin: parse flags, call feature/base packages, then render output through Cobra writers. The package is broad because Cobra command construction is broad; splitting it before a concrete repeated command subsystem appears would mostly duplicate shared completion, diagnostic, runtime flag, and process-exit helpers.
+Command handlers should stay thin: parse flags, call feature/base packages, then render output through Cobra writers.
 
-## Runtime and vault construction
+## Runtime construction
 
-`internal/app` centralizes runtime, Shelf vault loading, source selection, and version composition:
+`internal/app` centralizes runtime and local vault loading:
 
-- `LoadVault(configPath, vaultPath)` resolves config and constructs `*shelfvault.Vault`;
-- `LoadRuntime(configPath, vaultPath)` loads a decrypted Shelf vault store snapshot;
-- `LoadSecretReader(configPath, vaultPath)` selects the configured read source for project workflows;
-- `ReadVault(configPath, vaultPath, fn)` runs read-only Shelf vault work;
-- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `shelfvault.Vault.Update`;
+- `LoadVault(configPath, vaultPath)` resolves config and constructs `*vaultfile.Vault`;
+- `LoadRuntime(configPath, vaultPath)` loads a decrypted local vault `*vault.Store` snapshot;
+- `LoadSecretReader(configPath, vaultPath)` loads the local vault and returns `vault.Reader`;
+- `ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
+- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `vaultfile.Vault.Update`;
 - `String()` returns the application version string from release ldflags or Go build info.
-
-Only project workflows use non-Shelf sources today. Secret CRUD, manager editing, setup, status, and migration remain concrete Shelf vault workflows.
-
-## Source boundary
-
-`internal/source` defines the read-side contract for project env resolution. `source.Reader` exposes only exact lookup, prefix listing, and tag listing; it returns backend-neutral `source.Secret` values with string material plus optional env/description/tag metadata. This package must stay provider-neutral and must not import concrete backends.
-
-Implemented source adapters:
-
-- `internal/adapters/shelfvault.Reader`: adapts the local Shelf vault store.
-- `internal/adapters/gopass.Reader`: shells out to the `gopass` CLI for read-only project workflows. It maps Shelf paths like `app:token` to gopass paths like `app/token`, derives env names from paths unless `.shelf.json` provides `env`, and currently reports tag selectors as unsupported.
-
-Future 1Password or Bitwarden integrations should enter under `internal/adapters/` so `internal/project` keeps resolving manifests without knowing the provider.
-
-## Shelf vault adapter and persistence
-
-`internal/adapters/shelfvault` owns the current local encrypted JSON vault implementation. It is both a source adapter and the current concrete repository used by app/secret workflows.
-
-Current file responsibilities:
-
-- `model.go`: `Data`, `Secret`, `Info`, `CurrentVersion`, `NewData`;
-- `path.go`: secret path parsing and path-token validation;
-- `validate.go`: secret validation and env-name validation;
-- `store.go`: decrypted in-memory `Store` snapshot methods;
-- `json.go`: strict JSON encode/decode for the plaintext model;
-- `age.go`: Shelf vault file framing around `internal/crypto/age`;
-- `vault.go`: vault file format detection and encrypted vault orchestration;
-- `io.go`: legacy plaintext store load/save support used by migration tests and compatibility paths;
-- `lock.go`: file locking for vault writes;
-- `reader.go`: `source.Reader` implementation for project resolution;
-- `status.go`: typed status records for vault status/check/doctor diagnostics.
-
-There is intentionally no storage backend interface for writes yet. Project env resolution uses `internal/source.Reader`; additional read-only providers should implement that source boundary before any broader write/sync backend abstraction is introduced.
-
-## Crypto boundary
-
-`internal/crypto/age` owns direct `filippo.io/age` use: encrypt/decrypt helpers and X25519 identity read-or-create behavior. Shelf vault framing, headers, JSON decode, lock orchestration, and diagnostics stay in `internal/adapters/shelfvault`.
 
 ## Project workflows
 
@@ -118,7 +159,7 @@ Resolution order for env names:
 2. secret object's `env`;
 3. env name derived from the full secret path.
 
-Prefix and tag manifest entries may expand to multiple secrets and cannot carry `env`. Tag selectors use AND semantics and are stored as value-free `tags` arrays. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
+Prefix and tag manifest entries may expand to multiple local vault secrets and cannot carry `env`. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
 
 ## Secret edit workflow
 
@@ -130,7 +171,7 @@ Prefix and tag manifest entries may expand to multiple secrets and cannot carry 
 
 ## Local manager
 
-`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept. The public entrypoint is `shelf manager`; there is no `shelf vault open` alias.
+`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept.
 
 Safety boundaries:
 
@@ -141,5 +182,3 @@ Safety boundaries:
 - metadata list/search/detail without values;
 - explicit reveal endpoint for plaintext secret values;
 - no external network dependency.
-
-Public docs describe current behavior only. Planning state, phase history, and architecture refactor records stay under `.planning/`.

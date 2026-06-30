@@ -1,7 +1,8 @@
-package shelfvault
+package vaultfile
 
 import (
 	"bytes"
+	vaultdomain "github.com/zhongyangchuwu/shelf-go/internal/vault"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,8 +26,8 @@ func TestVaultSaveLoadEncryptsStoreAndBackup(t *testing.T) {
 		t.Fatalf("new vault: %v", err)
 	}
 
-	st := &Store{Data: NewData()}
-	if err := st.Set("app:token", Secret{Value: []byte(`"first-secret"`)}, false); err != nil {
+	st := &vaultdomain.Store{Data: vaultdomain.NewData()}
+	if err := st.Set("app:token", vaultdomain.Secret{Value: []byte(`"first-secret"`)}, false); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	if err := vault.Save(st); err != nil {
@@ -51,7 +52,7 @@ func TestVaultSaveLoadEncryptsStoreAndBackup(t *testing.T) {
 		t.Fatalf("unexpected loaded secret: ok=%v value=%s", ok, secret.Value)
 	}
 
-	if err := loaded.Set("app:token", Secret{Value: []byte(`"second-secret"`)}, true); err != nil {
+	if err := loaded.Set("app:token", vaultdomain.Secret{Value: []byte(`"second-secret"`)}, true); err != nil {
 		t.Fatalf("replace secret: %v", err)
 	}
 	if err := vault.Save(loaded); err != nil {
@@ -177,8 +178,8 @@ func TestVaultModeReportsMissingAndWrongIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
-	st := &Store{Data: NewData()}
-	if err := st.Set("app:token", Secret{Value: []byte(`"secret"`)}, false); err != nil {
+	st := &vaultdomain.Store{Data: vaultdomain.NewData()}
+	if err := st.Set("app:token", vaultdomain.Secret{Value: []byte(`"secret"`)}, false); err != nil {
 		t.Fatalf("set secret: %v", err)
 	}
 	if err := vault.Save(st); err != nil {

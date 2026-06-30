@@ -1,4 +1,4 @@
-package shelfvault
+package vault
 
 import "encoding/json"
 

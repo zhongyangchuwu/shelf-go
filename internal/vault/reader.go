@@ -1,4 +1,4 @@
-package shelfvault
+package vault
 
 import (
 	"github.com/zhongyangchuwu/shelf-go/internal/source"

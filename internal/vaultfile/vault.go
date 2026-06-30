@@ -1,9 +1,11 @@
-package shelfvault
+package vaultfile
 
 import (
 	"bytes"
 	"errors"
 	"os"
+
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 const vaultHeader = "shelf-vault/v1\n"
@@ -70,25 +72,25 @@ func (v *Vault) Lock() (*Lock, error) {
 	return LockFile(v.path)
 }
 
-func (v *Vault) Load() (*Store, error) {
+func (v *Vault) Load() (*vault.Store, error) {
 	content, err := os.ReadFile(v.path)
 	if errors.Is(err, os.ErrNotExist) {
-		return &Store{Data: NewData()}, nil
+		return &vault.Store{Data: vault.NewData()}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
 	if len(bytes.TrimSpace(content)) == 0 {
-		return &Store{Data: NewData()}, nil
+		return &vault.Store{Data: vault.NewData()}, nil
 	}
 	data, err := openVault(content, v.opts.IdentityPaths)
 	if err != nil {
 		return nil, err
 	}
-	return &Store{Data: data}, nil
+	return &vault.Store{Data: data}, nil
 }
 
-func (v *Vault) Save(st *Store) error {
+func (v *Vault) Save(st *vault.Store) error {
 	plain, err := encodeStore(st.Data)
 	if err != nil {
 		return err
@@ -100,7 +102,7 @@ func (v *Vault) Save(st *Store) error {
 	return writeStoreFile(v.path, content)
 }
 
-func (v *Vault) Read(fn func(*Store) error) error {
+func (v *Vault) Read(fn func(*vault.Store) error) error {
 	st, err := v.Load()
 	if err != nil {
 		return err
@@ -108,7 +110,7 @@ func (v *Vault) Read(fn func(*Store) error) error {
 	return fn(st)
 }
 
-func (v *Vault) Update(fn func(*Store) error) error {
+func (v *Vault) Update(fn func(*vault.Store) error) error {
 	lock, err := v.Lock()
 	if err != nil {
 		return err

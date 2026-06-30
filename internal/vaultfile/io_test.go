@@ -1,4 +1,4 @@
-package shelfvault
+package vaultfile
 
 import (
 	"os"

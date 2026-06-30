@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/source"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 type ExportRequest struct {
@@ -24,7 +24,7 @@ func ExportSecretsForRuntime(configPathFlag, vaultPathFlag string, req ExportReq
 	return ExportSecrets(st, req)
 }
 
-func ExportSecrets(st *shelfvault.Store, req ExportRequest) (string, error) {
+func ExportSecrets(st *vault.Store, req ExportRequest) (string, error) {
 	var paths []string
 	if req.Selector != "" {
 		if len(req.Tags) == 0 {
@@ -34,7 +34,7 @@ func ExportSecrets(st *shelfvault.Store, req ExportRequest) (string, error) {
 				paths = st.List(req.Selector)
 			}
 		} else if secret, ok := st.Get(req.Selector); ok {
-			if shelfvault.HasTags(secret, req.Tags) {
+			if vault.HasTags(secret, req.Tags) {
 				paths = []string{req.Selector}
 			}
 		} else {
@@ -74,7 +74,7 @@ func ExportSecrets(st *shelfvault.Store, req ExportRequest) (string, error) {
 	}
 }
 
-func secretBindings(paths []string, secrets map[string]shelfvault.Secret) ([]util.Binding, error) {
+func secretBindings(paths []string, secrets map[string]vault.Secret) ([]util.Binding, error) {
 	bindings := make([]util.Binding, 0, len(paths))
 	for _, path := range paths {
 		secret := secrets[path]

@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	agecrypt "github.com/zhongyangchuwu/shelf-go/internal/crypto/age"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultcrypto"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type InitConfig struct {
@@ -28,25 +29,25 @@ func ResolveInitConfigPath(flag string) (string, error) {
 	return ExpandInitPath(config.DefaultConfigPath)
 }
 
-func EnsureInitIdentity(path string) (agecrypt.Identity, error) {
-	return agecrypt.ReadOrCreateIdentity(path)
+func EnsureInitIdentity(path string) (vaultcrypto.AgeIdentity, error) {
+	return vaultcrypto.ReadOrCreateAgeIdentity(path)
 }
 
 func EnsureVaultForRuntime(runtime Runtime) (bool, error) {
-	return EnsureVaultFile(runtime.VaultPath, shelfvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	return EnsureVaultFile(runtime.VaultPath, vaultfile.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 }
 
-func EnsureVaultFile(vaultPath string, options shelfvault.VaultOptions) (bool, error) {
+func EnsureVaultFile(vaultPath string, options vaultfile.VaultOptions) (bool, error) {
 	if _, err := os.Stat(vaultPath); err == nil {
 		return false, nil
 	} else if err != nil && !os.IsNotExist(err) {
 		return false, err
 	}
-	v, err := shelfvault.NewVault(vaultPath, options)
+	v, err := vaultfile.NewVault(vaultPath, options)
 	if err != nil {
 		return false, err
 	}
-	if err := v.Save(&shelfvault.Store{Data: shelfvault.NewData()}); err != nil {
+	if err := v.Save(&vault.Store{Data: vault.NewData()}); err != nil {
 		return false, err
 	}
 	return true, nil

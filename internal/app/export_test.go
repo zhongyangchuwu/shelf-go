@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func TestExportSecretsSelectsPrefixAndFiltersEnvByDefault(t *testing.T) {
-	st := appTestStore(t, map[string]shelfvault.Secret{
+	st := appTestStore(t, map[string]vault.Secret{
 		"app/api:token":    {Value: appTestValue(t, "token-secret"), Env: "APP_TOKEN"},
 		"app/api:url":      {Value: appTestValue(t, "https://example.test"), Env: "APP_URL"},
 		"app/api:internal": {Value: appTestValue(t, "hidden")},
@@ -28,7 +28,7 @@ func TestExportSecretsSelectsPrefixAndFiltersEnvByDefault(t *testing.T) {
 }
 
 func TestExportSecretsAllDerivesEnvForSecretsWithoutEnv(t *testing.T) {
-	st := appTestStore(t, map[string]shelfvault.Secret{
+	st := appTestStore(t, map[string]vault.Secret{
 		"app/api:internal": {Value: appTestValue(t, "hidden")},
 	})
 	out, err := ExportSecrets(st, ExportRequest{Selector: "app/api", All: true, Format: "env"})
@@ -41,7 +41,7 @@ func TestExportSecretsAllDerivesEnvForSecretsWithoutEnv(t *testing.T) {
 }
 
 func TestExportSecretsSelectsTags(t *testing.T) {
-	st := appTestStore(t, map[string]shelfvault.Secret{
+	st := appTestStore(t, map[string]vault.Secret{
 		"providers/openai:api_key":    {Value: appTestValue(t, "sk-openai"), Env: "OPENAI_API_KEY", Tags: []string{"ai", "prod"}},
 		"providers/anthropic:api_key": {Value: appTestValue(t, "sk-anthropic"), Env: "ANTHROPIC_API_KEY", Tags: []string{"ai"}},
 	})
@@ -55,22 +55,22 @@ func TestExportSecretsSelectsTags(t *testing.T) {
 }
 
 func TestExportSecretsRejectsMissingSelectorAndBadFormat(t *testing.T) {
-	st := appTestStore(t, map[string]shelfvault.Secret{})
+	st := appTestStore(t, map[string]vault.Secret{})
 	if _, err := ExportSecrets(st, ExportRequest{Format: "env"}); err == nil || !strings.Contains(err.Error(), "path, prefix, or --tag is required") {
 		t.Fatalf("expected selector error, got %v", err)
 	}
 	if _, err := ExportSecrets(st, ExportRequest{Selector: "app", All: true, Format: "bad"}); err == nil || !strings.Contains(err.Error(), "no secrets matched: app") {
 		t.Fatalf("expected no match before format error, got %v", err)
 	}
-	st = appTestStore(t, map[string]shelfvault.Secret{"app:token": {Value: appTestValue(t, "secret"), Env: "APP_TOKEN"}})
+	st = appTestStore(t, map[string]vault.Secret{"app:token": {Value: appTestValue(t, "secret"), Env: "APP_TOKEN"}})
 	if _, err := ExportSecrets(st, ExportRequest{Selector: "app:token", Format: "bad"}); err == nil || !strings.Contains(err.Error(), "unsupported format: bad") {
 		t.Fatalf("expected bad format error, got %v", err)
 	}
 }
 
-func appTestStore(t *testing.T, secrets map[string]shelfvault.Secret) *shelfvault.Store {
+func appTestStore(t *testing.T, secrets map[string]vault.Secret) *vault.Store {
 	t.Helper()
-	st := &shelfvault.Store{Data: shelfvault.NewData()}
+	st := &vault.Store{Data: vault.NewData()}
 	for path, secret := range secrets {
 		if err := st.Set(path, secret, false); err != nil {
 			t.Fatalf("set %s: %v", path, err)
@@ -81,7 +81,7 @@ func appTestStore(t *testing.T, secrets map[string]shelfvault.Secret) *shelfvaul
 
 func appTestValue(t *testing.T, value string) []byte {
 	t.Helper()
-	raw, err := shelfvault.ParseValue(value)
+	raw, err := vault.ParseValue(value)
 	if err != nil {
 		t.Fatalf("parse value: %v", err)
 	}

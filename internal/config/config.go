@@ -12,23 +12,14 @@ import (
 const (
 	DefaultConfigPath = "~/.config/shelf/config.yaml"
 	DefaultVaultPath  = "~/.local/share/shelf/vault.age"
-
-	SourceShelfVault = "shelfvault"
-	SourceGopass     = "gopass"
 )
 
 type Config struct {
-	Version       int          `yaml:"version"`
-	VaultPath     string       `yaml:"vault_path"`
-	Recipients    []string     `yaml:"recipients"`
-	IdentityPaths []string     `yaml:"identity_paths"`
-	Editor        string       `yaml:"editor"`
-	Source        SourceConfig `yaml:"source"`
-}
-
-type SourceConfig struct {
-	Type          string `yaml:"type"`
-	GopassCommand string `yaml:"gopass_command"`
+	Version       int      `yaml:"version"`
+	VaultPath     string   `yaml:"vault_path"`
+	Recipients    []string `yaml:"recipients"`
+	IdentityPaths []string `yaml:"identity_paths"`
+	Editor        string   `yaml:"editor"`
 }
 
 type Runtime struct {
@@ -37,12 +28,6 @@ type Runtime struct {
 	Recipients    []string
 	IdentityPaths []string
 	Editor        string
-	Source        SourceRuntime
-}
-
-type SourceRuntime struct {
-	Type          string
-	GopassCommand string
 }
 
 func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
@@ -65,8 +50,6 @@ func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
 		return Runtime{}, err
 	}
 
-	sourceConfig := resolveSource(cfg.Source)
-
 	editor := os.ExpandEnv(cfg.Editor)
 	if editor == "" {
 		editor = os.Getenv("EDITOR")
@@ -75,7 +58,7 @@ func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
 		editor = "vi"
 	}
 
-	return Runtime{ConfigPath: configPath, VaultPath: vaultPath, Recipients: cfg.Recipients, IdentityPaths: identityPaths, Editor: editor, Source: sourceConfig}, nil
+	return Runtime{ConfigPath: configPath, VaultPath: vaultPath, Recipients: cfg.Recipients, IdentityPaths: identityPaths, Editor: editor}, nil
 }
 
 func resolveConfigPath(flag string) (string, error) {
@@ -114,14 +97,6 @@ func resolvePathList(paths []string, configPath string) ([]string, error) {
 		resolved = append(resolved, path)
 	}
 	return resolved, nil
-}
-
-func resolveSource(cfg SourceConfig) SourceRuntime {
-	typ := strings.TrimSpace(cfg.Type)
-	if typ == "" {
-		typ = SourceShelfVault
-	}
-	return SourceRuntime{Type: typ, GopassCommand: strings.TrimSpace(cfg.GopassCommand)}
 }
 
 func loadConfig(path string) (Config, error) {

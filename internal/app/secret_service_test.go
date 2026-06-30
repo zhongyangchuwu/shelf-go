@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 func TestSecretServiceWritesListsAndReveals(t *testing.T) {
@@ -42,7 +42,7 @@ func newTestSecretService(vaultPath string, recipients, identityPaths []string) 
 	if err := os.MkdirAll(filepath.Dir(vaultPath), 0o700); err != nil {
 		return nil, err
 	}
-	v, err := shelfvault.NewVault(vaultPath, shelfvault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
+	v, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
 	if err != nil {
 		return nil, err
 	}

@@ -32,6 +32,15 @@ func TestRootIncludesManagerCommand(t *testing.T) {
 			t.Fatalf("vault command should not include open subcommand")
 		}
 	}
+	var foundImport bool
+	for _, child := range vaultCmd.Commands() {
+		if child.Name() == "import" {
+			foundImport = true
+		}
+	}
+	if !foundImport {
+		t.Fatalf("vault command missing import subcommand")
+	}
 }
 
 func TestRootExcludesPreReleaseTopLevelCommands(t *testing.T) {

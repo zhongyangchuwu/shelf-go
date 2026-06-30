@@ -7,7 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/adapters/shelfvault"
+	vaultdomain "github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 func TestMigratePlaintextStorePreservesSourceAndEncryptsTarget(t *testing.T) {
@@ -22,7 +23,7 @@ func TestMigratePlaintextStorePreservesSourceAndEncryptsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	targetVault, err := shelfvault.NewVault(vaultPath, shelfvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	targetVault, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
@@ -57,11 +58,11 @@ func TestMigratePlaintextStoreRefusesExistingTargetWithoutForce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	targetVault, err := shelfvault.NewVault(vaultPath, shelfvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	targetVault, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
-	if err := targetVault.Save(&shelfvault.Store{Data: shelfvault.NewData()}); err != nil {
+	if err := targetVault.Save(&vaultdomain.Store{Data: vaultdomain.NewData()}); err != nil {
 		t.Fatalf("seed target: %v", err)
 	}
 	err = MigratePlaintextStore(sourcePath, targetVault, false)
