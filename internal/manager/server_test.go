@@ -12,7 +12,7 @@ import (
 
 	"filippo.io/age"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 )
 
 const testToken = "test-token"
@@ -29,7 +29,7 @@ func newTestServer(t *testing.T) (*Server, string) {
 		t.Fatalf("write identity: %v", err)
 	}
 	vaultPath := filepath.Join(dir, "vault.age")
-	v, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient().String()}, IdentityPaths: []string{identityPath}})
+	v, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient().String()}, IdentityPaths: []string{identityPath}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}

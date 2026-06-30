@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 func TestLoadSecretReaderUsesLocalVault(t *testing.T) {
@@ -21,7 +21,7 @@ func TestLoadSecretReaderUsesLocalVault(t *testing.T) {
 	if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
-	v, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	v, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}

@@ -1,13 +1,19 @@
-package vaultfile
+package jsonvault
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/age"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultcrypto"
 )
+
+type AgeIdentity = age.Identity
+
+func ReadOrCreateAgeIdentity(path string) (AgeIdentity, error) {
+	return age.ReadOrCreateIdentity(path)
+}
 
 func openVault(content []byte, identityPaths []string) (vault.Data, error) {
 	if bytes.HasPrefix(bytes.TrimSpace(content), []byte("{")) {
@@ -20,7 +26,7 @@ func openVault(content []byte, identityPaths []string) (vault.Data, error) {
 		}
 		return vault.Data{}, errors.New("unsupported vault format: missing shelf-vault/v1 header")
 	}
-	plain, err := vaultcrypto.DecryptAge(content[len(vaultHeader):], identityPaths)
+	plain, err := age.Decrypt(content[len(vaultHeader):], identityPaths)
 	if err != nil {
 		return vault.Data{}, err
 	}
@@ -32,7 +38,7 @@ func openVault(content []byte, identityPaths []string) (vault.Data, error) {
 }
 
 func sealVault(plain []byte, recipients []string) ([]byte, error) {
-	ciphertext, err := vaultcrypto.EncryptAge(plain, recipients)
+	ciphertext, err := age.Encrypt(plain, recipients)
 	if err != nil {
 		return nil, err
 	}

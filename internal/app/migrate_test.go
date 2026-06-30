@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	vaultdomain "github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 func TestMigratePlaintextStorePreservesSourceAndEncryptsTarget(t *testing.T) {
@@ -23,7 +23,7 @@ func TestMigratePlaintextStorePreservesSourceAndEncryptsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	targetVault, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	targetVault, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestMigratePlaintextStoreRefusesExistingTargetWithoutForce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	targetVault, err := vaultfile.NewVault(vaultPath, vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	targetVault, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}

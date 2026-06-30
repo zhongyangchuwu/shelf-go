@@ -5,13 +5,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type SecretService struct {
-	vault *vaultfile.Vault
+	vault *jsonvault.Vault
 }
 
 type SecretSummary struct {
@@ -32,7 +32,7 @@ type WriteSecretRequest struct {
 	Force       bool
 }
 
-func NewSecretService(v *vaultfile.Vault) (*SecretService, error) {
+func NewSecretService(v *jsonvault.Vault) (*SecretService, error) {
 	if v == nil {
 		return nil, fmt.Errorf("vault is required")
 	}

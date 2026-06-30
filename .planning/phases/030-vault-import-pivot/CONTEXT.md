@@ -8,11 +8,11 @@ The previous gopass read-source MVP made gopass a runtime project source. That c
 
 Shelf's product model is a local encrypted vault. External systems such as gopass are import sources, not runtime backends.
 
-## Target Model
+## Current Target Model
 
 - `internal/vault`: Shelf vault domain model, path/env/tag validation, in-memory store, and `source.Reader` adapter over a local store.
-- `internal/vaultfile`: current encrypted JSON file implementation, including file format detection, JSON encoding, file locking, and save/load/update orchestration.
-- `internal/vaultcrypto`: vault encryption boundary. Current functions are age-specific and named with `Age` to leave room for GPG.
+- `internal/jsonvault`: current `shelf-vault/v1` encrypted JSON implementation, including file format detection, JSON encoding, file locking, and save/load/update orchestration.
+- `internal/age`: age encryption/decryption and identity helper package.
 - `internal/importer/gopass`: gopass CLI import client. It is not a `source.Reader` and is not selected at runtime by project workflows.
 
 ## Import Semantics
@@ -30,4 +30,4 @@ Shelf's product model is a local encrypted vault. External systems such as gopas
 - gopass as a runtime backend/source.
 - writing back to gopass.
 - multi-source project resolution.
-- SQL/NoSQL vault implementations; the refactor only makes current JSON file persistence distinct from the domain model.
+- SQL/NoSQL vault implementations; the refactor only makes current JSON persistence distinct from the domain model.

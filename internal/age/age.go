@@ -1,4 +1,4 @@
-package vaultcrypto
+package age
 
 import (
 	"bytes"
@@ -9,51 +9,51 @@ import (
 	"path/filepath"
 	"strings"
 
-	"filippo.io/age"
+	filippoage "filippo.io/age"
 )
 
-type AgeIdentity struct {
+type Identity struct {
 	value     string
 	recipient string
 }
 
-func (i AgeIdentity) String() string {
+func (i Identity) String() string {
 	return i.value
 }
 
-func (i AgeIdentity) Recipient() string {
+func (i Identity) Recipient() string {
 	return i.recipient
 }
 
-func ReadOrCreateAgeIdentity(path string) (AgeIdentity, error) {
+func ReadOrCreateIdentity(path string) (Identity, error) {
 	if content, err := os.ReadFile(path); err == nil {
-		identities, err := age.ParseIdentities(strings.NewReader(string(content)))
+		identities, err := filippoage.ParseIdentities(strings.NewReader(string(content)))
 		if err != nil {
-			return AgeIdentity{}, fmt.Errorf("parse age identity %s: %w", path, err)
+			return Identity{}, fmt.Errorf("parse age identity %s: %w", path, err)
 		}
 		for _, identity := range identities {
-			if x25519, ok := identity.(*age.X25519Identity); ok {
-				return AgeIdentity{value: x25519.String(), recipient: x25519.Recipient().String()}, nil
+			if x25519, ok := identity.(*filippoage.X25519Identity); ok {
+				return Identity{value: x25519.String(), recipient: x25519.Recipient().String()}, nil
 			}
 		}
-		return AgeIdentity{}, fmt.Errorf("age identity %s contains no X25519 identity", path)
+		return Identity{}, fmt.Errorf("age identity %s contains no X25519 identity", path)
 	} else if !os.IsNotExist(err) {
-		return AgeIdentity{}, fmt.Errorf("read age identity %s: %w", path, err)
+		return Identity{}, fmt.Errorf("read age identity %s: %w", path, err)
 	}
-	identity, err := age.GenerateX25519Identity()
+	identity, err := filippoage.GenerateX25519Identity()
 	if err != nil {
-		return AgeIdentity{}, err
+		return Identity{}, err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return AgeIdentity{}, err
+		return Identity{}, err
 	}
 	if err := os.WriteFile(path, []byte(identity.String()+"\n"), 0o600); err != nil {
-		return AgeIdentity{}, err
+		return Identity{}, err
 	}
-	return AgeIdentity{value: identity.String(), recipient: identity.Recipient().String()}, nil
+	return Identity{value: identity.String(), recipient: identity.Recipient().String()}, nil
 }
 
-func DecryptAge(content []byte, identityPaths []string) ([]byte, error) {
+func Decrypt(content []byte, identityPaths []string) ([]byte, error) {
 	if len(identityPaths) == 0 {
 		return nil, errors.New("no age identity paths configured for encrypted vault")
 	}
@@ -61,9 +61,9 @@ func DecryptAge(content []byte, identityPaths []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	reader, err := age.Decrypt(bytes.NewReader(content), identities...)
+	reader, err := filippoage.Decrypt(bytes.NewReader(content), identities...)
 	if err != nil {
-		var noMatch *age.NoIdentityMatchError
+		var noMatch *filippoage.NoIdentityMatchError
 		if errors.As(err, &noMatch) {
 			return nil, errors.New("could not decrypt vault: no configured age identity matched")
 		}
@@ -76,24 +76,24 @@ func DecryptAge(content []byte, identityPaths []string) ([]byte, error) {
 	return plain, nil
 }
 
-func EncryptAge(plain []byte, recipients []string) ([]byte, error) {
+func Encrypt(plain []byte, recipients []string) ([]byte, error) {
 	if len(recipients) == 0 {
 		return nil, errors.New("no age recipients configured for encrypted vault")
 	}
-	parsed := make([]age.Recipient, 0, len(recipients))
+	parsed := make([]filippoage.Recipient, 0, len(recipients))
 	for _, value := range recipients {
 		value = strings.TrimSpace(value)
 		if value == "" {
 			return nil, errors.New("empty age recipient configured")
 		}
-		recipient, err := age.ParseX25519Recipient(value)
+		recipient, err := filippoage.ParseX25519Recipient(value)
 		if err != nil {
 			return nil, fmt.Errorf("invalid age recipient %q: %w", value, err)
 		}
 		parsed = append(parsed, recipient)
 	}
 	var out bytes.Buffer
-	writer, err := age.Encrypt(&out, parsed...)
+	writer, err := filippoage.Encrypt(&out, parsed...)
 	if err != nil {
 		return nil, fmt.Errorf("encrypt vault: %w", err)
 	}
@@ -107,8 +107,8 @@ func EncryptAge(plain []byte, recipients []string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func loadIdentities(paths []string) ([]age.Identity, error) {
-	identities := make([]age.Identity, 0, len(paths))
+func loadIdentities(paths []string) ([]filippoage.Identity, error) {
+	identities := make([]filippoage.Identity, 0, len(paths))
 	for _, path := range paths {
 		path = strings.TrimSpace(path)
 		if path == "" {
@@ -118,7 +118,7 @@ func loadIdentities(paths []string) ([]age.Identity, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read age identity %s: %w", path, err)
 		}
-		parsed, parseErr := age.ParseIdentities(file)
+		parsed, parseErr := filippoage.ParseIdentities(file)
 		closeErr := file.Close()
 		if parseErr != nil {
 			return nil, fmt.Errorf("parse age identity %s: %w", path, parseErr)

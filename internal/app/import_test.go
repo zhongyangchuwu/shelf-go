@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type fakeGopassImportClient struct {
@@ -112,13 +112,13 @@ func TestImportGopassToVaultAbortsBeforeWriteOnReadFailure(t *testing.T) {
 	}
 }
 
-func newTestVaultFile(t *testing.T, dir string) *vaultfile.Vault {
+func newTestVaultFile(t *testing.T, dir string) *jsonvault.Vault {
 	t.Helper()
 	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
 	if err != nil {
 		t.Fatalf("identity: %v", err)
 	}
-	v, err := vaultfile.NewVault(filepath.Join(dir, "vault.age"), vaultfile.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	v, err := jsonvault.NewVault(filepath.Join(dir, "vault.age"), jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}

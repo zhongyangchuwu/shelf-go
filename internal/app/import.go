@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/importer/gopass"
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type GopassImportOptions struct {
@@ -44,7 +44,7 @@ func ImportGopassForRuntime(configPathFlag, vaultPathFlag string, opts GopassImp
 	return ImportGopassToVault(v, client, opts)
 }
 
-func ImportGopassToVault(v *vaultfile.Vault, client gopassImportClient, opts GopassImportOptions) (ImportResult, error) {
+func ImportGopassToVault(v *jsonvault.Vault, client gopassImportClient, opts GopassImportOptions) (ImportResult, error) {
 	if v == nil {
 		return ImportResult{}, fmt.Errorf("vault is required")
 	}

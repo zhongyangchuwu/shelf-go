@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultcrypto"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type InitConfig struct {
@@ -29,21 +28,21 @@ func ResolveInitConfigPath(flag string) (string, error) {
 	return ExpandInitPath(config.DefaultConfigPath)
 }
 
-func EnsureInitIdentity(path string) (vaultcrypto.AgeIdentity, error) {
-	return vaultcrypto.ReadOrCreateAgeIdentity(path)
+func EnsureInitIdentity(path string) (jsonvault.AgeIdentity, error) {
+	return jsonvault.ReadOrCreateAgeIdentity(path)
 }
 
 func EnsureVaultForRuntime(runtime Runtime) (bool, error) {
-	return EnsureVaultFile(runtime.VaultPath, vaultfile.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	return EnsureVaultFile(runtime.VaultPath, jsonvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 }
 
-func EnsureVaultFile(vaultPath string, options vaultfile.VaultOptions) (bool, error) {
+func EnsureVaultFile(vaultPath string, options jsonvault.VaultOptions) (bool, error) {
 	if _, err := os.Stat(vaultPath); err == nil {
 		return false, nil
 	} else if err != nil && !os.IsNotExist(err) {
 		return false, err
 	}
-	v, err := vaultfile.NewVault(vaultPath, options)
+	v, err := jsonvault.NewVault(vaultPath, options)
 	if err != nil {
 		return false, err
 	}

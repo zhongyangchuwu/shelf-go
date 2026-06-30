@@ -16,8 +16,8 @@ internal/secret/              reusable secret workflows such as editor-based upd
 
 internal/source/              project-resolution reader contract
 internal/vault/               Shelf vault domain model, path/env/tag rules, in-memory store, and local reader
-internal/vaultfile/           current encrypted JSON file vault implementation
-internal/vaultcrypto/         vault encryption helpers; currently age-specific
+internal/jsonvault/           current shelf-vault/v1 encrypted JSON implementation
+internal/age/                 age encryption/decryption and identity helpers
 internal/importer/gopass/     gopass CLI import client
 internal/config/              runtime config resolution
 internal/util/                small shared primitives: atomic write and env/shell/JSON binding formatting
@@ -32,14 +32,14 @@ Surface:
   internal/manager -> app
 
 Workflow:
-  app -> config, project, secret, source, vault, vaultfile, importer/gopass, util
+  app -> config, project, secret, source, vault, jsonvault, importer/gopass, util
   project -> source, util
   secret -> vault
 
 Domain/persistence/support:
   vault -> source, util
-  vaultfile -> vault, vaultcrypto, util, flock
-  vaultcrypto -> filippo.io/age
+  jsonvault -> vault, age, util, flock
+  age -> filippo.io/age
   importer/gopass -> standard library
   config -> YAML
   util -> standard library
@@ -73,30 +73,30 @@ This avoids split-brain behavior where one command reads gopass while another co
 
 The domain package does not know how data is persisted or encrypted. Future SQL/NoSQL persistence should depend on `internal/vault`, not replace its model prematurely.
 
-## Vault file persistence
+## JSON vault persistence
 
-`internal/vaultfile` owns the current file implementation:
+`internal/jsonvault` owns the current `shelf-vault/v1` encrypted JSON implementation:
 
 - strict JSON plaintext model encode/decode;
 - `shelf-vault/v1` encrypted file framing;
-- age sealing/opening through `internal/vaultcrypto`;
+- age sealing/opening through `internal/age`;
 - file format detection;
 - file lock and atomic write/backup behavior;
 - vault status/check diagnostics;
 - legacy plaintext store load/save used by migration paths.
 
-This is the current production repository for local vault data. It is not the entire Shelf vault concept.
+This is the current production repository for local vault data. It is not the entire Shelf vault concept and should not be treated as the generic file-storage abstraction for future formats.
 
-## Vault crypto
+## Age helper
 
-`internal/vaultcrypto` owns vault encryption helpers. Current exports are age-specific:
+`internal/age` owns age encryption/decryption and identity helpers:
 
-- `AgeIdentity`;
-- `ReadOrCreateAgeIdentity`;
-- `EncryptAge`;
-- `DecryptAge`.
+- `Identity`;
+- `ReadOrCreateIdentity`;
+- `Encrypt`;
+- `Decrypt`.
 
-`vaultcrypto` does not own vault file headers, JSON format, locks, or status diagnostics. Those stay in `vaultfile`. Future GPG support should add GPG-specific helpers or a small crypto port after file-format framing is decided.
+`internal/age` does not own vault file headers, JSON format, locks, or status diagnostics. Those stay in `jsonvault`. Future GPG support should start as its own helper or a small crypto port after file-format framing is decided.
 
 ## Importers
 
@@ -142,11 +142,11 @@ Command handlers should stay thin: parse flags, call feature/base packages, then
 
 `internal/app` centralizes runtime and local vault loading:
 
-- `LoadVault(configPath, vaultPath)` resolves config and constructs `*vaultfile.Vault`;
+- `LoadVault(configPath, vaultPath)` resolves config and constructs `*jsonvault.Vault`;
 - `LoadRuntime(configPath, vaultPath)` loads a decrypted local vault `*vault.Store` snapshot;
 - `LoadSecretReader(configPath, vaultPath)` loads the local vault and returns `vault.Reader`;
 - `ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
-- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `vaultfile.Vault.Update`;
+- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `jsonvault.Vault.Update`;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 ## Project workflows

@@ -1,4 +1,4 @@
-package vaultfile
+package jsonvault
 
 import (
 	"os"

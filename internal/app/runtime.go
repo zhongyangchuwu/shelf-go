@@ -2,9 +2,9 @@ package app
 
 import (
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/source"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
-	"github.com/zhongyangchuwu/shelf-go/internal/vaultfile"
 )
 
 type Runtime = config.Runtime
@@ -17,12 +17,12 @@ func DefaultVaultPath() string {
 	return config.DefaultVaultPath
 }
 
-func LoadVault(configPathFlag, vaultPathFlag string) (Runtime, *vaultfile.Vault, error) {
+func LoadVault(configPathFlag, vaultPathFlag string) (Runtime, *jsonvault.Vault, error) {
 	runtime, err := config.Resolve(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return Runtime{}, nil, err
 	}
-	v, err := vaultfile.NewVault(runtime.VaultPath, vaultfile.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
+	v, err := jsonvault.NewVault(runtime.VaultPath, jsonvault.VaultOptions{Recipients: runtime.Recipients, IdentityPaths: runtime.IdentityPaths})
 	if err != nil {
 		return Runtime{}, nil, err
 	}

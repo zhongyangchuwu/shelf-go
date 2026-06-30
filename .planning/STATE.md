@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Vault Import Pivot
+- Phase: Vault Naming Cleanup
 - Status: implementation-in-progress
-- Active Artifact: .planning/phases/030-vault-import-pivot/PLAN.md
-- Next Action: Refactor vault/domain/import/crypto packages, remove gopass runtime source selection, and add gopass-to-local-vault import.
+- Active Artifact: .planning/phases/031-vault-naming-cleanup/PLAN.md
+- Next Action: Verify package naming cleanup and confirm the architecture graph shows `vault`, `jsonvault`, and `age` with app depending on jsonvault rather than age.
 
 ## Blockers
 - None
@@ -26,7 +26,8 @@
 - Phase 28 completed architecture boundary lint and CLI adapter slimming.
 - Phase 29 planning created `.planning/phases/029-backend-pluggability-architecture/CONTEXT.md` and `PLAN.md` for adding gopass as a read source and evaluating GPG as a Shelf vault crypto backend.
 - Gopass read-source MVP implementation added config `source.type`, `source.gopass_command`, `internal/adapters/gopass.Reader`, and runtime source selection for project workflows.
-- Phase 30 pivot decided that gopass is an import source, not a runtime backend; target package layout is `internal/vault`, `internal/vaultfile`, `internal/vaultcrypto`, and `internal/importer/gopass`.
+- Phase 30 pivot decided that gopass is an import source, not a runtime backend; target package layout is `internal/vault`, `internal/jsonvault`, `internal/age`, and `internal/importer/gopass`.
+- Phase 31 naming cleanup selected `internal/jsonvault` for the current encrypted JSON vault implementation and `internal/age` for algorithm-level age helpers.
 
 ## Updated
 - 2026-06-30
