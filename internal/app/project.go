@@ -62,11 +62,11 @@ func ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (s
 	fmt.Fprintf(&out, "root:    %s\n", root)
 	fmt.Fprintf(&out, "config:  %s\n\n", project.FileName)
 
-	reader, err := LoadSecretReader(configPathFlag, vaultPathFlag)
+	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return out.String(), err
 	}
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, reader)
+	resolvedEntries, diagnostics := project.ResolveEntries(manifest, st)
 	writeProjectDiagnostics(&out, diagnostics)
 	for _, entry := range resolvedEntries {
 		fmt.Fprintf(&out, "ok   %s -> %s\n", entry.Path, entry.EnvName)
@@ -91,7 +91,7 @@ func ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (st
 	} else if err != nil {
 		return "", err
 	}
-	reader, err := LoadSecretReader(configPathFlag, vaultPathFlag)
+	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +100,7 @@ func ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (st
 	if err != nil {
 		return "", err
 	}
-	manifest, entry, err := project.AddEntry(manifest, reader, project.AddEntryRequest{Selector: req.Selector, Env: req.Env, Optional: req.Optional, Tags: req.Tags})
+	manifest, entry, err := project.AddEntry(manifest, st, project.AddEntryRequest{Selector: req.Selector, Env: req.Env, Optional: req.Optional, Tags: req.Tags})
 	if err != nil {
 		return "", err
 	}
@@ -163,12 +163,12 @@ func ProjectExport(configPathFlag, vaultPathFlag, format string) (ProjectExportR
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
-	reader, err := LoadSecretReader(configPathFlag, vaultPathFlag)
+	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
 
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, reader)
+	resolvedEntries, diagnostics := project.ResolveEntries(manifest, st)
 	var diagnosticsOut strings.Builder
 	writeProjectDiagnostics(&diagnosticsOut, diagnostics)
 	result := ProjectExportResult{Diagnostics: diagnosticsOut.String()}

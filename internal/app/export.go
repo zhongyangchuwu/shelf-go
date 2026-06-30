@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/source"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
@@ -78,8 +77,7 @@ func secretBindings(paths []string, secrets map[string]vault.Secret) ([]util.Bin
 	bindings := make([]util.Binding, 0, len(paths))
 	for _, path := range paths {
 		secret := secrets[path]
-		wrapped := source.Secret{Path: path, Env: secret.Env}
-		envName, err := source.EnvName(path, wrapped)
+		envName, err := vault.EnvName(path, secret)
 		if err != nil {
 			return nil, err
 		}

@@ -4,12 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 type exitCoder interface {
@@ -49,52 +46,22 @@ func newRunCmd() *cobra.Command {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := project.Root()
-			if err != nil {
-				return err
-			}
-			m, err := project.Load(filepath.Join(root, project.FileName))
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
-			}
-			if err != nil {
-				return err
-			}
 			configPath, vaultPath := runtimePaths(cmd)
-			reader, err := app.LoadSecretReader(configPath, vaultPath)
-			if err != nil {
-				return err
+			err := app.ProjectRun(app.ProjectRunRequest{
+				ConfigPath: configPath,
+				VaultPath:  vaultPath,
+				Command:    args,
+				DryRun:     dryRun,
+				ParentEnv:  os.Environ(),
+				Stdin:      os.Stdin,
+				Stdout:     cmd.OutOrStdout(),
+				Stderr:     cmd.OutOrStderr(),
+			})
+			var childExit app.ChildExitError
+			if errors.As(err, &childExit) {
+				return exitCodeError{code: childExit.Code}
 			}
-
-			resolvedEntries, diagnostics := project.ResolveEntries(m, reader)
-			project.RenderDiagnostics(cmd.OutOrStderr(), diagnostics)
-			if project.HasFailures(diagnostics) {
-				return fmt.Errorf("project run failed")
-			}
-
-			if dryRun {
-				for _, warning := range project.EnvOverrideWarnings(resolvedEntries, os.Environ()) {
-					fmt.Fprintln(cmd.OutOrStderr(), warning)
-				}
-				for _, entry := range resolvedEntries {
-					fmt.Fprintf(cmd.OutOrStdout(), "inject %s\n", entry.EnvName)
-				}
-				return nil
-			}
-
-			child := exec.Command(args[0], args[1:]...)
-			child.Env = project.ChildEnv(os.Environ(), resolvedEntries)
-			child.Stdin = os.Stdin
-			child.Stdout = cmd.OutOrStdout()
-			child.Stderr = cmd.OutOrStderr()
-			if err := child.Run(); err != nil {
-				var exitErr *exec.ExitError
-				if errors.As(err, &exitErr) {
-					return exitCodeError{code: exitErr.ExitCode()}
-				}
-				return err
-			}
-			return nil
+			return err
 		},
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print injected env names without executing the command")

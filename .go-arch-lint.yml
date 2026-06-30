@@ -33,8 +33,6 @@ components:
     in: project
   secret:
     in: secret
-  source:
-    in: source
   vault:
     in: vault
   jsonvault:
@@ -52,7 +50,6 @@ deps:
   cli:
     mayDependOn:
       - app
-      - project
       - manager
     canUse:
       - cobra
@@ -67,7 +64,6 @@ deps:
       - config
       - project
       - secret
-      - source
       - vault
       - jsonvault
       - importer_gopass
@@ -75,21 +71,12 @@ deps:
 
   project:
     mayDependOn:
-      - source
+      - vault
       - util
 
   secret:
     mayDependOn:
       - vault
-
-  source:
-    mayDependOn:
-      - util
-
-  vault:
-    mayDependOn:
-      - source
-      - util
 
   jsonvault:
     mayDependOn:

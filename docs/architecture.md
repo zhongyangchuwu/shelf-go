@@ -14,8 +14,7 @@ internal/app/                 runtime construction, workflow orchestration, impo
 internal/project/             project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/              reusable secret workflows such as editor-based updates
 
-internal/source/              project-resolution reader contract
-internal/vault/               Shelf vault domain model, path/env/tag rules, in-memory store, and local reader
+internal/vault/               Shelf vault domain model, path/env/tag rules, and in-memory store
 internal/jsonvault/           current shelf-vault/v1 encrypted JSON implementation
 internal/age/                 age encryption/decryption and identity helpers
 internal/importer/gopass/     gopass CLI import client
@@ -28,16 +27,15 @@ The intended dependency direction is local surface to workflow to domain/persist
 ```text
 Surface:
   cmd/shelf -> internal/cli
-  internal/cli -> app, project, manager
+  internal/cli -> app, manager
   internal/manager -> app
 
 Workflow:
-  app -> config, project, secret, source, vault, jsonvault, importer/gopass, util
-  project -> source, util
+  app -> config, project, secret, vault, jsonvault, importer/gopass, util
+  project -> vault, util
   secret -> vault
 
 Domain/persistence/support:
-  vault -> source, util
   jsonvault -> vault, age, util, flock
   age -> filippo.io/age
   importer/gopass -> standard library
@@ -67,11 +65,10 @@ This avoids split-brain behavior where one command reads gopass while another co
 
 - `Data`, `Secret`, `Info`, `CurrentVersion`, `NewData`;
 - `SecretID`, `ParseSecretID`, `ValidatePath`, `ValidateSecretID`;
-- `ValidateSecret`, `ParseValue`, env/tag validation;
-- in-memory `Store` mutation/list/query methods;
-- `Reader`, which adapts a local `Store` to `source.Reader` for project resolution.
+- `ValidateSecret`, `ParseValue`, env/tag validation and env-name derivation;
+- in-memory `Store` mutation/list/query methods.
 
-The domain package does not know how data is persisted or encrypted. Future SQL/NoSQL persistence should depend on `internal/vault`, not replace its model prematurely.
+The domain package does not know how data is persisted or encrypted. It also does not know about project manifests. Future SQL/NoSQL persistence should depend on `internal/vault`, not replace its model prematurely.
 
 ## JSON vault persistence
 
@@ -105,7 +102,7 @@ This is the current production repository for local vault data. It is not the en
 - `gopass list --flat`;
 - `gopass show --password <path>`.
 
-It is not a runtime backend and does not implement `source.Reader`.
+It is not a runtime backend. Importers copy secrets into the local Shelf vault before project/runtime commands can use them.
 
 `internal/app.ImportGopassForRuntime` maps gopass entries into the local Shelf vault:
 
@@ -116,12 +113,6 @@ It is not a runtime backend and does not implement `source.Reader`.
 - read failures abort before writing to avoid partial imports.
 
 The CLI entrypoint is `shelf vault import gopass`.
-
-## Source boundary
-
-`internal/source` defines the read-side contract used by project env resolution. It exists so `internal/project` does not depend on the local vault store type. Today the runtime implementation is always the local vault reader from `internal/vault`.
-
-Do not add runtime external backends to `source.Reader` without a new product decision. External managers currently import into the local vault first.
 
 ## Command layer
 
@@ -136,7 +127,7 @@ Do not add runtime external backends to `source.Reader` without a new product de
 - `doctor`;
 - shell completion.
 
-Command handlers should stay thin: parse flags, call feature/base packages, then render output through Cobra writers.
+Command handlers should stay thin: parse flags, call `internal/app`, then render output through Cobra writers. Project/run orchestration belongs in `internal/app`, not in CLI command handlers.
 
 ## Runtime construction
 
@@ -144,16 +135,16 @@ Command handlers should stay thin: parse flags, call feature/base packages, then
 
 - `LoadVault(configPath, vaultPath)` resolves config and constructs `*jsonvault.Vault`;
 - `LoadRuntime(configPath, vaultPath)` loads a decrypted local vault `*vault.Store` snapshot;
-- `LoadSecretReader(configPath, vaultPath)` loads the local vault and returns `vault.Reader`;
 - `ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
 - `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `jsonvault.Vault.Update`;
+- `ProjectRun(req)` resolves the current project manifest against local vault data and runs the child process;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 ## Project workflows
 
 `internal/project` owns Git project identity, `.shelf.json` schema/IO/validation, and manifest-to-env resolution.
 
-Resolution order for env names:
+Resolution uses a local `*vault.Store` snapshot supplied by `internal/app`. Resolution order for env names:
 
 1. manifest entry `env`;
 2. secret object's `env`;

@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+var nonEnvChar = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
 func IsEnvName(name string) bool {
 	return envNamePattern.MatchString(name)
@@ -17,6 +19,18 @@ func ValidateEnvName(name string) error {
 		return fmt.Errorf("invalid env name: %s", name)
 	}
 	return nil
+}
+func EnvName(path string, secret Secret) (string, error) {
+	if secret.Env != "" {
+		return secret.Env, nil
+	}
+	name := nonEnvChar.ReplaceAllString(path, "_")
+	name = strings.Trim(name, "_")
+	name = strings.ToUpper(name)
+	if !IsEnvName(name) {
+		return "", fmt.Errorf("derived env name for %s is invalid: %s", path, name)
+	}
+	return name, nil
 }
 
 func ValidateSecret(secret Secret) error {

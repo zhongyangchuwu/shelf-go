@@ -9,7 +9,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-func TestLoadSecretReaderUsesLocalVault(t *testing.T) {
+func TestLoadRuntimeUsesLocalVault(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yaml")
 	vaultPath := filepath.Join(dir, "vault.age")
@@ -33,15 +33,15 @@ func TestLoadSecretReaderUsesLocalVault(t *testing.T) {
 		t.Fatalf("save vault: %v", err)
 	}
 
-	reader, err := LoadSecretReader(configPath, "")
+	_, loaded, err := LoadRuntime(configPath, "")
 	if err != nil {
-		t.Fatalf("load reader: %v", err)
+		t.Fatalf("load runtime: %v", err)
 	}
-	secret, err := reader.Get("app:token")
-	if err != nil {
-		t.Fatalf("get secret: %v", err)
+	secret, ok := loaded.Get("app:token")
+	if !ok {
+		t.Fatalf("secret not found")
 	}
-	if secret.Value != "secret" {
-		t.Fatalf("value = %q, want secret", secret.Value)
+	if string(secret.Value) != `"secret"` {
+		t.Fatalf("value = %s, want %q", secret.Value, `"secret"`)
 	}
 }

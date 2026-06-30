@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/source"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func Validate(manifest Manifest) error {
@@ -34,7 +34,7 @@ func Validate(manifest Manifest) error {
 			return fmt.Errorf("secrets[%d]: path, prefix, and tags are mutually exclusive", i)
 		}
 		if hasPath {
-			if err := source.ValidatePath(entry.Path); err != nil {
+			if err := vault.ValidatePath(entry.Path); err != nil {
 				return fmt.Errorf("invalid secrets[%d].path: %w", i, err)
 			}
 			if _, ok := seenPath[entry.Path]; ok {
@@ -50,7 +50,7 @@ func Validate(manifest Manifest) error {
 				if segment == "" {
 					return fmt.Errorf("invalid secrets[%d].prefix: empty segment", i)
 				}
-				if !source.IsPathToken(segment) {
+				if !vault.IsPathToken(segment) {
 					return fmt.Errorf("invalid secrets[%d].prefix: unsupported characters in segment %q", i, segment)
 				}
 			}
@@ -65,7 +65,7 @@ func Validate(manifest Manifest) error {
 				if tag == "" {
 					return fmt.Errorf("invalid secrets[%d].tags: tag must not be empty", i)
 				}
-				if !source.IsPathToken(tag) {
+				if !vault.IsPathToken(tag) {
 					return fmt.Errorf("invalid secrets[%d].tags: unsupported characters in tag %q", i, tag)
 				}
 				if _, ok := seenEntryTags[tag]; ok {
@@ -86,7 +86,7 @@ func Validate(manifest Manifest) error {
 			return fmt.Errorf("secrets[%d]: tag entries must not carry env", i)
 		}
 		if entry.Env != "" {
-			if err := source.ValidateEnvName(entry.Env); err != nil {
+			if err := vault.ValidateEnvName(entry.Env); err != nil {
 				return fmt.Errorf("invalid secrets[%d].env: %s", i, entry.Env)
 			}
 		}

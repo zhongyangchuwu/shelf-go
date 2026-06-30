@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Vault Naming Cleanup
+- Phase: Graph Source Cleanup
 - Status: implementation-in-progress
-- Active Artifact: .planning/phases/031-vault-naming-cleanup/PLAN.md
-- Next Action: Verify package naming cleanup and confirm the architecture graph shows `vault`, `jsonvault`, and `age` with app depending on jsonvault rather than age.
+- Active Artifact: .planning/phases/032-graph-source-cleanup/PLAN.md
+- Next Action: Commit graph cleanup after targeted tests, full verification, arch lint, and LSP diagnostics passed.
 
 ## Blockers
 - None
@@ -28,6 +28,8 @@
 - Gopass read-source MVP implementation added config `source.type`, `source.gopass_command`, `internal/adapters/gopass.Reader`, and runtime source selection for project workflows.
 - Phase 30 pivot decided that gopass is an import source, not a runtime backend; target package layout is `internal/vault`, `internal/jsonvault`, `internal/age`, and `internal/importer/gopass`.
 - Phase 31 naming cleanup selected `internal/jsonvault` for the current encrypted JSON vault implementation and `internal/age` for algorithm-level age helpers.
+- Phase 32 graph cleanup targets removing `internal/source`, eliminating `cli -> project`, and keeping vault independent of project concepts.
+- Phase 32 verification passed: `go test ./internal/vault ./internal/project ./internal/app ./internal/cli`, `./scripts/test.sh`, arch lint OK, and LSP diagnostics clean.
 
 ## Updated
 - 2026-06-30

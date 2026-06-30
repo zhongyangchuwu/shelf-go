@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/source"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func TestResolveEntriesReportsStatuses(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai/accounts/personal:api_key":     {Value: "sk-openai"},
-		"providers/openrouter/accounts/personal:api_key": {Value: "sk-openrouter"},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai/accounts/personal:api_key":     {Value: []byte(`"sk-openai"`)},
+		"providers/openrouter/accounts/personal:api_key": {Value: []byte(`"sk-openrouter"`)},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{
 		{Path: "providers/openai/accounts/personal:api_key", Env: "OPENAI_API_KEY"},
@@ -37,9 +37,9 @@ func TestResolveEntriesReportsStatuses(t *testing.T) {
 }
 
 func TestResolveEntriesExpandsPrefixSorted(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai/accounts/work:api_key":     {Value: "sk-work"},
-		"providers/openai/accounts/personal:api_key": {Value: "sk-personal"},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai/accounts/work:api_key":     {Value: []byte(`"sk-work"`)},
+		"providers/openai/accounts/personal:api_key": {Value: []byte(`"sk-personal"`)},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{Prefix: "providers/openai/accounts"}}}
 	bindings, diagnostics := ResolveEntries(m, reader)
@@ -57,8 +57,8 @@ func TestResolveEntriesExpandsPrefixSorted(t *testing.T) {
 }
 
 func TestResolveEntriesReportsEmptyPrefixByRequiredState(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"app:token": {Value: "secret", Env: "APP_TOKEN"},
+	reader := projectTestReader(map[string]vault.Secret{
+		"app:token": {Value: []byte(`"secret"`), Env: "APP_TOKEN"},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{
 		{Path: "app:token"},
@@ -77,10 +77,10 @@ func TestResolveEntriesReportsEmptyPrefixByRequiredState(t *testing.T) {
 }
 
 func TestResolveEntriesExpandsTagSelector(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai:api_key":     {Value: "sk-openai", Tags: []string{"ai", "prod"}},
-		"providers/anthropic:api_key":  {Value: "sk-anthropic", Tags: []string{"ai"}},
-		"providers/openrouter:api_key": {Value: "sk-openrouter", Tags: []string{"ai", "prod"}},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai:api_key":     {Value: []byte(`"sk-openai"`), Tags: []string{"ai", "prod"}},
+		"providers/anthropic:api_key":  {Value: []byte(`"sk-anthropic"`), Tags: []string{"ai"}},
+		"providers/openrouter:api_key": {Value: []byte(`"sk-openrouter"`), Tags: []string{"ai", "prod"}},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{Tags: []string{"ai", "prod"}}}}
 	bindings, diagnostics := ResolveEntries(m, reader)

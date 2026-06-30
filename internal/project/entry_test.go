@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/source"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func TestBuildEntryCreatesPathEntry(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: "sk-test"},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: []byte(`"sk-test"`)},
 	})
 	entry, err := BuildEntry(reader, AddEntryRequest{Selector: "providers/openai/accounts/personal:api_key", Env: "OPENAI_API_KEY"})
 	if err != nil {
@@ -24,8 +24,8 @@ func TestBuildEntryCreatesPathEntry(t *testing.T) {
 }
 
 func TestBuildEntryCreatesOptionalPrefixEntry(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: "sk-test"},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: []byte(`"sk-test"`)},
 	})
 	entry, err := BuildEntry(reader, AddEntryRequest{Selector: "providers/openai/accounts/personal", Optional: true})
 	if err != nil {
@@ -37,8 +37,8 @@ func TestBuildEntryCreatesOptionalPrefixEntry(t *testing.T) {
 }
 
 func TestBuildEntryCreatesTagEntry(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: "sk-test", Tags: []string{"ai", "prod"}},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: []byte(`"sk-test"`), Tags: []string{"ai", "prod"}},
 	})
 	entry, err := BuildEntry(reader, AddEntryRequest{Tags: []string{"ai", "prod"}})
 	if err != nil {
@@ -50,8 +50,8 @@ func TestBuildEntryCreatesTagEntry(t *testing.T) {
 }
 
 func TestBuildEntryRejectsInvalidRequests(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"providers/openai/accounts/personal:api_key": {Value: "sk-test", Tags: []string{"ai"}},
+	reader := projectTestReader(map[string]vault.Secret{
+		"providers/openai/accounts/personal:api_key": {Value: []byte(`"sk-test"`), Tags: []string{"ai"}},
 	})
 	tests := []struct {
 		name    string
@@ -80,8 +80,8 @@ func TestBuildEntryRejectsInvalidRequests(t *testing.T) {
 }
 
 func TestAddEntryRejectsDuplicate(t *testing.T) {
-	reader := projectTestReader(map[string]source.Secret{
-		"app:token": {Value: "secret"},
+	reader := projectTestReader(map[string]vault.Secret{
+		"app:token": {Value: []byte(`"secret"`)},
 	})
 	m := Manifest{Version: CurrentVersion, Secrets: []Entry{{Path: "app:token"}}}
 	_, _, err := AddEntry(m, reader, AddEntryRequest{Selector: "app:token"})
@@ -93,6 +93,12 @@ func TestAddEntryRejectsDuplicate(t *testing.T) {
 	}
 }
 
-func projectTestReader(secrets map[string]source.Secret) source.MemoryReader {
-	return source.MemoryReader(secrets)
+func projectTestReader(secrets map[string]vault.Secret) *vault.Store {
+	st := &vault.Store{Data: vault.NewData()}
+	for path, secret := range secrets {
+		if err := st.Set(path, secret, false); err != nil {
+			panic(err)
+		}
+	}
+	return st
 }
