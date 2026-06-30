@@ -4,7 +4,7 @@
 - Phase: Vault Abstraction Boundary
 - Status: implementation-in-progress
 - Active Artifact: .planning/phases/033-vault-abstraction-boundary/PLAN.md
-- Next Action: Commit vault abstraction boundary after targeted tests, full verification, arch lint, and LSP diagnostics passed.
+- Next Action: App default factory move verified; commit the change.
 
 ## Blockers
 - None
@@ -32,6 +32,8 @@
 - Phase 32 verification passed: `go test ./internal/vault ./internal/project ./internal/app ./internal/cli`, `./scripts/test.sh`, arch lint OK, and LSP diagnostics clean.
 - Phase 33 abstraction boundary removed production `app -> jsonvault` and `cli -> jsonvault` dependencies by adding vault repository interfaces and injecting `jsonvault.Provider` from `cmd/shelf`.
 - Phase 33 verification passed: `go test ./cmd/shelf ./internal/vault ./internal/jsonvault ./internal/app ./internal/cli ./internal/manager ./internal/project ./internal/secret`, `./scripts/test.sh`, arch lint OK, and LSP diagnostics clean.
+- App default factory move keeps `jsonvault.Provider` construction inside `app.NewDefault`; `cmd/shelf` and CLI no longer import `internal/jsonvault`.
+- App default factory verification passed: `go test ./cmd/shelf ./internal/app ./internal/cli ./internal/jsonvault ./internal/vault`, `./scripts/test.sh`, arch lint OK, LSP diagnostics clean, and grep confirmed no `jsonvault` imports in `cmd` or CLI.
 
 ## Updated
 - 2026-06-30

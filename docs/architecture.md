@@ -26,12 +26,12 @@ The intended dependency direction is local surface to workflow to domain/persist
 
 ```text
 Surface:
-  cmd/shelf -> internal/cli, internal/app, internal/jsonvault
+  cmd/shelf -> internal/cli, internal/app
   internal/cli -> app, manager
   internal/manager -> app
 
 Workflow:
-  app -> config, project, secret, vault, importer/gopass, util
+  app -> config, project, secret, vault, jsonvault, importer/gopass, util
   project -> vault, util
   secret -> vault
 
@@ -128,13 +128,14 @@ The CLI entrypoint is `shelf vault import gopass`.
 - `doctor`;
 - shell completion.
 
-Command handlers should stay thin: parse flags, call an injected `*app.App`, then render output through Cobra writers. Project/run orchestration belongs in `internal/app`, not in CLI command handlers. The command composition root wires `jsonvault.Provider{}` into `app.New`; CLI code does not import `internal/jsonvault`.
+Command handlers should stay thin: parse flags, call an injected `*app.App`, then render output through Cobra writers. Project/run orchestration belongs in `internal/app`, not in CLI command handlers. `app.NewDefault` wires the current `jsonvault.Provider{}` implementation; CLI and `cmd/shelf` do not import `internal/jsonvault`.
 
 ## Runtime construction
 
 `internal/app` centralizes runtime and local vault loading behind the `internal/vault` repository abstraction:
 
-- `App.LoadVault(configPath, vaultPath)` resolves config and opens a `vault.Repository` through the injected provider;
+- `app.NewDefault()` constructs the default app using the current `jsonvault.Provider{}` implementation;
+- `App.LoadVault(configPath, vaultPath)` resolves config and opens a `vault.Repository` through the app provider;
 - `App.LoadRuntime(configPath, vaultPath)` loads a decrypted local vault `*vault.Store` snapshot;
 - `App.ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
 - `App.UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and saves through `vault.Repository.Update`;
