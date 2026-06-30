@@ -10,8 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 type Runtime struct {
@@ -20,15 +18,7 @@ type Runtime struct {
 	httpServer *http.Server
 }
 
-func Open(appSvc *app.App, configPathFlag, vaultPathFlag, addr string) (*Runtime, error) {
-	_, vaultHandle, err := appSvc.LoadVault(configPathFlag, vaultPathFlag)
-	if err != nil {
-		return nil, err
-	}
-	service, err := app.NewSecretService(vaultHandle)
-	if err != nil {
-		return nil, err
-	}
+func Open(service SecretService, addr string) (*Runtime, error) {
 	listener, err := ListenLoopback(addr)
 	if err != nil {
 		return nil, err

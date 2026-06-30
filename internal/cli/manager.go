@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/manager"
 )
 
 func newVaultCmd(appSvc *app.App) *cobra.Command {
@@ -46,7 +45,7 @@ func newManagerCmd(appSvc *app.App) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			runtime, err := manager.Open(appSvc, configPath, vaultPath, addr)
+			runtime, err := appSvc.OpenManager(configPath, vaultPath, addr)
 			if err != nil {
 				return err
 			}

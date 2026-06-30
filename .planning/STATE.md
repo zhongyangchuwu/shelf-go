@@ -4,7 +4,7 @@
 - Phase: Vault Abstraction Boundary
 - Status: implementation-in-progress
 - Active Artifact: .planning/phases/033-vault-abstraction-boundary/PLAN.md
-- Next Action: App default factory move verified; commit the change.
+- Next Action: Commit manager boundary change after verification passed.
 
 ## Blockers
 - None
@@ -34,6 +34,8 @@
 - Phase 33 verification passed: `go test ./cmd/shelf ./internal/vault ./internal/jsonvault ./internal/app ./internal/cli ./internal/manager ./internal/project ./internal/secret`, `./scripts/test.sh`, arch lint OK, and LSP diagnostics clean.
 - App default factory move keeps `jsonvault.Provider` construction inside `app.NewDefault`; `cmd/shelf` and CLI no longer import `internal/jsonvault`.
 - App default factory verification passed: `go test ./cmd/shelf ./internal/app ./internal/cli ./internal/jsonvault ./internal/vault`, `./scripts/test.sh`, arch lint OK, LSP diagnostics clean, and grep confirmed no `jsonvault` imports in `cmd` or CLI.
+- Manager boundary change routes CLI through `app.OpenManager`; `internal/manager` remains a separate feature package and no longer imports `internal/app`.
+- Manager boundary verification passed: `go test ./internal/manager ./internal/app ./internal/cli`, `./scripts/test.sh`, arch lint OK, LSP diagnostics clean, and grep confirmed no `internal/manager` imports in CLI and no `internal/app` imports in manager.
 
 ## Updated
 - 2026-06-30

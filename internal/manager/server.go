@@ -7,19 +7,69 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-
-	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 const sessionCookie = "shelf_manager_token"
 
+type SecretService interface {
+	SecretInfo(path string) (SecretInfo, error)
+	ListSecrets(query string) ([]SecretInfo, error)
+	RevealSecret(path string) (string, error)
+	WriteSecret(update bool, req WriteSecretRequest) error
+	DeleteSecret(path string) error
+}
+
+type ServiceFuncs struct {
+	SecretInfoFunc   func(path string) (SecretInfo, error)
+	ListSecretsFunc  func(query string) ([]SecretInfo, error)
+	RevealSecretFunc func(path string) (string, error)
+	WriteSecretFunc  func(update bool, req WriteSecretRequest) error
+	DeleteSecretFunc func(path string) error
+}
+
+func (s ServiceFuncs) SecretInfo(path string) (SecretInfo, error) {
+	return s.SecretInfoFunc(path)
+}
+
+func (s ServiceFuncs) ListSecrets(query string) ([]SecretInfo, error) {
+	return s.ListSecretsFunc(query)
+}
+
+func (s ServiceFuncs) RevealSecret(path string) (string, error) {
+	return s.RevealSecretFunc(path)
+}
+
+func (s ServiceFuncs) WriteSecret(update bool, req WriteSecretRequest) error {
+	return s.WriteSecretFunc(update, req)
+}
+
+func (s ServiceFuncs) DeleteSecret(path string) error {
+	return s.DeleteSecretFunc(path)
+}
+
 type Server struct {
-	service *app.SecretService
+	service SecretService
 	token   string
 	host    string
 }
 
-type SecretInfo = app.SecretSummary
+type SecretInfo struct {
+	Path        string   `json:"path"`
+	Env         string   `json:"env,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Tags        []string `json:"tags"`
+	ValueSet    bool     `json:"value_set"`
+}
+
+type WriteSecretRequest struct {
+	OldPath     string
+	Path        string
+	Value       *string
+	Env         string
+	Description string
+	Tags        []string
+	Force       bool
+}
 
 type secretPayload struct {
 	OldPath     string   `json:"old_path,omitempty"`
@@ -35,7 +85,7 @@ type pathPayload struct {
 	Path string `json:"path"`
 }
 
-func NewServer(service *app.SecretService, token, host string) (*Server, error) {
+func NewServer(service SecretService, token, host string) (*Server, error) {
 	if service == nil {
 		return nil, fmt.Errorf("manager service is required")
 	}
@@ -172,7 +222,7 @@ func (s *Server) writeSecret(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "value is required", http.StatusBadRequest)
 		return
 	}
-	err := s.service.WriteSecret(r.Method == http.MethodPut, app.WriteSecretRequest{
+	err := s.service.WriteSecret(r.Method == http.MethodPut, WriteSecretRequest{
 		OldPath:     payload.OldPath,
 		Path:        payload.Path,
 		Value:       payload.Value,

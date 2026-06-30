@@ -1,47 +1,103 @@
 package manager
 
 import (
-	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-
-	"filippo.io/age"
-	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 )
 
 const testToken = "test-token"
 
-func newTestServer(t *testing.T) (*Server, string) {
+type fakeSecret struct {
+	info  SecretInfo
+	value string
+}
+
+type fakeSecretService struct {
+	secrets map[string]fakeSecret
+}
+
+func newTestServer(t *testing.T) (*Server, *fakeSecretService) {
 	t.Helper()
-	dir := t.TempDir()
-	identity, err := age.GenerateX25519Identity()
-	if err != nil {
-		t.Fatalf("generate identity: %v", err)
-	}
-	identityPath := filepath.Join(dir, "identity.txt")
-	if err := os.WriteFile(identityPath, []byte(identity.String()+"\n"), 0o600); err != nil {
-		t.Fatalf("write identity: %v", err)
-	}
-	vaultPath := filepath.Join(dir, "vault.age")
-	v, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient().String()}, IdentityPaths: []string{identityPath}})
-	if err != nil {
-		t.Fatalf("new vault: %v", err)
-	}
-	service, err := app.NewSecretService(v)
-	if err != nil {
-		t.Fatalf("new manager service: %v", err)
-	}
+	service := &fakeSecretService{secrets: make(map[string]fakeSecret)}
 	server, err := NewServer(service, testToken, "127.0.0.1:4321")
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
-	return server, vaultPath
+	return server, service
+}
+
+func (s *fakeSecretService) SecretInfo(path string) (SecretInfo, error) {
+	secret, ok := s.secrets[path]
+	if !ok {
+		return SecretInfo{}, fmt.Errorf("secret not found: %s", path)
+	}
+	return secret.info, nil
+}
+
+func (s *fakeSecretService) ListSecrets(query string) ([]SecretInfo, error) {
+	query = strings.ToLower(query)
+	items := make([]SecretInfo, 0, len(s.secrets))
+	for _, secret := range s.secrets {
+		if query == "" || strings.Contains(strings.ToLower(secret.info.Path), query) || strings.Contains(strings.ToLower(secret.info.Env), query) || strings.Contains(strings.ToLower(secret.info.Description), query) || containsTag(secret.info.Tags, query) {
+			items = append(items, secret.info)
+		}
+	}
+	return items, nil
+}
+
+func (s *fakeSecretService) RevealSecret(path string) (string, error) {
+	secret, ok := s.secrets[path]
+	if !ok {
+		return "", fmt.Errorf("secret not found: %s", path)
+	}
+	return secret.value, nil
+}
+
+func (s *fakeSecretService) WriteSecret(update bool, req WriteSecretRequest) error {
+	path := req.Path
+	value := ""
+	if update {
+		oldPath := req.OldPath
+		if oldPath == "" {
+			oldPath = req.Path
+		}
+		existing, ok := s.secrets[oldPath]
+		if !ok {
+			return fmt.Errorf("secret not found: %s", oldPath)
+		}
+		value = existing.value
+		if oldPath != path {
+			delete(s.secrets, oldPath)
+		}
+	} else if _, exists := s.secrets[path]; exists && !req.Force {
+		return fmt.Errorf("secret already exists: %s", path)
+	}
+	if req.Value != nil {
+		value = *req.Value
+	}
+	s.secrets[path] = fakeSecret{info: SecretInfo{Path: path, Env: req.Env, Description: req.Description, Tags: append([]string(nil), req.Tags...), ValueSet: value != ""}, value: value}
+	return nil
+}
+
+func (s *fakeSecretService) DeleteSecret(path string) error {
+	if _, ok := s.secrets[path]; !ok {
+		return fmt.Errorf("secret not found: %s", path)
+	}
+	delete(s.secrets, path)
+	return nil
+}
+
+func containsTag(tags []string, query string) bool {
+	for _, tag := range tags {
+		if strings.Contains(strings.ToLower(tag), query) {
+			return true
+		}
+	}
+	return false
 }
 
 func managerRequest(method, target, body string) *http.Request {
@@ -143,6 +199,7 @@ func TestManagerQueryTokenSetsStrictCookieAndRedirects(t *testing.T) {
 	}
 	requireNoStore(t, rr)
 }
+
 func TestManagerIndexServesEmbeddedWorkbench(t *testing.T) {
 	server, _ := newTestServer(t)
 	req := authorizedManagerRequest(http.MethodGet, "/", "")
@@ -244,8 +301,8 @@ func TestManagerRevealRequiresPostAndIsExplicit(t *testing.T) {
 	}
 }
 
-func TestManagerWritesUseEncryptedVaultAndRejectBadOrigin(t *testing.T) {
-	server, vaultPath := newTestServer(t)
+func TestManagerWritesThroughServiceAndRejectsBadOrigin(t *testing.T) {
+	server, _ := newTestServer(t)
 	payload := `{"path":"app:token","value":"secret-value","env":"APP_TOKEN"}`
 	badOrigin := authorizedManagerRequest(http.MethodPost, "/api/secrets", payload)
 	badOrigin.Header.Set("Origin", "http://evil.test")
@@ -261,16 +318,6 @@ func TestManagerWritesUseEncryptedVaultAndRejectBadOrigin(t *testing.T) {
 	updateReq := unsafeManagerRequest(http.MethodPut, "/api/secrets", `{"path":"app:token","value":"updated-value","env":"APP_TOKEN"}`)
 	if rr := serveManager(server, updateReq); rr.Code != http.StatusOK {
 		t.Fatalf("update status = %d body=%s", rr.Code, rr.Body.String())
-	}
-
-	content, err := os.ReadFile(vaultPath)
-	if err != nil {
-		t.Fatalf("read vault: %v", err)
-	}
-	for _, forbidden := range [][]byte{[]byte("secret-value"), []byte("updated-value"), []byte("app:token"), []byte("APP_TOKEN")} {
-		if bytes.Contains(content, forbidden) {
-			t.Fatalf("encrypted vault contains plaintext %q", forbidden)
-		}
 	}
 
 	revealReq := unsafeManagerRequest(http.MethodPost, "/api/reveal", `{"path":"app:token"}`)

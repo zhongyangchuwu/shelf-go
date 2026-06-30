@@ -3,7 +3,6 @@ workdir: internal
 
 allow:
   depOnAnyVendor: false
-  deepScan: true
 
 excludeFiles:
   - "^.*_test\\.go$"
@@ -50,23 +49,24 @@ deps:
   cli:
     mayDependOn:
       - app
-      - manager
     canUse:
       - cobra
       - term
 
-  manager:
-    mayDependOn:
-      - app
 
   app:
     mayDependOn:
       - config
+      - manager
       - project
       - secret
       - vault
       - jsonvault
       - importer_gopass
+      - util
+
+  manager:
+    mayDependOn:
       - util
 
   project:

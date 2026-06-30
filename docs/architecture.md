@@ -10,7 +10,7 @@ cmd/shelf/                    process entry point
 internal/cli/                 Cobra command tree, flags, argument validation, and text rendering
 internal/manager/             local manager surface, currently loopback HTTP/Web
 
-internal/app/                 application service, runtime construction, workflow orchestration, import services, and version composition
+internal/app/                 application service, runtime construction, workflow orchestration, manager orchestration, import services, and version composition
 internal/project/             project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/              reusable secret workflows such as editor-based updates
 
@@ -27,11 +27,10 @@ The intended dependency direction is local surface to workflow to domain/persist
 ```text
 Surface:
   cmd/shelf -> internal/cli, internal/app
-  internal/cli -> app, manager
-  internal/manager -> app
+  internal/cli -> app
 
 Workflow:
-  app -> config, project, secret, vault, jsonvault, importer/gopass, util
+  app -> config, project, secret, vault, jsonvault, importer/gopass, manager, util
   project -> vault, util
   secret -> vault
 
@@ -43,7 +42,7 @@ Domain/persistence/support:
   util -> standard library
 ```
 
-Base packages must not import `internal/cli` or `internal/manager`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
+Base packages must not import `internal/cli`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
 
 ## Product data model
 
@@ -140,6 +139,7 @@ Command handlers should stay thin: parse flags, call an injected `*app.App`, the
 - `App.ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
 - `App.UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and saves through `vault.Repository.Update`;
 - `App.ProjectRun(req)` resolves the current project manifest against local vault data and runs the child process;
+- `App.OpenManager(configPath, vaultPath, addr)` opens the local manager using a manager-specific service adapter;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 ## Project workflows
@@ -164,7 +164,7 @@ Prefix and tag manifest entries may expand to multiple local vault secrets and c
 
 ## Local manager
 
-`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept.
+`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept. CLI reaches it through `internal/app`; manager receives a narrow secret-service contract and does not import app.
 
 Safety boundaries:
 

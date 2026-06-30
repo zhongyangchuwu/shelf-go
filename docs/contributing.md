@@ -56,7 +56,7 @@ cmd/shelf/           process entry point
 internal/cli/        Cobra command surface, flags, completions, and output routing
 internal/manager/    local manager surface, currently loopback HTTP/Web
 
-internal/app/        runtime, vault construction, app workflows, status, and version composition
+internal/app/        runtime, vault construction, app workflows, manager orchestration, status, and version composition
 internal/project/    project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/     reusable secret workflows such as interactive add and editor-based updates
 
