@@ -15,8 +15,8 @@ type ExportRequest struct {
 	Format   string
 }
 
-func ExportSecretsForRuntime(configPathFlag, vaultPathFlag string, req ExportRequest) (string, error) {
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+func (a *App) ExportSecretsForRuntime(configPathFlag, vaultPathFlag string, req ExportRequest) (string, error) {
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}

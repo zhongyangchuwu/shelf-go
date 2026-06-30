@@ -9,7 +9,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func newDoctorCmd() *cobra.Command {
+func newDoctorCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Check local Shelf configuration and data health",
@@ -17,7 +17,7 @@ func newDoctorCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report := newDiagnosticReport(cmd.OutOrStdout())
 			configPath, vaultPath := runtimePaths(cmd)
-			runtime, reportChecks, err := app.ResolveDoctor(configPath, vaultPath)
+			runtime, reportChecks, err := appSvc.ResolveDoctor(configPath, vaultPath)
 			if err != nil {
 				report.fail("config resolves", err.Error())
 				return report.err("doctor")

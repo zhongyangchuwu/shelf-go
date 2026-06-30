@@ -8,16 +8,16 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func newProjectCmd() *cobra.Command {
+func newProjectCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{Use: "project", Short: "Project utilities"}
 	cmd.AddCommand(newProjectIDCmd())
 	cmd.AddCommand(newProjectInitCmd())
-	cmd.AddCommand(newProjectExplainCmd())
-	cmd.AddCommand(newProjectAddCmd())
+	cmd.AddCommand(newProjectExplainCmd(appSvc))
+	cmd.AddCommand(newProjectAddCmd(appSvc))
 	cmd.AddCommand(newProjectRmCmd())
 	cmd.AddCommand(newProjectListCmd())
-	cmd.AddCommand(newProjectExportCmd())
-	cmd.AddCommand(newRunCmd())
+	cmd.AddCommand(newProjectExportCmd(appSvc))
+	cmd.AddCommand(newRunCmd(appSvc))
 	return cmd
 }
 
@@ -56,7 +56,7 @@ func newProjectInitCmd() *cobra.Command {
 	return cmd
 }
 
-func newProjectExplainCmd() *cobra.Command {
+func newProjectExplainCmd(appSvc *app.App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "explain",
 		Short: "Explain project manifest resolution",
@@ -64,7 +64,7 @@ func newProjectExplainCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
-			out, err := app.ProjectExplain(configPath, vaultPath, os.Environ())
+			out, err := appSvc.ProjectExplain(configPath, vaultPath, os.Environ())
 			if out != "" {
 				fmt.Fprint(cmd.OutOrStdout(), out)
 			}
@@ -73,15 +73,17 @@ func newProjectExplainCmd() *cobra.Command {
 	}
 }
 
-func newProjectAddCmd() *cobra.Command {
+func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 	var envName string
 	var optional bool
 	var tags []string
 	cmd := &cobra.Command{
-		Use:               "add [path-or-prefix]",
-		Short:             "Add a secret path, prefix, or tag selector to project manifest",
-		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeProjectAddArg,
+		Use:   "add [path-or-prefix]",
+		Short: "Add a secret path, prefix, or tag selector to project manifest",
+		Args:  cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeProjectAddArg(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selector := ""
 			if len(args) > 0 {
@@ -90,7 +92,7 @@ func newProjectAddCmd() *cobra.Command {
 
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
-			out, err := app.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: selector, Env: envName, Optional: optional, Tags: tags})
+			out, err := appSvc.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: selector, Env: envName, Optional: optional, Tags: tags})
 			if err != nil {
 				return err
 			}
@@ -124,12 +126,12 @@ func newProjectRmCmd() *cobra.Command {
 	return cmd
 }
 
-func completeProjectAddArg(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+func completeProjectAddArg(appSvc *app.App, cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	configPath, vaultPath := runtimePaths(cmd)
-	paths, err := app.AllSecretPaths(configPath, vaultPath)
+	paths, err := appSvc.AllSecretPaths(configPath, vaultPath)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -167,7 +169,7 @@ func newProjectListCmd() *cobra.Command {
 	}
 }
 
-func newProjectExportCmd() *cobra.Command {
+func newProjectExportCmd(appSvc *app.App) *cobra.Command {
 	var format string
 	cmd := &cobra.Command{
 		Use:   "export",
@@ -176,7 +178,7 @@ func newProjectExportCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
-			result, err := app.ProjectExport(configPath, vaultPath, format)
+			result, err := appSvc.ProjectExport(configPath, vaultPath, format)
 			if result.Diagnostics != "" {
 				fmt.Fprint(cmd.OutOrStderr(), result.Diagnostics)
 			}

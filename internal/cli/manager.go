@@ -8,16 +8,16 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/manager"
 )
 
-func newVaultCmd() *cobra.Command {
+func newVaultCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{Use: "vault", Short: "Manage encrypted vault"}
-	cmd.AddCommand(newVaultInitCmd())
-	cmd.AddCommand(newMigrateCmd())
-	cmd.AddCommand(newVaultImportCmd())
-	cmd.AddCommand(newVaultStatusCmd())
+	cmd.AddCommand(newVaultInitCmd(appSvc))
+	cmd.AddCommand(newMigrateCmd(appSvc))
+	cmd.AddCommand(newVaultImportCmd(appSvc))
+	cmd.AddCommand(newVaultStatusCmd(appSvc))
 	return cmd
 }
 
-func newVaultStatusCmd() *cobra.Command {
+func newVaultStatusCmd(appSvc *app.App) *cobra.Command {
 	return &cobra.Command{
 		Use:     "status",
 		Aliases: []string{"check"},
@@ -26,7 +26,7 @@ func newVaultStatusCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report := newDiagnosticReport(cmd.OutOrStdout())
 			configPath, vaultPath := runtimePaths(cmd)
-			reportChecks, err := app.ResolveStatus(configPath, vaultPath)
+			reportChecks, err := appSvc.ResolveStatus(configPath, vaultPath)
 			if err != nil {
 				report.fail("config", err.Error())
 				return report.err("vault status")
@@ -38,7 +38,7 @@ func newVaultStatusCmd() *cobra.Command {
 	}
 }
 
-func newManagerCmd() *cobra.Command {
+func newManagerCmd(appSvc *app.App) *cobra.Command {
 	var addr string
 	cmd := &cobra.Command{
 		Use:   "manager",
@@ -46,7 +46,7 @@ func newManagerCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			runtime, err := manager.Open(configPath, vaultPath, addr)
+			runtime, err := manager.Open(appSvc, configPath, vaultPath, addr)
 			if err != nil {
 				return err
 			}

@@ -7,7 +7,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func newExportCmd() *cobra.Command {
+func newExportCmd(appSvc *app.App) *cobra.Command {
 	var format string
 	var all bool
 	var tags []string
@@ -21,7 +21,7 @@ func newExportCmd() *cobra.Command {
 				selector = args[0]
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			out, err := app.ExportSecretsForRuntime(configPath, vaultPath, app.ExportRequest{Selector: selector, Tags: tags, All: all, Format: format})
+			out, err := appSvc.ExportSecretsForRuntime(configPath, vaultPath, app.ExportRequest{Selector: selector, Tags: tags, All: all, Format: format})
 			if err != nil {
 				return err
 			}
@@ -35,6 +35,8 @@ func newExportCmd() *cobra.Command {
 	_ = cmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 		return []cobra.Completion{"shell", "env", "json"}, cobra.ShellCompDirectiveNoFileComp
 	})
-	cmd.ValidArgsFunction = completeSecretPaths
+	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretPaths(appSvc, cmd, args, toComplete)
+	}
 	return cmd
 }

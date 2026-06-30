@@ -10,11 +10,11 @@ cmd/shelf/                    process entry point
 internal/cli/                 Cobra command tree, flags, argument validation, and text rendering
 internal/manager/             local manager surface, currently loopback HTTP/Web
 
-internal/app/                 runtime construction, workflow orchestration, import services, and version composition
+internal/app/                 application service, runtime construction, workflow orchestration, import services, and version composition
 internal/project/             project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/secret/              reusable secret workflows such as editor-based updates
 
-internal/vault/               Shelf vault domain model, path/env/tag rules, and in-memory store
+internal/vault/               Shelf vault domain model, repository abstraction, path/env/tag rules, and in-memory store
 internal/jsonvault/           current shelf-vault/v1 encrypted JSON implementation
 internal/age/                 age encryption/decryption and identity helpers
 internal/importer/gopass/     gopass CLI import client
@@ -26,12 +26,12 @@ The intended dependency direction is local surface to workflow to domain/persist
 
 ```text
 Surface:
-  cmd/shelf -> internal/cli
+  cmd/shelf -> internal/cli, internal/app, internal/jsonvault
   internal/cli -> app, manager
   internal/manager -> app
 
 Workflow:
-  app -> config, project, secret, vault, jsonvault, importer/gopass, util
+  app -> config, project, secret, vault, importer/gopass, util
   project -> vault, util
   secret -> vault
 
@@ -66,9 +66,10 @@ This avoids split-brain behavior where one command reads gopass while another co
 - `Data`, `Secret`, `Info`, `CurrentVersion`, `NewData`;
 - `SecretID`, `ParseSecretID`, `ValidatePath`, `ValidateSecretID`;
 - `ValidateSecret`, `ParseValue`, env/tag validation and env-name derivation;
-- in-memory `Store` mutation/list/query methods.
+- in-memory `Store` mutation/list/query methods;
+- application-facing vault repository contracts: `Options`, `Repository`, `Provider`, and status `Report`.
 
-The domain package does not know how data is persisted or encrypted. It also does not know about project manifests. Future SQL/NoSQL persistence should depend on `internal/vault`, not replace its model prematurely.
+The domain package defines the application-facing contract for an encrypted Shelf vault, including recipients and identity paths needed to open one. It does not know the file format, encryption algorithm, lock strategy, or project manifests. Future SQL/NoSQL persistence should implement the `vault.Repository` contract rather than replacing the model prematurely.
 
 ## JSON vault persistence
 
@@ -79,7 +80,7 @@ The domain package does not know how data is persisted or encrypted. It also doe
 - age sealing/opening through `internal/age`;
 - file format detection;
 - file lock and atomic write/backup behavior;
-- vault status/check diagnostics;
+- vault status/check diagnostics behind the `vault.Provider` contract;
 - legacy plaintext store load/save used by migration paths.
 
 This is the current production repository for local vault data. It is not the entire Shelf vault concept and should not be treated as the generic file-storage abstraction for future formats.
@@ -127,17 +128,17 @@ The CLI entrypoint is `shelf vault import gopass`.
 - `doctor`;
 - shell completion.
 
-Command handlers should stay thin: parse flags, call `internal/app`, then render output through Cobra writers. Project/run orchestration belongs in `internal/app`, not in CLI command handlers.
+Command handlers should stay thin: parse flags, call an injected `*app.App`, then render output through Cobra writers. Project/run orchestration belongs in `internal/app`, not in CLI command handlers. The command composition root wires `jsonvault.Provider{}` into `app.New`; CLI code does not import `internal/jsonvault`.
 
 ## Runtime construction
 
-`internal/app` centralizes runtime and local vault loading:
+`internal/app` centralizes runtime and local vault loading behind the `internal/vault` repository abstraction:
 
-- `LoadVault(configPath, vaultPath)` resolves config and constructs `*jsonvault.Vault`;
-- `LoadRuntime(configPath, vaultPath)` loads a decrypted local vault `*vault.Store` snapshot;
-- `ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
-- `UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and encrypted-saves through `jsonvault.Vault.Update`;
-- `ProjectRun(req)` resolves the current project manifest against local vault data and runs the child process;
+- `App.LoadVault(configPath, vaultPath)` resolves config and opens a `vault.Repository` through the injected provider;
+- `App.LoadRuntime(configPath, vaultPath)` loads a decrypted local vault `*vault.Store` snapshot;
+- `App.ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
+- `App.UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and saves through `vault.Repository.Update`;
+- `App.ProjectRun(req)` resolves the current project manifest against local vault data and runs the child process;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 ## Project workflows

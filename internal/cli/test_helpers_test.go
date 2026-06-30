@@ -18,7 +18,7 @@ var vaultTestConfigMu sync.Mutex
 func runShelf(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	args = withVaultTestConfig(t, args)
-	cmd := NewRootCmd()
+	cmd := NewRootCmd(testApp())
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
@@ -69,7 +69,7 @@ func chdirTest(t *testing.T, dir string) {
 func runShelfWithInput(t *testing.T, input string, args ...string) (string, error) {
 	t.Helper()
 	args = withVaultTestConfig(t, args)
-	cmd := NewRootCmd()
+	cmd := NewRootCmd(testApp())
 	var out bytes.Buffer
 	cmd.SetIn(strings.NewReader(input))
 	cmd.SetOut(&out)

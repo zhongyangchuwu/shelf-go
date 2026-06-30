@@ -5,7 +5,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func NewRootCmd() *cobra.Command {
+func NewRootCmd(appSvc *app.App) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "shelf",
 		Short:         "Shelf Go rewrite",
@@ -18,12 +18,12 @@ func NewRootCmd() *cobra.Command {
 	root.PersistentFlags().String("vault", "", "Path to encrypted vault")
 
 	root.AddCommand(newCompletionCmd())
-	root.AddCommand(newSetupCmd())
-	root.AddCommand(newVaultCmd())
-	root.AddCommand(newManagerCmd())
-	root.AddCommand(newSecretCmd())
-	root.AddCommand(newDoctorCmd())
-	root.AddCommand(newProjectCmd())
+	root.AddCommand(newSetupCmd(appSvc))
+	root.AddCommand(newVaultCmd(appSvc))
+	root.AddCommand(newManagerCmd(appSvc))
+	root.AddCommand(newSecretCmd(appSvc))
+	root.AddCommand(newDoctorCmd(appSvc))
+	root.AddCommand(newProjectCmd(appSvc))
 	return root
 }
 

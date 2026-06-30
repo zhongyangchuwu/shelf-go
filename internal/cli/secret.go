@@ -14,31 +14,33 @@ import (
 var secretAddIsTerminal = term.IsTerminal
 var secretAddReadPassword = term.ReadPassword
 
-func newSecretCmd() *cobra.Command {
+func newSecretCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{Use: "secret", Short: "Manage secrets"}
-	cmd.AddCommand(newSecretAddCmd())
-	cmd.AddCommand(newSecretSetCmd())
-	cmd.AddCommand(newSecretGetCmd())
-	cmd.AddCommand(newSecretListCmd())
-	cmd.AddCommand(newSecretInfoCmd())
-	cmd.AddCommand(newSecretEditCmd())
-	cmd.AddCommand(newExportCmd())
-	cmd.AddCommand(newSecretRmCmd())
+	cmd.AddCommand(newSecretAddCmd(appSvc))
+	cmd.AddCommand(newSecretSetCmd(appSvc))
+	cmd.AddCommand(newSecretGetCmd(appSvc))
+	cmd.AddCommand(newSecretListCmd(appSvc))
+	cmd.AddCommand(newSecretInfoCmd(appSvc))
+	cmd.AddCommand(newSecretEditCmd(appSvc))
+	cmd.AddCommand(newExportCmd(appSvc))
+	cmd.AddCommand(newSecretRmCmd(appSvc))
 	return cmd
 }
 
-func newSecretAddCmd() *cobra.Command {
+func newSecretAddCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "add [path-or-group]",
-		Short:             "Interactively create a secret",
-		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeSecretSetPathArg,
+		Use:   "add [path-or-group]",
+		Short: "Interactively create a secret",
+		Args:  cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSetPathArg(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !secretAddIsTerminal(int(os.Stdin.Fd())) {
 				return fmt.Errorf("secret add requires a terminal; use `shelf secret set` for scripts")
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			path, err := app.AddSecret(configPath, vaultPath, app.AddSecretRequest{
+			path, err := appSvc.AddSecret(configPath, vaultPath, app.AddSecretRequest{
 				Args: args,
 				In:   cmd.InOrStdin(),
 				Out:  cmd.OutOrStdout(),
@@ -56,18 +58,20 @@ func newSecretAddCmd() *cobra.Command {
 	return cmd
 }
 
-func newSecretSetCmd() *cobra.Command {
+func newSecretSetCmd(appSvc *app.App) *cobra.Command {
 	var envName, description string
 	var tags []string
 	var force bool
 	cmd := &cobra.Command{
-		Use:               "set <path> <value>",
-		Short:             "Create a secret",
-		Args:              cobra.ExactArgs(2),
-		ValidArgsFunction: completeSecretSetPathArg,
+		Use:   "set <path> <value>",
+		Short: "Create a secret",
+		Args:  cobra.ExactArgs(2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSetPathArg(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			return app.SetSecret(configPath, vaultPath, app.SetSecretRequest{Path: args[0], Value: args[1], Env: envName, Description: description, Tags: tags, Force: force})
+			return appSvc.SetSecret(configPath, vaultPath, app.SetSecretRequest{Path: args[0], Value: args[1], Env: envName, Description: description, Tags: tags, Force: force})
 		},
 	}
 	cmd.Flags().StringVar(&envName, "env", "", "Environment variable name")
@@ -80,15 +84,17 @@ func newSecretSetCmd() *cobra.Command {
 	return cmd
 }
 
-func newSecretGetCmd() *cobra.Command {
+func newSecretGetCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "get <path>",
-		Short:             "Print a secret value",
-		Args:              cobra.ExactArgs(1),
-		ValidArgsFunction: completeSecretPaths,
+		Use:   "get <path>",
+		Short: "Print a secret value",
+		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretPaths(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			value, err := app.GetSecretValue(configPath, vaultPath, args[0])
+			value, err := appSvc.GetSecretValue(configPath, vaultPath, args[0])
 			if err != nil {
 				return err
 			}
@@ -99,20 +105,22 @@ func newSecretGetCmd() *cobra.Command {
 	return cmd
 }
 
-func newSecretListCmd() *cobra.Command {
+func newSecretListCmd(appSvc *app.App) *cobra.Command {
 	var tags []string
 	cmd := &cobra.Command{
-		Use:               "list [prefix]",
-		Short:             "List secret paths",
-		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeSecretPathPrefixes,
+		Use:   "list [prefix]",
+		Short: "List secret paths",
+		Args:  cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretPathPrefixes(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefix := ""
 			if len(args) > 0 {
 				prefix = args[0]
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			paths, err := app.ListSecretPaths(configPath, vaultPath, app.ListSecretsRequest{Prefix: prefix, Tags: tags})
+			paths, err := appSvc.ListSecretPaths(configPath, vaultPath, app.ListSecretsRequest{Prefix: prefix, Tags: tags})
 			if err != nil {
 				return err
 			}
@@ -127,15 +135,17 @@ func newSecretListCmd() *cobra.Command {
 	return cmd
 }
 
-func newSecretInfoCmd() *cobra.Command {
+func newSecretInfoCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "info <path>",
-		Short:             "Print secret metadata as JSON",
-		Args:              cobra.ExactArgs(1),
-		ValidArgsFunction: completeSecretPaths,
+		Use:   "info <path>",
+		Short: "Print secret metadata as JSON",
+		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretPaths(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			info, err := app.SecretInfoJSON(configPath, vaultPath, args[0])
+			info, err := appSvc.SecretInfoJSON(configPath, vaultPath, args[0])
 			if err != nil {
 				return err
 			}
@@ -146,26 +156,28 @@ func newSecretInfoCmd() *cobra.Command {
 	return cmd
 }
 
-func newSecretEditCmd() *cobra.Command {
+func newSecretEditCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "edit <path>",
-		Short:             "Edit a secret object as JSON",
-		Args:              cobra.ExactArgs(1),
-		ValidArgsFunction: completeSecretPaths,
+		Use:   "edit <path>",
+		Short: "Edit a secret object as JSON",
+		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretPaths(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			return app.EditSecret(configPath, vaultPath, app.EditSecretRequest{Path: args[0], Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr})
+			return appSvc.EditSecret(configPath, vaultPath, app.EditSecretRequest{Path: args[0], Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr})
 		},
 	}
 	return cmd
 }
 
-func completeSecretPaths(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+func completeSecretPaths(appSvc *app.App, cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	configPath, vaultPath := runtimePaths(cmd)
-	paths, err := app.SecretPaths(configPath, vaultPath, toComplete)
+	paths, err := appSvc.SecretPaths(configPath, vaultPath, toComplete)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -178,21 +190,21 @@ func completeSecretPaths(cmd *cobra.Command, args []string, toComplete string) (
 	return comps, cobra.ShellCompDirectiveNoFileComp
 }
 
-func completeSecretPathPrefixes(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+func completeSecretPathPrefixes(appSvc *app.App, cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	configPath, vaultPath := runtimePaths(cmd)
-	paths, err := app.AllSecretPaths(configPath, vaultPath)
+	paths, err := appSvc.AllSecretPaths(configPath, vaultPath)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	return completeSecretSetPath(paths, toComplete)
 }
 
-func completeSecretSetPathArg(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+func completeSecretSetPathArg(appSvc *app.App, cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 	configPath, vaultPath := runtimePaths(cmd)
-	paths, err := app.AllSecretPaths(configPath, vaultPath)
+	paths, err := appSvc.AllSecretPaths(configPath, vaultPath)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -264,15 +276,17 @@ func completeSecretSetPath(paths []string, toComplete string) ([]cobra.Completio
 	return comps, directive
 }
 
-func newSecretRmCmd() *cobra.Command {
+func newSecretRmCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "rm <path>",
-		Short:             "Remove a secret",
-		Args:              cobra.ExactArgs(1),
-		ValidArgsFunction: completeSecretPaths,
+		Use:   "rm <path>",
+		Short: "Remove a secret",
+		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretPaths(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			return app.RemoveSecret(configPath, vaultPath, args[0])
+			return appSvc.RemoveSecret(configPath, vaultPath, args[0])
 		},
 	}
 	return cmd

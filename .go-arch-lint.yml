@@ -65,7 +65,6 @@ deps:
       - project
       - secret
       - vault
-      - jsonvault
       - importer_gopass
       - util
 

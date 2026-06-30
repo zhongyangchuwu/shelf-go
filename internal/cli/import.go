@@ -8,13 +8,13 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func newVaultImportCmd() *cobra.Command {
+func newVaultImportCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{Use: "import", Short: "Import external secrets into the local vault"}
-	cmd.AddCommand(newGopassImportCmd())
+	cmd.AddCommand(newGopassImportCmd(appSvc))
 	return cmd
 }
 
-func newGopassImportCmd() *cobra.Command {
+func newGopassImportCmd(appSvc *app.App) *cobra.Command {
 	var opts app.GopassImportOptions
 	cmd := &cobra.Command{
 		Use:   "gopass",
@@ -22,7 +22,7 @@ func newGopassImportCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			result, err := app.ImportGopassForRuntime(configPath, vaultPath, opts)
+			result, err := appSvc.ImportGopassForRuntime(configPath, vaultPath, opts)
 			writeImportResult(cmd, result)
 			return err
 		},

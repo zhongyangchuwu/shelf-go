@@ -47,17 +47,14 @@ func DetectFileFormat(path string) (FileFormat, error) {
 	return FileFormatUnsupported, nil
 }
 
-type VaultOptions struct {
-	Recipients    []string
-	IdentityPaths []string
-}
+type VaultOptions = vault.Options
 
 type Vault struct {
 	path string
-	opts VaultOptions
+	opts vault.Options
 }
 
-func NewVault(path string, opts VaultOptions) (*Vault, error) {
+func NewVault(path string, opts vault.Options) (*Vault, error) {
 	if path == "" {
 		return nil, errors.New("vault path is required")
 	}

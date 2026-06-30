@@ -17,9 +17,9 @@ type AddSecretRequest struct {
 	ReadPassword func() ([]byte, error)
 }
 
-func AddSecret(configPathFlag, vaultPathFlag string, req AddSecretRequest) (string, error) {
+func (a *App) AddSecret(configPathFlag, vaultPathFlag string, req AddSecretRequest) (string, error) {
 	var path string
-	err := UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
+	err := a.UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
 		addedPath, err := secretsvc.Add(st, secretsvc.AddRequest{Args: req.Args, In: req.In, Out: req.Out, ReadPassword: req.ReadPassword})
 		if err != nil {
 			return err
@@ -48,8 +48,8 @@ func SetSecretInStore(st *vault.Store, req SetSecretRequest) error {
 	return st.Set(req.Path, secret, req.Force)
 }
 
-func SetSecret(configPathFlag, vaultPathFlag string, req SetSecretRequest) error {
-	return UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
+func (a *App) SetSecret(configPathFlag, vaultPathFlag string, req SetSecretRequest) error {
+	return a.UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
 		return SetSecretInStore(st, req)
 	})
 }
@@ -62,8 +62,8 @@ func GetSecretValueFromStore(st *vault.Store, path string) (string, error) {
 	return util.ValueString(secret.Value)
 }
 
-func GetSecretValue(configPathFlag, vaultPathFlag, path string) (string, error) {
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+func (a *App) GetSecretValue(configPathFlag, vaultPathFlag, path string) (string, error) {
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -79,24 +79,24 @@ func ListSecretPathsInStore(st *vault.Store, req ListSecretsRequest) []string {
 	return st.ListByTags(req.Prefix, req.Tags)
 }
 
-func ListSecretPaths(configPathFlag, vaultPathFlag string, req ListSecretsRequest) ([]string, error) {
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+func (a *App) ListSecretPaths(configPathFlag, vaultPathFlag string, req ListSecretsRequest) ([]string, error) {
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}
 	return ListSecretPathsInStore(st, req), nil
 }
 
-func AllSecretPaths(configPathFlag, vaultPathFlag string) ([]string, error) {
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+func (a *App) AllSecretPaths(configPathFlag, vaultPathFlag string) ([]string, error) {
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}
 	return st.List(""), nil
 }
 
-func SecretPaths(configPathFlag, vaultPathFlag, prefix string) ([]string, error) {
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+func (a *App) SecretPaths(configPathFlag, vaultPathFlag, prefix string) ([]string, error) {
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,8 @@ func SecretInfoJSONFromStore(st *vault.Store, path string) (string, error) {
 	return string(bytes), nil
 }
 
-func SecretInfoJSON(configPathFlag, vaultPathFlag, path string) (string, error) {
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+func (a *App) SecretInfoJSON(configPathFlag, vaultPathFlag, path string) (string, error) {
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -129,8 +129,8 @@ func RemoveSecretFromStore(st *vault.Store, path string) error {
 	return nil
 }
 
-func RemoveSecret(configPathFlag, vaultPathFlag, path string) error {
-	return UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
+func (a *App) RemoveSecret(configPathFlag, vaultPathFlag, path string) error {
+	return a.UpdateVault(configPathFlag, vaultPathFlag, func(st *vault.Store) error {
 		return RemoveSecretFromStore(st, path)
 	})
 }
@@ -142,8 +142,8 @@ type EditSecretRequest struct {
 	Stderr io.Writer
 }
 
-func EditSecret(configPathFlag, vaultPathFlag string, req EditSecretRequest) error {
-	runtime, v, err := LoadVault(configPathFlag, vaultPathFlag)
+func (a *App) EditSecret(configPathFlag, vaultPathFlag string, req EditSecretRequest) error {
+	runtime, v, err := a.LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err
 	}

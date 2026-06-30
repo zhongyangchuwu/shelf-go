@@ -7,7 +7,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func newMigrateCmd() *cobra.Command {
+func newMigrateCmd(appSvc *app.App) *cobra.Command {
 	var sourcePath string
 	var targetPath string
 	var force bool
@@ -20,7 +20,7 @@ func newMigrateCmd() *cobra.Command {
 				return fmt.Errorf("--from is required")
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			targetVaultPath, err := app.MigratePlaintextStoreForRuntime(configPath, vaultPath, sourcePath, targetPath, force)
+			targetVaultPath, err := appSvc.MigratePlaintextStoreForRuntime(configPath, vaultPath, sourcePath, targetPath, force)
 			if err != nil {
 				return err
 			}

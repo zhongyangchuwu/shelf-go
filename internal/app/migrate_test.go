@@ -19,11 +19,11 @@ func TestMigratePlaintextStorePreservesSourceAndEncryptsTarget(t *testing.T) {
 	if err := os.WriteFile(sourcePath, plaintext, 0o600); err != nil {
 		t.Fatalf("write source: %v", err)
 	}
-	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
+	identity, err := testApp().EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	targetVault, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	targetVault, err := jsonvault.NewVault(vaultPath, vaultdomain.Options{Path: vaultPath, Recipients: []string{identity.Recipient}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
@@ -54,11 +54,11 @@ func TestMigratePlaintextStoreRefusesExistingTargetWithoutForce(t *testing.T) {
 	if err := os.WriteFile(sourcePath, plaintext, 0o600); err != nil {
 		t.Fatalf("write source: %v", err)
 	}
-	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
+	identity, err := testApp().EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	targetVault, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	targetVault, err := jsonvault.NewVault(vaultPath, vaultdomain.Options{Path: vaultPath, Recipients: []string{identity.Recipient}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}

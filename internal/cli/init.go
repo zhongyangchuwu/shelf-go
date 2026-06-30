@@ -11,15 +11,15 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
-func newSetupCmd() *cobra.Command {
-	return newInitFilesCmd("setup", "Set up Shelf config and encrypted vault")
+func newSetupCmd(appSvc *app.App) *cobra.Command {
+	return newInitFilesCmd(appSvc, "setup", "Set up Shelf config and encrypted vault")
 }
 
-func newVaultInitCmd() *cobra.Command {
-	return newInitFilesCmd("init", "Initialize config and encrypted vault")
+func newVaultInitCmd(appSvc *app.App) *cobra.Command {
+	return newInitFilesCmd(appSvc, "init", "Initialize config and encrypted vault")
 }
 
-func newInitFilesCmd(use, short string) *cobra.Command {
+func newInitFilesCmd(appSvc *app.App, use, short string) *cobra.Command {
 	var force bool
 	var vaultPath string
 	var recipients []string
@@ -42,7 +42,7 @@ func newInitFilesCmd(use, short string) *cobra.Command {
 				return fmt.Errorf("config already exists; rerun with --force to update vault config")
 			}
 			cfg := initConfig{VaultPath: vaultPath, Recipients: recipients, IdentityPaths: identityPaths}
-			if err := cfg.fill(cmd, configPath); err != nil {
+			if err := cfg.fill(cmd, appSvc, configPath); err != nil {
 				return err
 			}
 			configCreated, err := app.EnsureConfigFile(configPath, app.InitConfig{VaultPath: cfg.VaultPath, Recipients: cfg.Recipients, IdentityPaths: cfg.IdentityPaths}, force)
@@ -53,7 +53,7 @@ func newInitFilesCmd(use, short string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vaultCreated, err := app.EnsureVaultForRuntime(runtime)
+			vaultCreated, err := appSvc.EnsureVaultForRuntime(runtime)
 			if err != nil {
 				return err
 			}
@@ -86,7 +86,7 @@ type initConfig struct {
 	IdentityPaths []string
 }
 
-func (c *initConfig) fill(cmd *cobra.Command, configPath string) error {
+func (c *initConfig) fill(cmd *cobra.Command, appSvc *app.App, configPath string) error {
 	if runtime, err := app.ResolveRuntime(configPath, ""); err == nil {
 		if c.VaultPath == "" {
 			c.VaultPath = runtime.VaultPath
@@ -110,11 +110,11 @@ func (c *initConfig) fill(cmd *cobra.Command, configPath string) error {
 		c.Recipients = splitCSV(line)
 	}
 	if len(c.Recipients) == 0 {
-		identity, err := app.EnsureInitIdentity(c.IdentityPaths[0])
+		identity, err := appSvc.EnsureInitIdentity(c.IdentityPaths[0])
 		if err != nil {
 			return err
 		}
-		c.Recipients = []string{identity.Recipient()}
+		c.Recipients = []string{identity.Recipient}
 	}
 	if c.VaultPath == "" {
 		return fmt.Errorf("vault path is required")

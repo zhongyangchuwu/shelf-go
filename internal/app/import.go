@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/importer/gopass"
-	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
 	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
@@ -35,8 +34,8 @@ type gopassImportClient interface {
 	ShowPassword(path string) (string, error)
 }
 
-func ImportGopassForRuntime(configPathFlag, vaultPathFlag string, opts GopassImportOptions) (ImportResult, error) {
-	_, v, err := LoadVault(configPathFlag, vaultPathFlag)
+func (a *App) ImportGopassForRuntime(configPathFlag, vaultPathFlag string, opts GopassImportOptions) (ImportResult, error) {
+	_, v, err := a.LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return ImportResult{}, err
 	}
@@ -44,7 +43,7 @@ func ImportGopassForRuntime(configPathFlag, vaultPathFlag string, opts GopassImp
 	return ImportGopassToVault(v, client, opts)
 }
 
-func ImportGopassToVault(v *jsonvault.Vault, client gopassImportClient, opts GopassImportOptions) (ImportResult, error) {
+func ImportGopassToVault(v vault.Repository, client gopassImportClient, opts GopassImportOptions) (ImportResult, error) {
 	if v == nil {
 		return ImportResult{}, fmt.Errorf("vault is required")
 	}

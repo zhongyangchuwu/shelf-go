@@ -5,16 +5,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func TestSecretServiceWritesListsAndReveals(t *testing.T) {
 	dir := t.TempDir()
-	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
+	identity, err := testApp().EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
-	service, err := newTestSecretService(filepath.Join(dir, "vault.age"), []string{identity.Recipient()}, []string{filepath.Join(dir, "identity.txt")})
+	service, err := newTestSecretService(filepath.Join(dir, "vault.age"), []string{identity.Recipient}, []string{filepath.Join(dir, "identity.txt")})
 	if err != nil {
 		t.Fatalf("new manager service: %v", err)
 	}
@@ -42,9 +42,9 @@ func newTestSecretService(vaultPath string, recipients, identityPaths []string) 
 	if err := os.MkdirAll(filepath.Dir(vaultPath), 0o700); err != nil {
 		return nil, err
 	}
-	v, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
+	repo, err := testApp().vaults.Open(vault.Options{Path: vaultPath, Recipients: recipients, IdentityPaths: identityPaths})
 	if err != nil {
 		return nil, err
 	}
-	return NewSecretService(v)
+	return NewSecretService(repo)
 }

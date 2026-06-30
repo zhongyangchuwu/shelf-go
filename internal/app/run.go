@@ -30,7 +30,7 @@ func (e ChildExitError) Error() string {
 	return fmt.Sprintf("child process exited with status %d", e.Code)
 }
 
-func ProjectRun(req ProjectRunRequest) error {
+func (a *App) ProjectRun(req ProjectRunRequest) error {
 	root, err := project.Root()
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func ProjectRun(req ProjectRunRequest) error {
 	if err != nil {
 		return err
 	}
-	_, st, err := LoadRuntime(req.ConfigPath, req.VaultPath)
+	_, st, err := a.LoadRuntime(req.ConfigPath, req.VaultPath)
 	if err != nil {
 		return err
 	}

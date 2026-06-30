@@ -36,7 +36,7 @@ func ExitCode(err error) int {
 	return 1
 }
 
-func newRunCmd() *cobra.Command {
+func newRunCmd(appSvc *app.App) *cobra.Command {
 	var dryRun bool
 	cmd := &cobra.Command{
 		Use:   "run -- command args...",
@@ -47,7 +47,7 @@ func newRunCmd() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			err := app.ProjectRun(app.ProjectRunRequest{
+			err := appSvc.ProjectRun(app.ProjectRunRequest{
 				ConfigPath: configPath,
 				VaultPath:  vaultPath,
 				Command:    args,

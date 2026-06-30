@@ -10,7 +10,7 @@ import (
 )
 
 func TestRootIncludesManagerCommand(t *testing.T) {
-	cmd := NewRootCmd()
+	cmd := NewRootCmd(testApp())
 	var foundManager bool
 	var vaultCmd *cobra.Command
 	for _, child := range cmd.Commands() {
@@ -50,7 +50,7 @@ func TestRootExcludesPreReleaseTopLevelCommands(t *testing.T) {
 		"export":  {},
 		"run":     {},
 	}
-	for _, child := range NewRootCmd().Commands() {
+	for _, child := range NewRootCmd(testApp()).Commands() {
 		if _, exists := forbidden[child.Name()]; exists {
 			t.Fatalf("root command should not include %s", child.Name())
 		}

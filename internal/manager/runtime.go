@@ -20,8 +20,8 @@ type Runtime struct {
 	httpServer *http.Server
 }
 
-func Open(configPathFlag, vaultPathFlag, addr string) (*Runtime, error) {
-	_, vaultHandle, err := app.LoadVault(configPathFlag, vaultPathFlag)
+func Open(appSvc *app.App, configPathFlag, vaultPathFlag, addr string) (*Runtime, error) {
+	_, vaultHandle, err := appSvc.LoadVault(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}

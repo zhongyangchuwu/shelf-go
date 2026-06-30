@@ -1,93 +1,45 @@
 package app
 
 import (
-	"strconv"
-
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
-	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-type Report = jsonvault.Report
-type Level = jsonvault.Level
+type Report = vault.Report
+type Level = vault.Level
 
 const (
-	LevelOK   = jsonvault.LevelOK
-	LevelWarn = jsonvault.LevelWarn
-	LevelFail = jsonvault.LevelFail
+	LevelOK   = vault.LevelOK
+	LevelWarn = vault.LevelWarn
+	LevelFail = vault.LevelFail
 )
 
-func ResolveStatus(configPathFlag, vaultPathFlag string) (Report, error) {
+func (a *App) ResolveStatus(configPathFlag, vaultPathFlag string) (Report, error) {
 	runtime, err := ResolveRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}
-	return Status(runtime), nil
+	return a.Status(runtime), nil
 }
 
-func ResolveDoctor(configPathFlag, vaultPathFlag string) (Runtime, Report, error) {
+func (a *App) ResolveDoctor(configPathFlag, vaultPathFlag string) (Runtime, Report, error) {
 	runtime, err := ResolveRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return Runtime{}, nil, err
 	}
-	return runtime, Doctor(runtime), nil
+	return runtime, a.Doctor(runtime), nil
 }
 
-func Status(runtime config.Runtime) jsonvault.Report {
-	var report jsonvault.Report
+func (a *App) Status(runtime config.Runtime) vault.Report {
+	var report vault.Report
 	report.OK("config", runtime.ConfigPath)
 	report.OK("vault path", runtime.VaultPath)
-	checkVaultRecipients(&report, runtime.Recipients)
-	checkVaultLoads(&report, runtime.VaultPath, runtime.Recipients, runtime.IdentityPaths)
+	a.vaults.CheckStatus(&report, a.vaultOptions(runtime))
 	return report
 }
 
-func Doctor(runtime config.Runtime) jsonvault.Report {
-	var report jsonvault.Report
-	jsonvault.CheckFile(&report, runtime.VaultPath)
-	checkVaultLoads(&report, runtime.VaultPath, runtime.Recipients, runtime.IdentityPaths)
-	jsonvault.CheckTracking(&report, runtime.VaultPath)
+func (a *App) Doctor(runtime config.Runtime) vault.Report {
+	var report vault.Report
+	a.vaults.CheckDoctor(&report, a.vaultOptions(runtime))
 	return report
-}
-
-func checkVaultRecipients(report *jsonvault.Report, recipients []string) {
-	if len(recipients) == 0 {
-		report.Fail("vault recipients", jsonvault.MissingRecipientsDetail())
-		return
-	}
-	report.OK("vault recipients", strconv.Itoa(len(recipients))+" configured")
-}
-
-func checkVaultLoads(report *jsonvault.Report, vaultPath string, recipients, identityPaths []string) {
-	format, err := jsonvault.DetectFileFormat(vaultPath)
-	if err != nil {
-		report.Fail("vault format", err.Error())
-		return
-	}
-	switch format {
-	case jsonvault.FileFormatMissing:
-		report.Warn("vault format", jsonvault.FormatDetail(format, vaultPath))
-	case jsonvault.FileFormatEmpty:
-		report.Warn("vault format", jsonvault.FormatDetail(format, vaultPath))
-	case jsonvault.FileFormatEncryptedVault:
-		report.OK("vault format", "encrypted shelf-vault/v1")
-	case jsonvault.FileFormatPlaintextStore:
-		report.Fail("vault format", jsonvault.FormatDetail(format, vaultPath))
-		return
-	case jsonvault.FileFormatUnsupportedVault:
-		report.Fail("vault format", jsonvault.FormatDetail(format, vaultPath))
-		return
-	default:
-		report.Fail("vault format", jsonvault.FormatDetail(format, vaultPath))
-		return
-	}
-	vaultHandle, err := jsonvault.NewVault(vaultPath, jsonvault.VaultOptions{Recipients: recipients, IdentityPaths: identityPaths})
-	if err != nil {
-		report.Fail("vault loads", jsonvault.LoadErrorDetail(err))
-		return
-	}
-	if _, err := vaultHandle.Load(); err != nil {
-		report.Fail("vault loads", jsonvault.LoadErrorDetail(err))
-		return
-	}
-	report.OK("vault loads", vaultPath)
 }

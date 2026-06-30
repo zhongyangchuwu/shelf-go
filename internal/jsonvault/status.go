@@ -6,46 +6,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
-type Level string
-
-const (
-	LevelOK   Level = "ok"
-	LevelWarn Level = "warn"
-	LevelFail Level = "fail"
-)
-
-type Check struct {
-	Level  Level
-	Name   string
-	Detail string
-}
-
-type Report []Check
-
-func (r *Report) OK(name, detail string) {
-	*r = append(*r, Check{Level: LevelOK, Name: name, Detail: detail})
-}
-
-func (r *Report) Warn(name, detail string) {
-	*r = append(*r, Check{Level: LevelWarn, Name: name, Detail: detail})
-}
-
-func (r *Report) Fail(name, detail string) {
-	*r = append(*r, Check{Level: LevelFail, Name: name, Detail: detail})
-}
-
-func HasFailures(report Report) bool {
-	for _, check := range report {
-		if check.Level == LevelFail {
-			return true
-		}
-	}
-	return false
-}
-
-func CheckFile(report *Report, vaultPath string) {
+func CheckFile(report *vault.Report, vaultPath string) {
 	info, err := os.Stat(vaultPath)
 	if os.IsNotExist(err) {
 		report.Warn("vault file exists", vaultPath+" will be created on first write")
@@ -118,7 +83,7 @@ func LoadErrorDetail(err error) string {
 	}
 }
 
-func CheckTracking(report *Report, vaultPath string) {
+func CheckTracking(report *vault.Report, vaultPath string) {
 	format, formatErr := DetectFileFormat(vaultPath)
 	abs, err := filepath.Abs(vaultPath)
 	if err != nil {

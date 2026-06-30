@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zhongyangchuwu/shelf-go/internal/jsonvault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
 )
 
 func TestEnsureConfigFileWritesRelativeDescendantPaths(t *testing.T) {
@@ -36,19 +36,19 @@ func TestEnsureConfigFileWritesRelativeDescendantPaths(t *testing.T) {
 }
 
 func TestEnsureVaultFileCreatesEncryptedVaultOnce(t *testing.T) {
-	identity, err := EnsureInitIdentity(filepath.Join(t.TempDir(), "identity.txt"))
+	identity, err := testApp().EnsureInitIdentity(filepath.Join(t.TempDir(), "identity.txt"))
 	if err != nil {
 		t.Fatalf("ensure identity: %v", err)
 	}
 	vaultPath := filepath.Join(t.TempDir(), "vault.age")
-	created, err := EnsureVaultFile(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{}})
+	created, err := testApp().EnsureVaultFile(vault.Options{Path: vaultPath, Recipients: []string{identity.Recipient}, IdentityPaths: []string{}})
 	if err != nil {
 		t.Fatalf("ensure vault: %v", err)
 	}
 	if !created {
 		t.Fatalf("expected vault to be created")
 	}
-	created, err = EnsureVaultFile(vaultPath, jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{}})
+	created, err = testApp().EnsureVaultFile(vault.Options{Path: vaultPath, Recipients: []string{identity.Recipient}, IdentityPaths: []string{}})
 	if err != nil {
 		t.Fatalf("ensure vault again: %v", err)
 	}

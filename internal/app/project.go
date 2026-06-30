@@ -49,7 +49,7 @@ func ProjectInit(force bool) (string, error) {
 	return fmt.Sprintf("manifest: %s (%s)\n", manifestPath, label[existed]), nil
 }
 
-func ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (string, error) {
+func (a *App) ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (string, error) {
 	root, manifest, err := loadProjectManifest()
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
@@ -62,7 +62,7 @@ func ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (s
 	fmt.Fprintf(&out, "root:    %s\n", root)
 	fmt.Fprintf(&out, "config:  %s\n\n", project.FileName)
 
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return out.String(), err
 	}
@@ -80,7 +80,7 @@ func ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (s
 	return out.String(), nil
 }
 
-func ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (string, error) {
+func (a *App) ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (string, error) {
 	root, err := project.Root()
 	if err != nil {
 		return "", err
@@ -91,7 +91,7 @@ func ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (st
 	} else if err != nil {
 		return "", err
 	}
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +155,7 @@ func ProjectList() (string, error) {
 	return out.String(), nil
 }
 
-func ProjectExport(configPathFlag, vaultPathFlag, format string) (ProjectExportResult, error) {
+func (a *App) ProjectExport(configPathFlag, vaultPathFlag, format string) (ProjectExportResult, error) {
 	_, manifest, err := loadProjectManifest()
 	if errors.Is(err, os.ErrNotExist) {
 		return ProjectExportResult{}, fmt.Errorf("%s not found", project.FileName)
@@ -163,7 +163,7 @@ func ProjectExport(configPathFlag, vaultPathFlag, format string) (ProjectExportR
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
-	_, st, err := LoadRuntime(configPathFlag, vaultPathFlag)
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return ProjectExportResult{}, err
 	}

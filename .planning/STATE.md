@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Graph Source Cleanup
+- Phase: Vault Abstraction Boundary
 - Status: implementation-in-progress
-- Active Artifact: .planning/phases/032-graph-source-cleanup/PLAN.md
-- Next Action: Commit graph cleanup after targeted tests, full verification, arch lint, and LSP diagnostics passed.
+- Active Artifact: .planning/phases/033-vault-abstraction-boundary/PLAN.md
+- Next Action: Commit vault abstraction boundary after targeted tests, full verification, arch lint, and LSP diagnostics passed.
 
 ## Blockers
 - None
@@ -30,6 +30,8 @@
 - Phase 31 naming cleanup selected `internal/jsonvault` for the current encrypted JSON vault implementation and `internal/age` for algorithm-level age helpers.
 - Phase 32 graph cleanup targets removing `internal/source`, eliminating `cli -> project`, and keeping vault independent of project concepts.
 - Phase 32 verification passed: `go test ./internal/vault ./internal/project ./internal/app ./internal/cli`, `./scripts/test.sh`, arch lint OK, and LSP diagnostics clean.
+- Phase 33 abstraction boundary removed production `app -> jsonvault` and `cli -> jsonvault` dependencies by adding vault repository interfaces and injecting `jsonvault.Provider` from `cmd/shelf`.
+- Phase 33 verification passed: `go test ./cmd/shelf ./internal/vault ./internal/jsonvault ./internal/app ./internal/cli ./internal/manager ./internal/project ./internal/secret`, `./scripts/test.sh`, arch lint OK, and LSP diagnostics clean.
 
 ## Updated
 - 2026-06-30

@@ -114,11 +114,11 @@ func TestImportGopassToVaultAbortsBeforeWriteOnReadFailure(t *testing.T) {
 
 func newTestVaultFile(t *testing.T, dir string) *jsonvault.Vault {
 	t.Helper()
-	identity, err := EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
+	identity, err := testApp().EnsureInitIdentity(filepath.Join(dir, "identity.txt"))
 	if err != nil {
 		t.Fatalf("identity: %v", err)
 	}
-	v, err := jsonvault.NewVault(filepath.Join(dir, "vault.age"), jsonvault.VaultOptions{Recipients: []string{identity.Recipient()}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
+	v, err := jsonvault.NewVault(filepath.Join(dir, "vault.age"), vault.Options{Path: filepath.Join(dir, "vault.age"), Recipients: []string{identity.Recipient}, IdentityPaths: []string{filepath.Join(dir, "identity.txt")}})
 	if err != nil {
 		t.Fatalf("new vault: %v", err)
 	}
