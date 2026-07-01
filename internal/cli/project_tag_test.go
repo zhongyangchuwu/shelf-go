@@ -74,20 +74,20 @@ func TestProjectExportExpandsTagEntryWithAndSemantics(t *testing.T) {
 	}
 }
 
-func TestProjectExplainShowsTagExpansion(t *testing.T) {
+func TestProjectStatusShowsTagExpansion(t *testing.T) {
 	_, data := setupProjectTest(t)
 	setProjectTagSecrets(t, data)
 	if _, err := runShelf(t, "--vault", data, "project", "add", "--tag", "ai", "--tag", "prod"); err != nil {
 		t.Fatalf("project add tag: %v", err)
 	}
 
-	out, err := runShelf(t, "--vault", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "status")
 	if err != nil {
-		t.Fatalf("project explain tag: %v\n%s", err, out)
+		t.Fatalf("project status tag: %v\n%s", err, out)
 	}
 	for _, want := range []string{"ok   app:token -> OPENAI_API_KEY", "ok   ops:deploy -> DEPLOY_KEY"} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("tag explain missing %q:\n%s", want, out)
+			t.Fatalf("project status missing %q:\n%s", want, out)
 		}
 	}
 }

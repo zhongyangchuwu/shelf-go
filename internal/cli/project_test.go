@@ -70,7 +70,7 @@ func TestProjectInitRequiresForceToOverwrite(t *testing.T) {
 		t.Fatalf("unexpected init --force output: %q", out)
 	}
 }
-func TestProjectExplainReportsStatuses(t *testing.T) {
+func TestProjectStatusReportsResolutionDiagnostics(t *testing.T) {
 	dir := t.TempDir()
 	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
@@ -109,9 +109,9 @@ func TestProjectExplainReportsStatuses(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "status")
 	if err == nil {
-		t.Fatalf("expected project explain failure")
+		t.Fatalf("expected project status failure with missing required + conflict")
 	}
 	for _, want := range []string{
 		"project:",
@@ -123,36 +123,39 @@ func TestProjectExplainReportsStatuses(t *testing.T) {
 		"fail providers/openrouter/accounts/personal:api_key env name OPENAI_API_KEY conflicts with providers/openai/accounts/personal:api_key",
 	} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("project explain output missing %q:\n%s", want, out)
+			t.Fatalf("project status output missing %q:\n%s", want, out)
 		}
 	}
 	if strings.Contains(out, "sk-openai") || strings.Contains(out, "sk-openrouter") {
-		t.Fatalf("project explain should not print secret values:\n%s", out)
+		t.Fatalf("project status should not print secret values:\n%s", out)
 	}
 }
-func TestProjectInitAndExplainFailOutsideGit(t *testing.T) {
+func TestProjectInitFailsOutsideGit(t *testing.T) {
 	chdirTest(t, t.TempDir())
 	if _, err := runShelf(t, "project", "init"); err == nil {
 		t.Fatalf("expected project init to fail outside git")
 	} else if !strings.Contains(err.Error(), "not inside a Git worktree") {
 		t.Fatalf("unexpected init error: %v", err)
 	}
-	if _, err := runShelf(t, "project", "explain"); err == nil {
-		t.Fatalf("expected project explain to fail outside git")
+}
+func TestProjectStatusFailsOutsideGit(t *testing.T) {
+	chdirTest(t, t.TempDir())
+	if _, err := runShelf(t, "project", "status"); err == nil {
+		t.Fatalf("expected project status to fail outside git")
 	} else if !strings.Contains(err.Error(), "not inside a Git worktree") {
-		t.Fatalf("unexpected explain error: %v", err)
+		t.Fatalf("unexpected status error: %v", err)
 	}
 }
-func TestProjectExplainPromptsInitWhenManifestMissing(t *testing.T) {
+func TestProjectStatusPromptsInitWhenManifestMissing(t *testing.T) {
 	dir := t.TempDir()
 	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
-	if _, err := runShelf(t, "project", "explain"); err == nil {
-		t.Fatalf("expected project explain to fail without manifest")
+	if _, err := runShelf(t, "project", "status"); err == nil {
+		t.Fatalf("expected project status to fail without manifest")
 	} else if !strings.Contains(err.Error(), "run `shelf project init`") {
-		t.Fatalf("unexpected explain error: %v", err)
+		t.Fatalf("unexpected status error: %v", err)
 	}
 }
 
@@ -332,7 +335,7 @@ func TestProjectExportFailsOnRequiredMissing(t *testing.T) {
 		t.Fatalf("expected export to fail with missing required")
 	}
 }
-func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
+func TestProjectStatusWarnsAboutParentEnvOverride(t *testing.T) {
 	dir := t.TempDir()
 	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
@@ -349,17 +352,129 @@ func TestProjectExplainWarnsAboutParentEnvOverride(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "project", "explain")
+	out, err := runShelf(t, "--vault", data, "project", "status")
 	if err != nil {
-		t.Fatalf("project explain: %v\n%s", err, out)
+		t.Fatalf("project status: %v\n%s", err, out)
 	}
 	if !strings.Contains(out, "warn APP_TOKEN overrides existing environment variable") {
 		t.Fatalf("missing override warning:\n%s", out)
 	}
 	for _, leaked := range []string{secretValue, parentValue} {
 		if strings.Contains(out, leaked) {
-			t.Fatalf("explain leaked env value %q:\n%s", leaked, out)
+			t.Fatalf("project status leaked env value %q:\n%s", leaked, out)
 		}
+	}
+}
+
+func TestProjectStatusScansEnvFilesWithoutLeakingValues(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret-value-789", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	// Write env files with known keys but keep values out of assertions.
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("DB_HOST=localhost\nDB_PORT=5432\n"), 0o600); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".env.example"), []byte("DB_HOST=\nDB_PORT=\n"), 0o600); err != nil {
+		t.Fatalf("write .env.example: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "status")
+	if err != nil {
+		t.Fatalf("project status: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, ".env") {
+		t.Fatalf("project status output should mention .env:\n%s", out)
+	}
+	if !strings.Contains(out, ".env.example") {
+		t.Fatalf("project status output should mention .env.example:\n%s", out)
+	}
+	// Must not print any env file keys or values.
+	for _, leaked := range []string{"DB_HOST", "localhost", "DB_PORT", "5432"} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("project status leaked env file content %q:\n%s", leaked, out)
+		}
+	}
+	// Must not print vault secret values either.
+	if strings.Contains(out, "secret-value-789") {
+		t.Fatalf("project status leaked vault secret value:\n%s", out)
+	}
+}
+
+func TestProjectStatusEnvFileFindingsDoNotFailWhenBindingsHealthy(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "secrets.json")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "healthy-value", "--env", "APP_TOKEN"); err != nil {
+		t.Fatalf("set secret: %v", err)
+	}
+	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	// Env file with empty and unbound entries — findings are informational.
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("EMPTY_VAL=\nUNSET_VAR\n"), 0o600); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+	if _, err := runShelf(t, "--vault", data, "project", "status"); err != nil {
+		t.Fatalf("expected project status to succeed despite env-file findings:\n%v", err)
+	}
+}
+
+func TestProjectInitOutputIncludesEnvSummary(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("SOME_KEY=some_value\n"), 0o600); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+	out, err := runShelf(t, "project", "init")
+	if err != nil {
+		t.Fatalf("project init: %v", err)
+	}
+	if !strings.Contains(out, "manifest:") {
+		t.Fatalf("project init missing manifest line:\n%s", out)
+	}
+	// Init output should include env-file summary section.
+	if !strings.Contains(out, ".env") {
+		t.Fatalf("project init output should mention .env:\n%s", out)
+	}
+	// Must not print env file values.
+	if strings.Contains(out, "some_value") {
+		t.Fatalf("project init leaked env file value:\n%s", out)
+	}
+}
+
+func TestProjectExplainIsRemoved(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	if _, err := runShelf(t, "project", "init"); err != nil {
+		t.Fatalf("project init: %v", err)
+	}
+	_, err := runShelf(t, "project", "explain")
+	if err == nil {
+		t.Fatalf("expected project explain to fail; it has been removed")
+	}
+	if !strings.Contains(err.Error(), "unknown command") &&
+		!strings.Contains(err.Error(), "not found") &&
+		!strings.Contains(err.Error(), "explain") {
+		t.Fatalf("unexpected error for removed command: %v", err)
 	}
 }
 

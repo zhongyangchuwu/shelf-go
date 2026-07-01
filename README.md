@@ -94,7 +94,7 @@ shelf project init
 shelf project add app:token
 shelf project add --tag ai --tag prod --optional
 shelf project list
-shelf project explain
+shelf project status
 ```
 
 Shelf writes `.shelf.json` at the Git root. It stores exact paths, prefixes, tag selectors, env overrides, and required/optional flags, but never secret values. Tag selectors expand at export/run time and use the same AND semantics as direct secret commands.

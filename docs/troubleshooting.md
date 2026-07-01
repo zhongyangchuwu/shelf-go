@@ -77,12 +77,12 @@ Project commands need a Git worktree and a manifest at the Git root.
 ```bash
 shelf project init
 shelf project add app:token
-shelf project explain
+shelf project status
 ```
 
 ## Required secret or tag binding is missing
 
-`project explain`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For tag entries, this means no secret has all listed tags.
+`project status`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For tag entries, this means no secret has all listed tags.
 
 Add the secret, adjust tags, or mark the entry optional:
 

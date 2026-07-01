@@ -52,7 +52,7 @@ Runtime commands read local vault data only:
 
 - `secret` CRUD;
 - manager list/reveal/edit/delete;
-- `project explain/export`;
+- `project status/export`;
 - `shelf run`;
 - `secret export`.
 

@@ -253,12 +253,12 @@ Lists manifest entries without resolving values.
 shelf project list
 ```
 
-### `shelf project explain`
+### `shelf project status`
 
-Shows project identity, manifest path, resolved env names, missing entries, and conflicts without printing values.
+Shows project identity, manifest path, resolved env names, missing entries, conflicts, and local env-file summaries without printing values.
 
 ```bash
-shelf project explain
+shelf project status
 ```
 
 ### `shelf project export`
@@ -330,6 +330,6 @@ Env name resolution order:
 2. secret object's `env`;
 3. derived from the full secret path.
 
-Tag entries expand to every secret that has all listed tags. If a required tag entry matches no secrets, project explain/export/run reports a missing required entry.
+Tag entries expand to every secret that has all listed tags. If a required tag entry matches no secrets, project status/export/run reports a missing required entry.
 
 Two entries resolving to the same env name are a conflict.

@@ -46,10 +46,13 @@ func ProjectInit(force bool) (string, error) {
 		return "", err
 	}
 	label := map[bool]string{true: "overwritten", false: "created"}
-	return fmt.Sprintf("manifest: %s (%s)\n", manifestPath, label[existed]), nil
+	var out strings.Builder
+	fmt.Fprintf(&out, "manifest: %s (%s)\n", manifestPath, label[existed])
+	renderProjectEnvFileStatuses(&out, root, nil)
+	return out.String(), nil
 }
 
-func (a *App) ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []string) (string, error) {
+func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []string) (string, error) {
 	root, manifest, err := loadProjectManifest()
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
@@ -74,6 +77,7 @@ func (a *App) ProjectExplain(configPathFlag, vaultPathFlag string, parentEnv []s
 	for _, warning := range project.EnvOverrideWarnings(resolvedEntries, parentEnv) {
 		fmt.Fprintln(&out, warning)
 	}
+	renderProjectEnvFileStatuses(&out, root, resolvedEnvNameSet(resolvedEntries))
 	if project.HasFailures(diagnostics) {
 		return out.String(), fmt.Errorf("project manifest check failed")
 	}
@@ -224,4 +228,19 @@ func writeProjectDiagnostics(out *strings.Builder, diagnostics []project.Diagnos
 	for _, diagnostic := range diagnostics {
 		fmt.Fprintf(out, "%s %s %s\n", diagnostic.Status, diagnostic.Path, diagnostic.Message)
 	}
+}
+
+func renderProjectEnvFileStatuses(out *strings.Builder, root string, boundEnvNames map[string]struct{}) {
+	if out.Len() > 0 {
+		fmt.Fprintln(out)
+	}
+	project.RenderEnvFileStatuses(out, project.EnvFileStatuses(root, boundEnvNames))
+}
+
+func resolvedEnvNameSet(entries []project.Binding) map[string]struct{} {
+	names := make(map[string]struct{}, len(entries))
+	for _, entry := range entries {
+		names[entry.EnvName] = struct{}{}
+	}
+	return names
 }

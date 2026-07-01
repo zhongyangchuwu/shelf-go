@@ -9,10 +9,10 @@ import (
 )
 
 func newProjectCmd(appSvc *app.App) *cobra.Command {
-	cmd := &cobra.Command{Use: "project", Short: "Project utilities"}
+	cmd := &cobra.Command{Use: "project", Short: "Project utilities", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error { return cmd.Help() }}
 	cmd.AddCommand(newProjectIDCmd())
 	cmd.AddCommand(newProjectInitCmd())
-	cmd.AddCommand(newProjectExplainCmd(appSvc))
+	cmd.AddCommand(newProjectStatusCmd(appSvc))
 	cmd.AddCommand(newProjectAddCmd(appSvc))
 	cmd.AddCommand(newProjectRmCmd())
 	cmd.AddCommand(newProjectListCmd())
@@ -56,15 +56,15 @@ func newProjectInitCmd() *cobra.Command {
 	return cmd
 }
 
-func newProjectExplainCmd(appSvc *app.App) *cobra.Command {
+func newProjectStatusCmd(appSvc *app.App) *cobra.Command {
 	return &cobra.Command{
-		Use:   "explain",
-		Short: "Explain project manifest resolution",
+		Use:   "status",
+		Short: "Show project manifest and env-file status",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
-			out, err := appSvc.ProjectExplain(configPath, vaultPath, os.Environ())
+			out, err := appSvc.ProjectStatus(configPath, vaultPath, os.Environ())
 			if out != "" {
 				fmt.Fprint(cmd.OutOrStdout(), out)
 			}

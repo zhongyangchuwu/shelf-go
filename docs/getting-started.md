@@ -78,7 +78,7 @@ Inside a Git project:
 ```bash
 shelf project init
 shelf project add app:token
-shelf project explain
+shelf project status
 ```
 
 Shelf writes `<git-root>/.shelf.json`. The manifest stores paths, prefixes, tag selectors, env overrides, and required/optional flags; it does not store values.
@@ -88,10 +88,10 @@ Add a tag-selected project binding when a project needs every secret matching a 
 ```bash
 shelf project add --tag ai --tag prod --optional
 shelf project list
-shelf project explain
+shelf project status
 ```
 
-Tag project bindings expand during `project explain`, `project export`, and `project run`. Prefix and tag entries cannot carry `--env` because they may expand to multiple secrets.
+Tag project bindings expand during `project status`, `project export`, and `project run`. Prefix and tag entries cannot carry `--env` because they may expand to multiple secrets.
 
 Export sourceable shell lines when you want to update your current shell manually:
 
