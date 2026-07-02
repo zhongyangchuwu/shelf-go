@@ -226,6 +226,14 @@ Creates `<git-root>/.shelf.json`.
 shelf project init [--force]
 ```
 
+### `shelf project configure`
+
+Interactively configures project secret bindings. The current flow lets you choose an env-file variable, choose an existing vault secret, review the value-free binding plan, and confirm before writing `.shelf.json`. It does not import env-file values or print secret values.
+
+```bash
+shelf project configure
+```
+
 ### `shelf project add`
 
 Adds an exact path, prefix, or tag selector to the project manifest.

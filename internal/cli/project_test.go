@@ -539,3 +539,139 @@ func TestProjectRmCompletionSuggestsManifestEntries(t *testing.T) {
 		}
 	}
 }
+
+// --- v0.4: project configure ---
+
+// setupConfigureTest prepares a git repo, initialised project, .env file with
+// variables, and vault secrets that can be bound. Returns project dir and vault data path.
+func setupConfigureTest(t *testing.T) (dir, data string) {
+	t.Helper()
+	dir, data = setupProjectTest(t)
+	// Create an env file with unset variables that a user would bind.
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("# Dotenv config\nOPENAI_API_KEY=\nAPP_TOKEN=\n"), 0o644); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+	// Create vault secrets matching plausible env var names.
+	for _, c := range []struct{ path, value string }{
+		{"providers/openai:api_key", "sk-test-key"},
+		{"app:token", "test-token"},
+	} {
+		if _, err := runShelf(t, "--vault", data, "secret", "set", c.path, c.value); err != nil {
+			t.Fatalf("set secret %s: %v", c.path, err)
+		}
+	}
+	return dir, data
+}
+
+func TestProjectConfigureAppearsInHelp(t *testing.T) {
+	dir, _ := setupConfigureTest(t)
+
+	// The subcommand is listed in the project command's help output.
+	out, err := runShelfIn(t, dir, "project", "--help")
+	if err != nil {
+		t.Fatalf("project --help: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "configure") {
+		t.Fatalf("project --help should list configure:\n%s", out)
+	}
+
+	// The configure subcommand itself responds to --help.
+	out, err = runShelfIn(t, dir, "project", "configure", "--help")
+	if err != nil {
+		t.Fatalf("project configure --help: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "configure") {
+		t.Fatalf("project configure --help should include 'configure':\n%s", out)
+	}
+}
+
+func TestProjectConfigureCancelledDoesNotAlterManifest(t *testing.T) {
+	dir, data := setupConfigureTest(t)
+	manifestPath := filepath.Join(dir, ".shelf.json")
+
+	// Read manifest before the configure attempt.
+	before, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest before: %v", err)
+	}
+
+	// Simulate full interactive flow but answer "n" (or anything non-y) to the confirmation.
+	// The command should not write the manifest on cancellation.
+	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\nn\n", "--vault", data, "project", "configure")
+	_ = out
+
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("manifest changed on cancel:\nbefore: %s\nafter:  %s", before, after)
+	}
+}
+
+func TestProjectConfigureCancelledWithEmptyInputDoesNotAlterManifest(t *testing.T) {
+	dir, data := setupConfigureTest(t)
+	manifestPath := filepath.Join(dir, ".shelf.json")
+
+	before, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest before: %v", err)
+	}
+
+	// Empty input at the confirmation prompt (just newline) should also cancel.
+	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\n\n", "--vault", data, "project", "configure")
+	_ = out
+	_ = err
+
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("manifest changed on empty cancel:\nbefore: %s\nafter:  %s", before, after)
+	}
+}
+
+func TestProjectConfigureSuccessfulBind(t *testing.T) {
+	dir, data := setupConfigureTest(t)
+	manifestPath := filepath.Join(dir, ".shelf.json")
+
+	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\ny\n", "--vault", data, "project", "configure")
+	if err != nil {
+		t.Fatalf("project configure: %v\n%s", err, out)
+	}
+
+	manifest, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+
+	// Manifest must contain the secret path and env variable name.
+	for _, want := range []string{"providers/openai:api_key", "OPENAI_API_KEY"} {
+		if !strings.Contains(string(manifest), want) {
+			t.Fatalf("manifest missing %q:\n%s", want, manifest)
+		}
+	}
+	// Manifest must NOT contain the vault secret value.
+	if strings.Contains(string(manifest), "sk-test-key") {
+		t.Fatalf("manifest leaks secret value:\n%s", manifest)
+	}
+}
+
+func TestProjectConfigureDoesNotLeakValuesToOutput(t *testing.T) {
+	_, data := setupConfigureTest(t)
+
+	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\ny\n", "--vault", data, "project", "configure")
+	if err != nil {
+		t.Fatalf("project configure: %v\n%s", err, out)
+	}
+
+	// Output MUST NOT contain the vault secret value.
+	if strings.Contains(out, "sk-test-key") {
+		t.Fatalf("output leaks secret value %q:\n%s", "sk-test-key", out)
+	}
+	// Output MUST NOT leak the env variable assignment line.
+	if strings.Contains(out, ".env") && strings.Contains(out, "OPENAI_API_KEY=") {
+		t.Fatalf("output may leak env file variable assignment:\n%s", out)
+	}
+}

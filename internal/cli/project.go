@@ -13,6 +13,7 @@ func newProjectCmd(appSvc *app.App) *cobra.Command {
 	cmd.AddCommand(newProjectIDCmd())
 	cmd.AddCommand(newProjectInitCmd())
 	cmd.AddCommand(newProjectStatusCmd(appSvc))
+	cmd.AddCommand(newProjectConfigureCmd(appSvc))
 	cmd.AddCommand(newProjectAddCmd(appSvc))
 	cmd.AddCommand(newProjectRmCmd())
 	cmd.AddCommand(newProjectListCmd())

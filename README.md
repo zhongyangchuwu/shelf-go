@@ -91,13 +91,11 @@ Inside a Git worktree, create a value-free project manifest:
 
 ```bash
 shelf project init
-shelf project add app:token
-shelf project add --tag ai --tag prod --optional
-shelf project list
 shelf project status
+shelf project configure
 ```
 
-Shelf writes `.shelf.json` at the Git root. It stores exact paths, prefixes, tag selectors, env overrides, and required/optional flags, but never secret values. Tag selectors expand at export/run time and use the same AND semantics as direct secret commands.
+Shelf writes `.shelf.json` at the Git root. It stores exact paths, prefixes, tag selectors, env overrides, and required/optional flags, but never secret values. Use `shelf project configure` to explicitly bind env-file variables to existing vault secrets without importing values. Advanced commands such as `project add`, `project rm`, and `project list` remain available for manual manifest edits.
 
 Export sourceable shell lines when you explicitly want a file or current-shell workflow:
 

@@ -18,6 +18,11 @@ type ProjectAddRequest struct {
 	Tags     []string
 }
 
+type ProjectConfigureOptions struct {
+	EnvFiles    []project.EnvFileDetail
+	SecretPaths []string
+}
+
 type ProjectExportResult struct {
 	Diagnostics string
 	Output      string
@@ -82,6 +87,29 @@ func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []st
 		return out.String(), fmt.Errorf("project manifest check failed")
 	}
 	return out.String(), nil
+}
+
+func (a *App) ProjectConfigureOptions(configPathFlag, vaultPathFlag string) (ProjectConfigureOptions, error) {
+	root, manifest, err := loadProjectManifest()
+	if errors.Is(err, os.ErrNotExist) {
+		return ProjectConfigureOptions{}, fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
+	}
+	if err != nil {
+		return ProjectConfigureOptions{}, err
+	}
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return ProjectConfigureOptions{}, err
+	}
+	resolvedEntries, _ := project.ResolveEntries(manifest, st)
+	return ProjectConfigureOptions{
+		EnvFiles:    project.EnvFileDetails(root, resolvedEnvNameSet(resolvedEntries)),
+		SecretPaths: st.List(""),
+	}, nil
+}
+
+func (a *App) ProjectConfigureBind(configPathFlag, vaultPathFlag, envName, secretPath string) (string, error) {
+	return a.ProjectAdd(configPathFlag, vaultPathFlag, ProjectAddRequest{Selector: secretPath, Env: envName})
 }
 
 func (a *App) ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (string, error) {
