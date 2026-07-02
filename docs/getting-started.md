@@ -89,7 +89,7 @@ When `project status` reports env-file variables that need bindings, run the int
 shelf project configure
 ```
 
-Project configuration writes only the value-free manifest after confirmation. Tag project bindings expand during `project status`, `project export`, and `project run`. Prefix and tag entries cannot carry `--env` because they may expand to multiple secrets.
+Project configuration queues value-free manifest changes and applies them only from the review screen. Tag project bindings expand during `project status`, `project export`, and `project run`. Prefix and tag entries cannot carry `--env` because they may expand to multiple secrets.
 
 Export sourceable shell lines when you want to update your current shell manually:
 

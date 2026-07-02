@@ -228,7 +228,7 @@ shelf project init [--force]
 
 ### `shelf project configure`
 
-Interactively configures project secret bindings. The current flow lets you choose an env-file variable, choose an existing vault secret, review the value-free binding plan, and confirm before writing `.shelf.json`. It does not import env-file values or print secret values.
+Opens a TUI for project secret bindings. The current flow lets you queue env-file variable bindings, add existing vault secrets, remove existing bindings, review pending changes, and apply them to `.shelf.json`. It does not import env-file values or print secret values.
 
 ```bash
 shelf project configure

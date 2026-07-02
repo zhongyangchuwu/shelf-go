@@ -95,7 +95,7 @@ shelf project status
 shelf project configure
 ```
 
-Shelf writes `.shelf.json` at the Git root. It stores exact paths, prefixes, tag selectors, env overrides, and required/optional flags, but never secret values. Use `shelf project configure` to explicitly bind env-file variables to existing vault secrets without importing values. Advanced commands such as `project add`, `project rm`, and `project list` remain available for manual manifest edits.
+Shelf writes `.shelf.json` at the Git root. It stores exact paths, prefixes, tag selectors, env overrides, and required/optional flags, but never secret values. Use `shelf project configure` to queue value-free binding changes in the TUI and apply them after review. Advanced commands such as `project add`, `project rm`, and `project list` remain available for manual manifest edits.
 
 Export sourceable shell lines when you explicitly want a file or current-shell workflow:
 

@@ -10,7 +10,7 @@ All notable user-facing changes will be recorded here.
 
 ### Added
 
-- Added `shelf project configure` for interactive, value-free project binding setup from env-file variables to existing vault secrets.
+- Added `shelf project configure` as a TUI for value-free project binding setup, including env-file binding, existing-secret add, remove, review, and apply flows.
 
 - Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
 - Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.

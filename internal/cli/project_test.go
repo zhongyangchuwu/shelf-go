@@ -5,6 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
+	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 func TestProjectIDNormalizesGitRemote(t *testing.T) {
@@ -542,31 +546,9 @@ func TestProjectRmCompletionSuggestsManifestEntries(t *testing.T) {
 
 // --- v0.4: project configure ---
 
-// setupConfigureTest prepares a git repo, initialised project, .env file with
-// variables, and vault secrets that can be bound. Returns project dir and vault data path.
-func setupConfigureTest(t *testing.T) (dir, data string) {
-	t.Helper()
-	dir, data = setupProjectTest(t)
-	// Create an env file with unset variables that a user would bind.
-	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("# Dotenv config\nOPENAI_API_KEY=\nAPP_TOKEN=\n"), 0o644); err != nil {
-		t.Fatalf("write .env: %v", err)
-	}
-	// Create vault secrets matching plausible env var names.
-	for _, c := range []struct{ path, value string }{
-		{"providers/openai:api_key", "sk-test-key"},
-		{"app:token", "test-token"},
-	} {
-		if _, err := runShelf(t, "--vault", data, "secret", "set", c.path, c.value); err != nil {
-			t.Fatalf("set secret %s: %v", c.path, err)
-		}
-	}
-	return dir, data
-}
-
 func TestProjectConfigureAppearsInHelp(t *testing.T) {
-	dir, _ := setupConfigureTest(t)
+	dir, _ := setupProjectTest(t)
 
-	// The subcommand is listed in the project command's help output.
 	out, err := runShelfIn(t, dir, "project", "--help")
 	if err != nil {
 		t.Fatalf("project --help: %v\n%s", err, out)
@@ -575,7 +557,6 @@ func TestProjectConfigureAppearsInHelp(t *testing.T) {
 		t.Fatalf("project --help should list configure:\n%s", out)
 	}
 
-	// The configure subcommand itself responds to --help.
 	out, err = runShelfIn(t, dir, "project", "configure", "--help")
 	if err != nil {
 		t.Fatalf("project configure --help: %v\n%s", err, out)
@@ -585,93 +566,118 @@ func TestProjectConfigureAppearsInHelp(t *testing.T) {
 	}
 }
 
-func TestProjectConfigureCancelledDoesNotAlterManifest(t *testing.T) {
-	dir, data := setupConfigureTest(t)
-	manifestPath := filepath.Join(dir, ".shelf.json")
+func TestProjectConfigureModelQueuesEnvBindingAndApplies(t *testing.T) {
+	var applied []app.ProjectConfigureAction
+	model := newProjectConfigureModel(configureTestState(), func(actions []app.ProjectConfigureAction) (string, error) {
+		applied = append([]app.ProjectConfigureAction(nil), actions...)
+		return "applied 1 change(s)\n", nil
+	})
 
-	// Read manifest before the configure attempt.
-	before, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest before: %v", err)
+	model = updateConfigureModel(t, model, "enter")
+	model = updateConfigureModel(t, model, "enter")
+	model = updateConfigureModel(t, model, "enter")
+	if len(model.pending) != 1 {
+		t.Fatalf("expected pending bind, got %#v", model.pending)
+	}
+	if model.pending[0].Kind != app.ProjectConfigureAddPath || model.pending[0].Env != "OPENAI_API_KEY" || model.pending[0].Path != "providers/openai:api_key" {
+		t.Fatalf("unexpected pending bind: %#v", model.pending[0])
 	}
 
-	// Simulate full interactive flow but answer "n" (or anything non-y) to the confirmation.
-	// The command should not write the manifest on cancellation.
-	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\nn\n", "--vault", data, "project", "configure")
-	_ = out
-
-	after, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest after: %v", err)
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "enter")
+	model = updateConfigureModel(t, model, "enter")
+	if len(applied) != 1 {
+		t.Fatalf("expected one applied action, got %#v", applied)
 	}
-	if string(before) != string(after) {
-		t.Fatalf("manifest changed on cancel:\nbefore: %s\nafter:  %s", before, after)
-	}
-}
-
-func TestProjectConfigureCancelledWithEmptyInputDoesNotAlterManifest(t *testing.T) {
-	dir, data := setupConfigureTest(t)
-	manifestPath := filepath.Join(dir, ".shelf.json")
-
-	before, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest before: %v", err)
-	}
-
-	// Empty input at the confirmation prompt (just newline) should also cancel.
-	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\n\n", "--vault", data, "project", "configure")
-	_ = out
-	_ = err
-
-	after, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest after: %v", err)
-	}
-	if string(before) != string(after) {
-		t.Fatalf("manifest changed on empty cancel:\nbefore: %s\nafter:  %s", before, after)
+	if !model.done {
+		t.Fatalf("expected model to quit after apply")
 	}
 }
 
-func TestProjectConfigureSuccessfulBind(t *testing.T) {
-	dir, data := setupConfigureTest(t)
-	manifestPath := filepath.Join(dir, ".shelf.json")
+func TestProjectConfigureModelQueuesAddAndRemove(t *testing.T) {
+	model := newProjectConfigureModel(configureTestState(), func(actions []app.ProjectConfigureAction) (string, error) {
+		return "applied\n", nil
+	})
 
-	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\ny\n", "--vault", data, "project", "configure")
-	if err != nil {
-		t.Fatalf("project configure: %v\n%s", err, out)
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "enter")
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "enter")
+
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "j")
+	model = updateConfigureModel(t, model, "enter")
+	model = updateConfigureModel(t, model, "enter")
+
+	if len(model.pending) != 2 {
+		t.Fatalf("expected add and remove pending actions, got %#v", model.pending)
+	}
+	if model.pending[0].Kind != app.ProjectConfigureAddPath || model.pending[0].Path != "app:token" || model.pending[0].Env != "" {
+		t.Fatalf("unexpected add action: %#v", model.pending[0])
+	}
+	if model.pending[1].Kind != app.ProjectConfigureRemove || model.pending[1].Key != "old:token" {
+		t.Fatalf("unexpected remove action: %#v", model.pending[1])
+	}
+}
+
+func TestProjectConfigureApplyWritesManifestWithoutSecretValues(t *testing.T) {
+	dir, data := setupProjectTest(t)
+	manifestPath := filepath.Join(dir, ".shelf.json")
+	if _, err := runShelf(t, "--vault", data, "secret", "set", "providers/openai:api_key", "sk-test-key"); err != nil {
+		t.Fatalf("set secret: %v", err)
 	}
 
+	appSvc := testApp()
+	_, err := appSvc.ApplyProjectConfigureActions(filepath.Join(dir, "shelf-test-config.yaml"), data, []app.ProjectConfigureAction{{Kind: app.ProjectConfigureAddPath, Env: "OPENAI_API_KEY", Path: "providers/openai:api_key"}})
+	if err != nil {
+		t.Fatalf("apply configure actions: %v", err)
+	}
 	manifest, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
-
-	// Manifest must contain the secret path and env variable name.
 	for _, want := range []string{"providers/openai:api_key", "OPENAI_API_KEY"} {
 		if !strings.Contains(string(manifest), want) {
 			t.Fatalf("manifest missing %q:\n%s", want, manifest)
 		}
 	}
-	// Manifest must NOT contain the vault secret value.
 	if strings.Contains(string(manifest), "sk-test-key") {
 		t.Fatalf("manifest leaks secret value:\n%s", manifest)
 	}
 }
 
-func TestProjectConfigureDoesNotLeakValuesToOutput(t *testing.T) {
-	_, data := setupConfigureTest(t)
+func TestProjectConfigureViewDoesNotLeakValues(t *testing.T) {
+	model := newProjectConfigureModel(configureTestState(), func(actions []app.ProjectConfigureAction) (string, error) { return "", nil })
+	out := model.View()
+	for _, leaked := range []string{"sk-test-key", "OPENAI_API_KEY="} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("configure view leaked %q:\n%s", leaked, out)
+		}
+	}
+}
 
-	out, err := runShelfWithInput(t, ".env\nOPENAI_API_KEY\nproviders/openai:api_key\ny\n", "--vault", data, "project", "configure")
-	if err != nil {
-		t.Fatalf("project configure: %v\n%s", err, out)
+func configureTestState() app.ProjectConfigureState {
+	return app.ProjectConfigureState{
+		EnvFiles:    []project.EnvFileDetail{{Name: ".env", Vars: []project.EnvVarStatus{{Name: "OPENAI_API_KEY", Empty: true}, {Name: "APP_TOKEN"}}}},
+		SecretPaths: []string{"providers/openai:api_key", "app:token"},
+		Entries:     []app.ProjectConfigureEntry{{Key: "old:token", Kind: "path", Selector: "old:token", Required: true}},
 	}
+}
 
-	// Output MUST NOT contain the vault secret value.
-	if strings.Contains(out, "sk-test-key") {
-		t.Fatalf("output leaks secret value %q:\n%s", "sk-test-key", out)
+func updateConfigureModel(t *testing.T, model projectConfigureModel, key string) projectConfigureModel {
+	t.Helper()
+	var msg tea.KeyMsg
+	if key == "enter" {
+		msg = tea.KeyMsg(tea.Key{Type: tea.KeyEnter})
+	} else {
+		msg = tea.KeyMsg(tea.Key{Type: tea.KeyRunes, Runes: []rune(key)})
 	}
-	// Output MUST NOT leak the env variable assignment line.
-	if strings.Contains(out, ".env") && strings.Contains(out, "OPENAI_API_KEY=") {
-		t.Fatalf("output may leak env file variable assignment:\n%s", out)
+	updated, _ := model.Update(msg)
+	got, ok := updated.(projectConfigureModel)
+	if !ok {
+		t.Fatalf("unexpected model type %T", updated)
 	}
+	return got
 }

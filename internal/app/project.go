@@ -18,9 +18,32 @@ type ProjectAddRequest struct {
 	Tags     []string
 }
 
-type ProjectConfigureOptions struct {
+type ProjectConfigureState struct {
 	EnvFiles    []project.EnvFileDetail
 	SecretPaths []string
+	Entries     []ProjectConfigureEntry
+}
+
+type ProjectConfigureEntry struct {
+	Key      string
+	Kind     string
+	Selector string
+	Env      string
+	Required bool
+}
+
+type ProjectConfigureActionKind string
+
+const (
+	ProjectConfigureAddPath ProjectConfigureActionKind = "add_path"
+	ProjectConfigureRemove  ProjectConfigureActionKind = "remove"
+)
+
+type ProjectConfigureAction struct {
+	Kind ProjectConfigureActionKind
+	Env  string
+	Path string
+	Key  string
 }
 
 type ProjectExportResult struct {
@@ -89,27 +112,59 @@ func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []st
 	return out.String(), nil
 }
 
-func (a *App) ProjectConfigureOptions(configPathFlag, vaultPathFlag string) (ProjectConfigureOptions, error) {
+func (a *App) ProjectConfigureState(configPathFlag, vaultPathFlag string) (ProjectConfigureState, error) {
 	root, manifest, err := loadProjectManifest()
 	if errors.Is(err, os.ErrNotExist) {
-		return ProjectConfigureOptions{}, fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
+		return ProjectConfigureState{}, fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
 	}
 	if err != nil {
-		return ProjectConfigureOptions{}, err
+		return ProjectConfigureState{}, err
 	}
 	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
-		return ProjectConfigureOptions{}, err
+		return ProjectConfigureState{}, err
 	}
 	resolvedEntries, _ := project.ResolveEntries(manifest, st)
-	return ProjectConfigureOptions{
+	return ProjectConfigureState{
 		EnvFiles:    project.EnvFileDetails(root, resolvedEnvNameSet(resolvedEntries)),
 		SecretPaths: st.List(""),
+		Entries:     projectConfigureEntries(manifest),
 	}, nil
 }
 
-func (a *App) ProjectConfigureBind(configPathFlag, vaultPathFlag, envName, secretPath string) (string, error) {
-	return a.ProjectAdd(configPathFlag, vaultPathFlag, ProjectAddRequest{Selector: secretPath, Env: envName})
+func (a *App) ApplyProjectConfigureActions(configPathFlag, vaultPathFlag string, actions []ProjectConfigureAction) (string, error) {
+	root, manifest, err := loadProjectManifest()
+	if errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("%s not found in %s; run `shelf project init`", project.FileName, root)
+	}
+	if err != nil {
+		return "", err
+	}
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	for _, action := range actions {
+		switch action.Kind {
+		case ProjectConfigureAddPath:
+			var entry project.Entry
+			manifest, entry, err = project.AddEntry(manifest, st, project.AddEntryRequest{Selector: action.Path, Env: action.Env})
+			_ = entry
+		case ProjectConfigureRemove:
+			if !manifest.RemoveEntry(action.Key) {
+				err = fmt.Errorf("entry not found: %s", action.Key)
+			}
+		default:
+			err = fmt.Errorf("unsupported project configure action: %s", action.Kind)
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	if err := project.Save(filepath.Join(root, project.FileName), manifest); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("applied %d change(s)\n", len(actions)), nil
 }
 
 func (a *App) ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddRequest) (string, error) {
@@ -222,10 +277,32 @@ func (a *App) ProjectExport(configPathFlag, vaultPathFlag, format string) (Proje
 	default:
 		return result, fmt.Errorf("unsupported format: %s", format)
 	}
+
 	if err != nil {
 		return result, err
 	}
 	return result, nil
+}
+
+func projectConfigureEntries(manifest project.Manifest) []ProjectConfigureEntry {
+	entries := make([]ProjectConfigureEntry, 0, len(manifest.Secrets))
+	for _, entry := range manifest.Secrets {
+		item := ProjectConfigureEntry{Key: entry.Key(), Required: entry.IsRequired()}
+		switch {
+		case entry.IsPrefix():
+			item.Kind = "prefix"
+			item.Selector = entry.Prefix
+		case entry.IsTag():
+			item.Kind = "tag"
+			item.Selector = entry.Key()
+		default:
+			item.Kind = "path"
+			item.Selector = entry.Path
+			item.Env = entry.Env
+		}
+		entries = append(entries, item)
+	}
+	return entries
 }
 
 func ProjectEntryCompletions(toComplete string) ([]string, error) {
