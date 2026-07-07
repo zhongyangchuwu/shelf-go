@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: JSON Codec and Repository Boundary
+- Phase: Legacy Migration Adapter
 - Status: executing
-- Active Artifact: .planning/phases/036-json-codec-repository-boundary/PLAN.md
-- Next Action: Implement v2 JSON codec and plaintext repository boundary over `internal/vaultmodel`.
+- Active Artifact: .planning/phases/037-legacy-migration-adapter/PLAN.md
+- Next Action: Implement internal v1-to-v2 migration adapters for vault records and value-free project manifest bindings.
 
 ## Blockers
 - None
@@ -22,6 +22,8 @@
 - Completed Phase 35: `internal/vaultmodel` model types, built-in templates, validation, runtime indexes, focused tests, and architecture boundary registration.
 - Verification passed for Phase 35: `go test ./internal/vaultmodel`; `go test ./internal/vault ./internal/project ./internal/app ./internal/cli ./internal/vaultmodel`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 - Created `.planning/phases/036-json-codec-repository-boundary/CONTEXT.md` and `PLAN.md` for the next implementation phase.
+- Completed Phase 36: `internal/vaultjson` strict JSON codec, plaintext repository, atomic save, backup behavior, missing-file errors, focused tests, and architecture boundary registration.
+- Verification passed for Phase 36: `go test ./internal/vaultjson`; `go test ./internal/vaultmodel ./internal/vaultjson`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 
 ## Updated
 - 2026-07-07

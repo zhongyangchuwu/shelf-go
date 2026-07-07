@@ -13,7 +13,7 @@ Requirements for the active v0.2.0 implementation track plus completed v0.2.0 de
 
 - [x] **V2-IMPL-01**: Shelf implements v2 vault model types, built-in templates, field sensitivity, field purpose, field bindings, and runtime indexes behind a package boundary that does not change current CLI behavior.
 - [x] **V2-IMPL-02**: v2 validation rejects duplicate item IDs, duplicate field IDs, unknown templates, missing required fields, invalid field values, invalid env bindings, duplicate env binding names, and public-field env bindings.
-- [ ] **V2-IMPL-03**: Shelf implements a v2 JSON codec and repository boundary with version checks, strict decoding, round-trip preservation, atomic save, and backup behavior.
+- [x] **V2-IMPL-03**: Shelf implements a v2 JSON codec and repository boundary with version checks, strict decoding, round-trip preservation, atomic save, and backup behavior.
 - [ ] **V2-IMPL-04**: Shelf implements a legacy migration adapter that converts v1 flat secrets and project manifests to v2 items and field bindings without deleting or rewriting source data before validation succeeds.
 - [ ] **V2-IMPL-05**: Common secret CLI workflows create, set from stdin, get, copy, list long, and info operate over v2 items and preserve value-free output rules.
 - [ ] **V2-IMPL-06**: Project manifest v2 item/field bindings resolve export/run environments without storing secret values and provide value-free diagnostics for missing items, missing fields, and duplicate env names.
@@ -155,7 +155,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | V2-STORE-01..V2-STORE-03 | Phase 34 | Complete |
 | V2-MIG-01..V2-MIG-03 | Phase 34 | Complete |
 | V2-IMPL-01..V2-IMPL-02 | Phase 35 | Complete |
-| V2-IMPL-03 | Phase 36 | Not Started |
+| V2-IMPL-03 | Phase 36 | Complete |
 | V2-IMPL-04 | Phase 37 | Not Started |
 | V2-IMPL-05 | Phase 38 | Not Started |
 | V2-IMPL-06 | Phase 39 | Not Started |
@@ -165,9 +165,9 @@ Explicitly excluded. Documented to prevent scope creep.
 - Current requirements: 48 total
 - Mapped to phases: 48
 - Unmapped: 0
-- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-02
+- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-03
 - Completed in v0.1.1: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-07, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-07 after completing Phase 35 model validation core*
+*Last updated: 2026-07-07 after completing Phase 36 JSON codec repository boundary*

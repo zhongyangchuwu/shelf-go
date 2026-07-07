@@ -38,6 +38,8 @@ components:
     in: vault
   vaultmodel:
     in: vaultmodel
+  vaultjson:
+    in: vaultjson
   jsonvault:
     in: jsonvault
   shelfage:
@@ -82,6 +84,11 @@ deps:
   secret:
     mayDependOn:
       - vault
+
+  vaultjson:
+    mayDependOn:
+      - vaultmodel
+      - util
 
   jsonvault:
     mayDependOn:
