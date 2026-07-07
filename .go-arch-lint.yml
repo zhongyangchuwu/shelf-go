@@ -40,6 +40,8 @@ components:
     in: vaultmodel
   vaultjson:
     in: vaultjson
+  vaultmigrate:
+    in: vaultmigrate
   jsonvault:
     in: jsonvault
   shelfage:
@@ -89,6 +91,12 @@ deps:
     mayDependOn:
       - vaultmodel
       - util
+
+  vaultmigrate:
+    mayDependOn:
+      - project
+      - vault
+      - vaultmodel
 
   jsonvault:
     mayDependOn:

@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Legacy Migration Adapter
+- Phase: Secret CLI v2 Workflows
 - Status: executing
-- Active Artifact: .planning/phases/037-legacy-migration-adapter/PLAN.md
-- Next Action: Implement internal v1-to-v2 migration adapters for vault records and value-free project manifest bindings.
+- Active Artifact: .planning/phases/038-secret-cli-v2-workflows/PLAN.md
+- Next Action: Decide v2 secret command compatibility and implement common non-interactive create/set/get/list/info workflows.
 
 ## Blockers
 - None
@@ -24,6 +24,9 @@
 - Created `.planning/phases/036-json-codec-repository-boundary/CONTEXT.md` and `PLAN.md` for the next implementation phase.
 - Completed Phase 36: `internal/vaultjson` strict JSON codec, plaintext repository, atomic save, backup behavior, missing-file errors, focused tests, and architecture boundary registration.
 - Verification passed for Phase 36: `go test ./internal/vaultjson`; `go test ./internal/vaultmodel ./internal/vaultjson`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
+- Completed Phase 37: `internal/vaultmigrate` converts v1 flat secrets to v2 `generic_secret` items, produces deterministic path mappings, converts v1 project manifests to value-free item/field/env bindings, and validates converted output.
+- Verification passed for Phase 37: `go test ./internal/vaultmigrate`; `go test ./internal/vaultmodel ./internal/vaultjson ./internal/vaultmigrate`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
+- Created `.planning/phases/038-secret-cli-v2-workflows/CONTEXT.md` and `PLAN.md` for the next implementation phase.
 
 ## Updated
 - 2026-07-07

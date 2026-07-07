@@ -30,10 +30,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.2.0 Phase 34 defined the template-based item/field vault model, built-in `generic_secret` and `api_credential` templates, repository/codec adapter boundaries, JSON-first storage decision, project manifest v2 direction, and v1 migration safety rules.
 - [x] v0.2.0 Phase 35 implemented the v2 model/validation core in `internal/vaultmodel` with built-in templates, field-level env bindings, validation, indexes, and architecture boundary coverage while preserving current v1 behavior.
 - [x] v0.2.0 Phase 36 implemented the v2 plaintext JSON codec/repository boundary in `internal/vaultjson` with strict decode, validated encode/save, atomic writes, backup behavior, and missing-file errors.
+- [x] v0.2.0 Phase 37 implemented internal v1-to-v2 migration adapters that convert flat secrets to `generic_secret` items and value-free project manifest bindings without deleting source data.
 
 ### Active
 
-- [ ] v0.2.0 implementation is building the legacy migration adapter before secret CLI, project manifest, or manager cutover work.
+- [ ] v0.2.0 implementation is building non-interactive v2 secret CLI workflows before project manifest runtime or manager cutover work.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -90,6 +91,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Attach env bindings to fields | Env values resolve from a specific secret-bearing field, not from an item or project-level value. | v2 project manifests bind item ID + field ID + env name and remain value-free. |
 | Add v2 model behind a new internal package | Incremental cutover is safer than replacing the v1 vault package in place. | `internal/vaultmodel` now owns v2 model types, built-in templates, validation, and indexes without changing v1 CLI behavior. |
 | Add v2 JSON storage behind a separate package | v2 storage needs strict validation and atomic writes without changing current v1 vault runtime behavior. | `internal/vaultjson` now owns plaintext v2 JSON encode/decode and repository load/save behind the model boundary. |
+| Convert v1 records to generic v2 items by default | Inferring richer templates from old path names risks changing user intent. | `internal/vaultmigrate` converts all v1 secrets to `generic_secret`, preserves old paths as aliases, and expands project bindings value-free. |
 
 ## Evolution
 
@@ -103,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-07-07 after completing Phase 36 JSON repository boundary*
+*Last updated: 2026-07-07 after completing Phase 37 legacy migration adapter*
