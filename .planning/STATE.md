@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: v0.2.0 Template Item Vault Design
-- Status: planning
-- Active Artifact: .planning/phases/034-v0.2-template-item-vault-design/PLAN.md
-- Next Action: Review and approve the v0.2 item/field/template model, storage recommendation, and migration direction before implementation planning.
+- Phase: Vault Model and Validation Core
+- Status: not-started
+- Active Artifact: .planning/phases/035-vault-model-validation-core/PLAN.md
+- Next Action: Create Phase 35 context and plan for the v2 model package, built-in templates, validation, and runtime indexes.
 
 ## Blockers
 - None
@@ -16,6 +16,8 @@
 - Recent product discussion selected a v0.2 direction: template-based items and fields, API credential as a built-in template, env bindings on fields, repository/codec adapters, and JSON as the initial storage recommendation over SQLite unless later evidence changes the storage decision.
 - Created `.planning/phases/034-v0.2-template-item-vault-design/CONTEXT.md` for v0.2 design context.
 - Created `.planning/phases/034-v0.2-template-item-vault-design/PLAN.md` for v0.2 model/storage/migration planning.
+- Completed `.planning/phases/034-v0.2-template-item-vault-design/SPEC.md`, `STORAGE-DECISION.md`, `MIGRATION.md`, `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, and `CAPTURE.md`.
+- Phase 34 is complete; Phase 35 is the next implementation phase and must implement the v2 model/validation core before storage or CLI cutover.
 
 ## Updated
 - 2026-07-07
