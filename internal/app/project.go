@@ -19,9 +19,21 @@ type ProjectAddRequest struct {
 }
 
 type ProjectConfigureState struct {
-	EnvFiles    []project.EnvFileDetail
+	EnvFiles    []ProjectConfigureEnvFile
 	SecretPaths []string
 	Entries     []ProjectConfigureEntry
+}
+
+type ProjectConfigureEnvFile struct {
+	Name  string
+	Vars  []ProjectConfigureEnvVar
+	Error string
+}
+
+type ProjectConfigureEnvVar struct {
+	Name  string
+	Empty bool
+	Bound bool
 }
 
 type ProjectConfigureEntry struct {
@@ -125,8 +137,9 @@ func (a *App) ProjectConfigureState(configPathFlag, vaultPathFlag string) (Proje
 		return ProjectConfigureState{}, err
 	}
 	resolvedEntries, _ := project.ResolveEntries(manifest, st)
+	envFiles := projectConfigureEnvFiles(project.EnvFileDetails(root, resolvedEnvNameSet(resolvedEntries)))
 	return ProjectConfigureState{
-		EnvFiles:    project.EnvFileDetails(root, resolvedEnvNameSet(resolvedEntries)),
+		EnvFiles:    envFiles,
 		SecretPaths: st.List(""),
 		Entries:     projectConfigureEntries(manifest),
 	}, nil
@@ -282,6 +295,30 @@ func (a *App) ProjectExport(configPathFlag, vaultPathFlag, format string) (Proje
 		return result, err
 	}
 	return result, nil
+}
+
+func projectConfigureEnvFiles(files []project.EnvFileDetail) []ProjectConfigureEnvFile {
+	converted := make([]ProjectConfigureEnvFile, 0, len(files))
+	for _, file := range files {
+		converted = append(converted, ProjectConfigureEnvFile{
+			Name:  file.Name,
+			Vars:  projectConfigureEnvVars(file.Vars),
+			Error: file.Error,
+		})
+	}
+	return converted
+}
+
+func projectConfigureEnvVars(vars []project.EnvVarStatus) []ProjectConfigureEnvVar {
+	converted := make([]ProjectConfigureEnvVar, 0, len(vars))
+	for _, variable := range vars {
+		converted = append(converted, ProjectConfigureEnvVar{
+			Name:  variable.Name,
+			Empty: variable.Empty,
+			Bound: variable.Bound,
+		})
+	}
+	return converted
 }
 
 func projectConfigureEntries(manifest project.Manifest) []ProjectConfigureEntry {

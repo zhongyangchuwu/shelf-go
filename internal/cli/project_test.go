@@ -8,7 +8,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 func TestProjectIDNormalizesGitRemote(t *testing.T) {
@@ -660,7 +659,7 @@ func TestProjectConfigureViewDoesNotLeakValues(t *testing.T) {
 
 func configureTestState() app.ProjectConfigureState {
 	return app.ProjectConfigureState{
-		EnvFiles:    []project.EnvFileDetail{{Name: ".env", Vars: []project.EnvVarStatus{{Name: "OPENAI_API_KEY", Empty: true}, {Name: "APP_TOKEN"}}}},
+		EnvFiles:    []app.ProjectConfigureEnvFile{{Name: ".env", Vars: []app.ProjectConfigureEnvVar{{Name: "OPENAI_API_KEY", Empty: true}, {Name: "APP_TOKEN"}}}},
 		SecretPaths: []string{"providers/openai:api_key", "app:token"},
 		Entries:     []app.ProjectConfigureEntry{{Key: "old:token", Kind: "path", Selector: "old:token", Required: true}},
 	}

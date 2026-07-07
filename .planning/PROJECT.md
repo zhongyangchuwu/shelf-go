@@ -28,10 +28,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.1.1 Phase 27 rebalanced tests so CLI covers command contracts while project/app/domain packages own reusable behavior-rule coverage.
 - [x] v0.1.1 Phase 28 added `go-arch-lint` enforcement and moved remaining project/secret/status orchestration out of CLI while preserving command behavior.
 - [x] v0.2.0 Phase 34 defined the template-based item/field vault model, built-in `generic_secret` and `api_credential` templates, repository/codec adapter boundaries, JSON-first storage decision, project manifest v2 direction, and v1 migration safety rules.
+- [x] v0.2.0 Phase 35 implemented the v2 model/validation core in `internal/vaultmodel` with built-in templates, field-level env bindings, validation, indexes, and architecture boundary coverage while preserving current v1 behavior.
 
 ### Active
 
-- [ ] v0.2.0 implementation is building the v2 vault model and validation core before storage, migration, CLI, project manifest, or manager cutover work.
+- [ ] v0.2.0 implementation is building the v2 JSON codec and repository boundary before migration, CLI, project manifest, or manager cutover work.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -86,6 +87,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Prefer JSON as the initial v0.2 storage candidate | JSON best preserves Shelf's portable encrypted-file model and age wrapping. SQLite remains a comparison point because WAL/journal/temp files and encryption choices need more evidence. | Phase 34 plan recommends JSON behind repository/codec interfaces unless design review records stronger evidence for SQLite. |
 | Keep `group:key` as a migration alias, not the v2 product model | Repeated keys like `api_key` and `token` hide the useful domain object. | Phase 34 defines stable item IDs, titles, templates, fields, and optional aliases for migration. |
 | Attach env bindings to fields | Env values resolve from a specific secret-bearing field, not from an item or project-level value. | v2 project manifests bind item ID + field ID + env name and remain value-free. |
+| Add v2 model behind a new internal package | Incremental cutover is safer than replacing the v1 vault package in place. | `internal/vaultmodel` now owns v2 model types, built-in templates, validation, and indexes without changing v1 CLI behavior. |
 
 ## Evolution
 
@@ -99,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-07-07 after completing Phase 34 and starting v0.2 model implementation*
+*Last updated: 2026-07-07 after completing Phase 35 model validation core*

@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
-	"github.com/zhongyangchuwu/shelf-go/internal/project"
 )
 
 type projectConfigureApplyFunc func([]app.ProjectConfigureAction) (string, error)
@@ -33,7 +32,7 @@ type projectConfigureModel struct {
 	err     error
 	done    bool
 
-	selectedEnv project.EnvVarStatus
+	selectedEnv app.ProjectConfigureEnvVar
 	pending     []app.ProjectConfigureAction
 }
 
@@ -268,8 +267,8 @@ func (m projectConfigureModel) mainItems() []string {
 	return []string{"Resolve env-file variable", "Add existing secret binding", "Remove project binding", "Review pending changes", "Apply pending changes", "Quit"}
 }
 
-func (m projectConfigureModel) envVars() []project.EnvVarStatus {
-	vars := make([]project.EnvVarStatus, 0)
+func (m projectConfigureModel) envVars() []app.ProjectConfigureEnvVar {
+	vars := make([]app.ProjectConfigureEnvVar, 0)
 	for _, file := range m.state.EnvFiles {
 		if file.Error != "" {
 			continue

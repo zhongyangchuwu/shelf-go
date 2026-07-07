@@ -11,7 +11,7 @@ JSON remains the initial storage recommendation because it preserves the portabl
 ## v0.2.0 Phases
 
 - [x] Phase 34: Template Item Vault Design
-- [ ] Phase 35: Vault Model and Validation Core
+- [x] Phase 35: Vault Model and Validation Core
 - [ ] Phase 36: JSON Codec and Repository Boundary
 - [ ] Phase 37: Legacy Migration Adapter
 - [ ] Phase 38: Secret CLI v2 Workflows
@@ -41,6 +41,10 @@ JSON remains the initial storage recommendation because it preserves the portabl
 **Requirements:** V2-IMPL-01, V2-IMPL-02
 
 **Plan:** `.planning/phases/035-vault-model-validation-core/PLAN.md`
+
+**Completion Date:** 2026-07-07
+
+**Artifacts:** `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
 
 ## Phase 36: JSON Codec and Repository Boundary
 
@@ -97,8 +101,8 @@ JSON remains the initial storage recommendation because it preserves the portabl
 | Phase | Status | Requirements | Plan | Completion Date |
 |-------|--------|--------------|------|-----------------|
 | Phase 34: Template Item Vault Design | Complete | V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03 | `.planning/phases/034-v0.2-template-item-vault-design/PLAN.md` | 2026-07-07 |
-| Phase 35: Vault Model and Validation Core | Not Started | V2-IMPL-01, V2-IMPL-02 | `.planning/phases/035-vault-model-validation-core/PLAN.md` | — |
-| Phase 36: JSON Codec and Repository Boundary | Not Started | V2-IMPL-03 | `.planning/phases/036-json-codec-repository-boundary/PLAN.md` | — |
+| Phase 35: Vault Model and Validation Core | Complete | V2-IMPL-01, V2-IMPL-02 | `.planning/phases/035-vault-model-validation-core/PLAN.md` | 2026-07-07 |
+| Phase 36: JSON Codec and Repository Boundary | Executing | V2-IMPL-03 | `.planning/phases/036-json-codec-repository-boundary/PLAN.md` | — |
 | Phase 37: Legacy Migration Adapter | Not Started | V2-IMPL-04 | `.planning/phases/037-legacy-migration-adapter/PLAN.md` | — |
 | Phase 38: Secret CLI v2 Workflows | Not Started | V2-IMPL-05 | `.planning/phases/038-secret-cli-v2-workflows/PLAN.md` | — |
 | Phase 39: Project Manifest v2 Bindings | Not Started | V2-IMPL-06 | `.planning/phases/039-project-manifest-v2-bindings/PLAN.md` | — |

@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Vault Model and Validation Core
+- Phase: JSON Codec and Repository Boundary
 - Status: executing
-- Active Artifact: .planning/phases/035-vault-model-validation-core/PLAN.md
-- Next Action: Implement `internal/vaultmodel` with built-in templates, validation, indexes, and focused tests.
+- Active Artifact: .planning/phases/036-json-codec-repository-boundary/PLAN.md
+- Next Action: Implement v2 JSON codec and plaintext repository boundary over `internal/vaultmodel`.
 
 ## Blockers
 - None
@@ -19,6 +19,9 @@
 - Completed `.planning/phases/034-v0.2-template-item-vault-design/SPEC.md`, `STORAGE-DECISION.md`, `MIGRATION.md`, `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, and `CAPTURE.md`.
 - Phase 34 is complete; Phase 35 is the next implementation phase and must implement the v2 model/validation core before storage or CLI cutover.
 - Created `.planning/phases/035-vault-model-validation-core/CONTEXT.md` and `PLAN.md` for the v2 model/validation implementation phase.
+- Completed Phase 35: `internal/vaultmodel` model types, built-in templates, validation, runtime indexes, focused tests, and architecture boundary registration.
+- Verification passed for Phase 35: `go test ./internal/vaultmodel`; `go test ./internal/vault ./internal/project ./internal/app ./internal/cli ./internal/vaultmodel`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
+- Created `.planning/phases/036-json-codec-repository-boundary/CONTEXT.md` and `PLAN.md` for the next implementation phase.
 
 ## Updated
 - 2026-07-07

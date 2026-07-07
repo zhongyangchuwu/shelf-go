@@ -36,6 +36,8 @@ components:
     in: secret
   vault:
     in: vault
+  vaultmodel:
+    in: vaultmodel
   jsonvault:
     in: jsonvault
   shelfage:
