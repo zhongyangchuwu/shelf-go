@@ -6,7 +6,24 @@
 
 ## Current Requirements
 
-Requirements for v0.1.1 editing experience, tag-based workflows, workflow scripts, architecture cleanup, documentation, release preparation, and the optional pre-tag CLI boundary refactor. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+Requirements for the active v0.2.0 design phase plus completed v0.1.1 editing experience, tag-based workflows, workflow scripts, architecture cleanup, documentation, release preparation, and CLI boundary refactors. Completed v0.1.0 requirements and evidence are archived at `.planning/archive/releases/v0.1.0/SUMMARY.md` and `.planning/archive/releases/v0.1.0/VERIFICATION.md`.
+
+
+### v0.2.0 Template Item Vault Design
+
+- [ ] **V2-MODEL-01**: Shelf defines a core item/field/template model where items have stable IDs, titles, template IDs, ordered fields, labels, notes, and timestamps.
+- [ ] **V2-MODEL-02**: Fields define type, sensitivity, purpose, value, and bindings so public metadata can be listed while concealed values remain hidden unless explicitly materialized.
+- [ ] **V2-MODEL-03**: Built-in templates include at least `generic_secret` and `api_credential`; API credentials include a concealed credential field plus public provider, website, expiration, and scopes fields.
+- [ ] **V2-MODEL-04**: Environment bindings attach to fields rather than whole items, and export/run workflows resolve only explicitly bound fields.
+- [ ] **V2-MODEL-05**: Common non-interactive CLI workflows are redesigned around create, set, get, copy, list, and info before any new interactive prompt or TUI is planned.
+- [ ] **V2-MODEL-06**: Project manifest v2 remains value-free while binding item IDs, field IDs, env names, required state, and optional review snapshots.
+- [ ] **V2-MODEL-07**: Value exposure rules distinguish public fields from secret fields across CLI, manager, project status/export/run, and future adapters.
+- [ ] **V2-STORE-01**: v0.2.0 compares JSON, age-wrapped JSON, plaintext SQLite, age-wrapped SQLite, and encrypted SQLite/SQLCipher-like storage against portability, leakage, migration, and distribution constraints before implementation.
+- [ ] **V2-STORE-02**: The selected storage implementation sits behind repository and codec interfaces so encryption and storage can be adapted without changing the core item model.
+- [ ] **V2-STORE-03**: JSON is the initial recommended storage candidate unless the v0.2 design review records evidence that SQLite's query benefits outweigh its leakage and portability costs.
+- [ ] **V2-MIG-01**: v1 flat secret records can be converted to v2 generic-secret items without losing values, env bindings, descriptions, or tags.
+- [ ] **V2-MIG-02**: v1 project manifests have a planned migration path to v2 item/field bindings without storing secret values.
+- [ ] **V2-MIG-03**: Migration does not infer API credential templates from old paths unless an explicit, reviewed migration rule is added.
 
 ### Web Manager Editing
 
@@ -133,4 +150,4 @@ Explicitly excluded. Documented to prevent scope creep.
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-28 after completing Phase 28 architecture boundary lint*
+*Last updated: 2026-07-07 after adding v0.2.0 template item vault design requirements*

@@ -30,6 +30,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 ### Active
 
+- [ ] v0.2.0 design is defining a template-based item/field vault model, built-in `generic_secret` and `api_credential` templates, repository/codec adapters, value-free item/field project bindings, and a migration path from v1 flat secrets.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign is deferred to v0.2.0.
 
 ### Out of Scope
@@ -40,7 +41,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - General password-manager replacement - Shelf is focused on developer secrets, env bindings, project runtime workflows, and local editing, not browser autofill, credit cards, identities, or family vaults.
 - Plain `.env` as the source of truth - `.env` files may be generated/exported, but Shelf's source of truth is the encrypted vault plus project manifests.
 - Hook-based project activation in current scope - explicit export/source and child-process workflows are preferred until hook complexity is clearly justified.
-- SQLite or storage backend replacement in v0.1.1 - storage model changes are deferred to v0.2.0 discussion.
+- SQLite or storage backend replacement in v0.1.1 - storage model changes are active v0.2.0 design topics.
 
 ## Context
 
@@ -80,6 +81,8 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Keep CLI editing compact | Fine-grained `meta`/`tag` edit commands increase command surface while WebUI is the intended editing surface. | v0.1.1 does not add `secret meta` or `secret tag`; CLI focuses on list/export/project tag application flows. |
 | Release hardening is final, not next | Install/tag/release scripts, docs, and architecture naming cleanup are prerequisites for a maintainable release. | Completed in Phase 24; v0.1.1 is ready to tag after review. |
 | Enforce package dependency direction | Architecture notes drift unless import boundaries are executable. | `.go-arch-lint.yml` now checks the light adapter/app/domain package boundary. |
+| Design v0.2.0 around template-based items and fields | API credentials and future developer-secret shapes need clearer structure than flat `path -> value/env/description/tags` records. | Active design phase 34 defines `Item`, `Field`, `Template`, field sensitivity, env bindings on fields, and storage adapters before implementation. |
+| Prefer JSON as the initial v0.2 storage candidate | JSON best preserves Shelf's portable encrypted-file model and age wrapping. SQLite remains a comparison point because WAL/journal/temp files and encryption choices need more evidence. | Phase 34 plan recommends JSON behind repository/codec interfaces unless design review records stronger evidence for SQLite. |
 
 ## Evolution
 
@@ -93,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-06-28 after completing Phase 28 architecture boundary lint*
+*Last updated: 2026-07-07 after starting v0.2.0 template item vault design*

@@ -1,3 +1,31 @@
+# Roadmap: Shelf Go v0.2.0 Design
+
+## Overview
+
+Shelf Go v0.2.0 redesigns the vault data model around template-based items and fields. The goal is to replace the current flat path-keyed secret record model with a core model that can represent generic secrets, API credentials, and future developer-secret templates while preserving local-first, value-free project workflows.
+
+The active v0.2.0 design phase is `.planning/phases/034-v0.2-template-item-vault-design/`. It is planning-only: no production code, migration, or command behavior changes are approved until the item/field/template model, storage recommendation, and migration strategy are reviewed.
+
+JSON remains the initial storage recommendation because it preserves the portable encrypted-file direction and keeps age wrapping simple. SQLite remains a comparison point behind a future repository adapter; it is not selected unless later evidence justifies the leakage, migration, and distribution costs.
+
+## v0.2.0 Design Phases
+
+- [ ] Phase 34: Template Item Vault Design
+
+## Phase 34: Template Item Vault Design
+
+**Goal:** Design the v0.2.0 core model, built-in templates, repository/codec adapters, storage choice, project manifest impact, and migration direction before implementation.
+
+**Depends on:** v0.1.x architecture boundary cleanup complete enough that CLI/app/domain/storage boundaries can be redesigned deliberately.
+
+**Requirements:** V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03
+
+**Plan:** `.planning/phases/034-v0.2-template-item-vault-design/PLAN.md`
+
+## Historical v0.1.1 Roadmap
+
+The v0.1.1 roadmap below is retained for traceability. Its storage redesign deferral is superseded by the active v0.2.0 design phase above.
+
 # Roadmap: Shelf Go v0.1.1
 
 ## Overview
@@ -6,7 +34,7 @@ Shelf Go v0.1.1 improves the day-to-day editing and selection experience without
 
 v0.1.1 release hardening is complete and remains ready for review/tagging. The newly added boundary-refactor phases are behavior-preserving internal cleanup that should run only if selected before the next tag/release; they keep the current age-encrypted JSON vault model and do not add user-visible features.
 
-SQLite and storage backend redesign are explicitly deferred to v0.2.0.
+SQLite and storage backend redesign are now active v0.2.0 design topics.
 
 ## Phases
 
@@ -237,4 +265,4 @@ SQLite and storage backend redesign are explicitly deferred to v0.2.0.
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-06-28 after completing Phase 28 architecture boundary lint*
+*Last updated: 2026-07-07 after starting v0.2.0 template item vault design*
