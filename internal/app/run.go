@@ -42,12 +42,10 @@ func (a *App) ProjectRun(req ProjectRunRequest) error {
 	if err != nil {
 		return err
 	}
-	_, st, err := a.LoadRuntime(req.ConfigPath, req.VaultPath)
+	resolvedEntries, diagnostics, err := a.resolveProjectBindings(req.ConfigPath, req.VaultPath, manifest)
 	if err != nil {
 		return err
 	}
-
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, st)
 	project.RenderDiagnostics(req.Stderr, diagnostics)
 	if project.HasFailures(diagnostics) {
 		return fmt.Errorf("project run failed")

@@ -9,10 +9,13 @@ import (
 
 	"github.com/zhongyangchuwu/shelf-go/internal/project"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
+	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
 type ProjectAddRequest struct {
 	Selector string
+	Field    string
 	Env      string
 	Optional bool
 	Tags     []string
@@ -105,11 +108,10 @@ func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []st
 	fmt.Fprintf(&out, "root:    %s\n", root)
 	fmt.Fprintf(&out, "config:  %s\n\n", project.FileName)
 
-	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	resolvedEntries, diagnostics, err := a.resolveProjectBindings(configPathFlag, vaultPathFlag, manifest)
 	if err != nil {
 		return out.String(), err
 	}
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, st)
 	writeProjectDiagnostics(&out, diagnostics)
 	for _, entry := range resolvedEntries {
 		fmt.Fprintf(&out, "ok   %s -> %s\n", entry.Path, entry.EnvName)
@@ -132,15 +134,27 @@ func (a *App) ProjectConfigureState(configPathFlag, vaultPathFlag string) (Proje
 	if err != nil {
 		return ProjectConfigureState{}, err
 	}
-	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
-	if err != nil {
-		return ProjectConfigureState{}, err
+	var resolvedEntries []project.Binding
+	var secretPaths []string
+	if manifest.IsV2() {
+		vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+		if err != nil {
+			return ProjectConfigureState{}, err
+		}
+		resolvedEntries, _ = project.ResolveV2Bindings(manifest, vault)
+		secretPaths = v2ProjectSecretSelectors(vault)
+	} else {
+		_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+		if err != nil {
+			return ProjectConfigureState{}, err
+		}
+		resolvedEntries, _ = project.ResolveEntries(manifest, st)
+		secretPaths = st.List("")
 	}
-	resolvedEntries, _ := project.ResolveEntries(manifest, st)
 	envFiles := projectConfigureEnvFiles(project.EnvFileDetails(root, resolvedEnvNameSet(resolvedEntries)))
 	return ProjectConfigureState{
 		EnvFiles:    envFiles,
-		SecretPaths: st.List(""),
+		SecretPaths: secretPaths,
 		Entries:     projectConfigureEntries(manifest),
 	}, nil
 }
@@ -153,18 +167,35 @@ func (a *App) ApplyProjectConfigureActions(configPathFlag, vaultPathFlag string,
 	if err != nil {
 		return "", err
 	}
-	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	var v1Store *vault.Store
+	var v2Vault vaultmodel.Vault
+	if manifest.IsV2() {
+		v2Vault, err = a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+	} else {
+		_, v1Store, err = a.LoadRuntime(configPathFlag, vaultPathFlag)
+	}
 	if err != nil {
 		return "", err
 	}
 	for _, action := range actions {
 		switch action.Kind {
 		case ProjectConfigureAddPath:
-			var entry project.Entry
-			manifest, entry, err = project.AddEntry(manifest, st, project.AddEntryRequest{Selector: action.Path, Env: action.Env})
-			_ = entry
+			if manifest.IsV2() {
+				binding, err := buildV2ProjectBinding(v2Vault, ProjectAddRequest{Selector: action.Path, Env: action.Env})
+				if err == nil {
+					err = manifest.AddV2Binding(binding)
+				}
+			} else {
+				var entry project.Entry
+				manifest, entry, err = project.AddEntry(manifest, v1Store, project.AddEntryRequest{Selector: action.Path, Env: action.Env})
+				_ = entry
+			}
 		case ProjectConfigureRemove:
-			if !manifest.RemoveEntry(action.Key) {
+			removed := manifest.RemoveEntry(action.Key)
+			if manifest.IsV2() {
+				removed = manifest.RemoveV2Binding(action.Key)
+			}
+			if !removed {
 				err = fmt.Errorf("entry not found: %s", action.Key)
 			}
 		default:
@@ -191,12 +222,28 @@ func (a *App) ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddReq
 	} else if err != nil {
 		return "", err
 	}
-	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	manifest, err := project.Load(manifestPath)
 	if err != nil {
 		return "", err
 	}
-
-	manifest, err := project.Load(manifestPath)
+	if manifest.IsV2() {
+		vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+		if err != nil {
+			return "", err
+		}
+		binding, err := buildV2ProjectBinding(vault, req)
+		if err != nil {
+			return "", err
+		}
+		if err := manifest.AddV2Binding(binding); err != nil {
+			return "", err
+		}
+		if err := project.Save(manifestPath, manifest); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("added %s\n", binding.Key()), nil
+	}
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -210,6 +257,21 @@ func (a *App) ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddReq
 	return fmt.Sprintf("added %s\n", entry.Key()), nil
 }
 
+func (a *App) ProjectAddCompletions(configPathFlag, vaultPathFlag string) ([]string, error) {
+	_, manifest, err := loadProjectManifest()
+	if err != nil {
+		return nil, err
+	}
+	if manifest.IsV2() {
+		vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+		if err != nil {
+			return nil, err
+		}
+		return v2ProjectSecretSelectors(vault), nil
+	}
+	return a.AllSecretPaths(configPathFlag, vaultPathFlag)
+}
+
 func ProjectRm(key string) (string, error) {
 	root, manifest, err := loadProjectManifest()
 	if errors.Is(err, os.ErrNotExist) {
@@ -218,7 +280,11 @@ func ProjectRm(key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !manifest.RemoveEntry(key) {
+	removed := manifest.RemoveEntry(key)
+	if manifest.IsV2() {
+		removed = manifest.RemoveV2Binding(key)
+	}
+	if !removed {
 		return "", fmt.Errorf("entry not found: %s", key)
 	}
 	if err := project.Save(filepath.Join(root, project.FileName), manifest); err != nil {
@@ -237,6 +303,16 @@ func ProjectList() (string, error) {
 	}
 
 	var out strings.Builder
+	if manifest.IsV2() {
+		for _, binding := range manifest.Bindings {
+			req := "required"
+			if !binding.IsRequired() {
+				req = "optional"
+			}
+			fmt.Fprintf(&out, "item   %s.%s -> %s (%s)\n", binding.Item, binding.Field, binding.Env, req)
+		}
+		return out.String(), nil
+	}
 	for _, entry := range manifest.Secrets {
 		req := "required"
 		if !entry.IsRequired() {
@@ -263,12 +339,10 @@ func (a *App) ProjectExport(configPathFlag, vaultPathFlag, format string) (Proje
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
-	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	resolvedEntries, diagnostics, err := a.resolveProjectBindings(configPathFlag, vaultPathFlag, manifest)
 	if err != nil {
 		return ProjectExportResult{}, err
 	}
-
-	resolvedEntries, diagnostics := project.ResolveEntries(manifest, st)
 	var diagnosticsOut strings.Builder
 	writeProjectDiagnostics(&diagnosticsOut, diagnostics)
 	result := ProjectExportResult{Diagnostics: diagnosticsOut.String()}
@@ -322,6 +396,13 @@ func projectConfigureEnvVars(vars []project.EnvVarStatus) []ProjectConfigureEnvV
 }
 
 func projectConfigureEntries(manifest project.Manifest) []ProjectConfigureEntry {
+	if manifest.IsV2() {
+		entries := make([]ProjectConfigureEntry, 0, len(manifest.Bindings))
+		for _, binding := range manifest.Bindings {
+			entries = append(entries, ProjectConfigureEntry{Kind: "item", Key: binding.Key(), Selector: binding.Key(), Env: binding.Env, Required: binding.IsRequired()})
+		}
+		return entries
+	}
 	entries := make([]ProjectConfigureEntry, 0, len(manifest.Secrets))
 	for _, entry := range manifest.Secrets {
 		item := ProjectConfigureEntry{Key: entry.Key(), Required: entry.IsRequired()}
@@ -346,6 +427,16 @@ func ProjectEntryCompletions(toComplete string) ([]string, error) {
 	_, manifest, err := loadProjectManifest()
 	if err != nil {
 		return nil, err
+	}
+	if manifest.IsV2() {
+		completions := make([]string, 0, len(manifest.Bindings))
+		for _, binding := range manifest.Bindings {
+			key := binding.Key()
+			if strings.HasPrefix(key, toComplete) {
+				completions = append(completions, key)
+			}
+		}
+		return completions, nil
 	}
 	completions := make([]string, 0, len(manifest.Secrets))
 	for _, entry := range manifest.Secrets {
@@ -385,4 +476,147 @@ func resolvedEnvNameSet(entries []project.Binding) map[string]struct{} {
 		names[entry.EnvName] = struct{}{}
 	}
 	return names
+}
+
+// resolveProjectBindings resolves entries for v1 or v2 manifests.
+func (a *App) resolveProjectBindings(configPathFlag, vaultPathFlag string, manifest project.Manifest) ([]project.Binding, []project.Diagnostic, error) {
+	if manifest.IsV2() {
+		vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+		if err != nil {
+			return nil, nil, err
+		}
+		entries, diagnostics := project.ResolveV2Bindings(manifest, vault)
+		return entries, diagnostics, nil
+	}
+	_, st, err := a.LoadRuntime(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return nil, nil, err
+	}
+	entries, diagnostics := project.ResolveEntries(manifest, st)
+	return entries, diagnostics, nil
+}
+
+// buildV2ProjectBinding builds a V2Binding from a ProjectAddRequest and a v2 vault.
+func buildV2ProjectBinding(vault vaultmodel.Vault, req ProjectAddRequest) (project.V2Binding, error) {
+	selector := req.Selector
+	if selector == "" {
+		return project.V2Binding{}, fmt.Errorf("selector is required")
+	}
+	itemSelector := selector
+	fieldID := req.Field
+	if before, after, ok := strings.Cut(selector, "."); ok {
+		itemSelector = before
+		if fieldID == "" {
+			fieldID = after
+		}
+	}
+	item, err := resolveV2ProjectItem(vault, itemSelector)
+	if err != nil {
+		return project.V2Binding{}, err
+	}
+	if fieldID == "" {
+		fieldID, err = primaryV2ProjectField(vault, item)
+		if err != nil {
+			return project.V2Binding{}, err
+		}
+	}
+	field, ok := v2FieldByID(item, fieldID)
+	if !ok {
+		return project.V2Binding{}, fmt.Errorf("field not found: %s.%s", item.ID, fieldID)
+	}
+	if field.Sensitivity != vaultmodel.SensitivitySecret {
+		return project.V2Binding{}, fmt.Errorf("field is not secret: %s.%s", item.ID, fieldID)
+	}
+	envName := req.Env
+	if envName == "" {
+		envName = v2EnvNameForField(vault, item, fieldID)
+	}
+	if envName == "" {
+		return project.V2Binding{}, fmt.Errorf("env name is required for %s.%s", item.ID, fieldID)
+	}
+	binding := project.V2Binding{Item: item.ID, Field: fieldID, Env: envName}
+	if req.Optional {
+		binding.Required = new(bool)
+	}
+	return binding, nil
+}
+
+// v2ProjectSecretSelectors returns item.field selectors for all secret fields in the vault.
+func v2ProjectSecretSelectors(vault vaultmodel.Vault) []string {
+	var selectors []string
+	for _, item := range vault.Items {
+		for _, field := range item.Fields {
+			if field.Sensitivity == vaultmodel.SensitivitySecret {
+				selectors = append(selectors, item.ID+"."+field.ID)
+			}
+		}
+	}
+	return selectors
+}
+
+func resolveV2ProjectItem(vault vaultmodel.Vault, selector string) (vaultmodel.Item, error) {
+	var matches []vaultmodel.Item
+	for _, item := range vault.Items {
+		if item.ID == selector || item.Title == selector || hasString(item.Aliases, selector) {
+			matches = append(matches, item)
+		}
+	}
+	if len(matches) == 0 {
+		return vaultmodel.Item{}, fmt.Errorf("item not found: %s", selector)
+	}
+	if len(matches) > 1 {
+		var b strings.Builder
+		fmt.Fprintf(&b, "selector matched multiple items: %s", selector)
+		for _, item := range matches {
+			fmt.Fprintf(&b, "\n- %s %s", item.ID, item.Title)
+		}
+		return vaultmodel.Item{}, fmt.Errorf("%s", b.String())
+	}
+	return matches[0], nil
+}
+
+func primaryV2ProjectField(vault vaultmodel.Vault, item vaultmodel.Item) (string, error) {
+	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
+	tmpl, ok := registry.Template(item.Template)
+	if !ok {
+		return "", fmt.Errorf("template not found: %s", item.Template)
+	}
+	for _, field := range tmpl.Fields {
+		if field.Purpose == vaultmodel.PurposePrimarySecret {
+			return field.ID, nil
+		}
+	}
+	return "", fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
+}
+
+func v2FieldByID(item vaultmodel.Item, fieldID string) (vaultmodel.Field, bool) {
+	for _, field := range item.Fields {
+		if field.ID == fieldID {
+			return field, true
+		}
+	}
+	return vaultmodel.Field{}, false
+}
+
+func v2EnvNameForField(vault vaultmodel.Vault, item vaultmodel.Item, fieldID string) string {
+	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
+	tmpl, ok := registry.Template(item.Template)
+	if !ok {
+		return ""
+	}
+	for _, templateField := range tmpl.Fields {
+		if templateField.Purpose != vaultmodel.PurposeEnvName || templateField.EnvFor != fieldID {
+			continue
+		}
+		field, ok := v2FieldByID(item, templateField.ID)
+		if !ok || len(field.Value) == 0 {
+			return ""
+		}
+		value, err := stringValue(field.Value)
+		if err != nil {
+			return ""
+		}
+		return value
+	}
+	return ""
 }

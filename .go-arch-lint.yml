@@ -84,6 +84,7 @@ deps:
     mayDependOn:
       - vault
       - util
+      - vaultmodel
 
   secret:
     mayDependOn:

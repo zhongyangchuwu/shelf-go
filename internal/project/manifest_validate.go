@@ -8,11 +8,22 @@ import (
 )
 
 func Validate(manifest Manifest) error {
-	if manifest.Version != CurrentVersion {
+	switch manifest.Version {
+	case CurrentVersion:
+		return validateV1Manifest(manifest)
+	case V2Version:
+		return validateV2Manifest(manifest)
+	default:
 		return fmt.Errorf("unsupported project manifest version %d", manifest.Version)
 	}
+}
+
+func validateV1Manifest(manifest Manifest) error {
 	if manifest.Secrets == nil {
 		return fmt.Errorf("project manifest secrets array is required")
+	}
+	if len(manifest.Bindings) > 0 {
+		return fmt.Errorf("project manifest bindings require version %d", V2Version)
 	}
 	seenPath := make(map[string]struct{}, len(manifest.Secrets))
 	seenPrefix := make(map[string]struct{}, len(manifest.Secrets))
@@ -90,6 +101,36 @@ func Validate(manifest Manifest) error {
 				return fmt.Errorf("invalid secrets[%d].env: %s", i, entry.Env)
 			}
 		}
+	}
+	return nil
+}
+
+func validateV2Manifest(manifest Manifest) error {
+	if len(manifest.Secrets) > 0 {
+		return fmt.Errorf("project manifest secrets require version %d", CurrentVersion)
+	}
+	if manifest.Bindings == nil {
+		return fmt.Errorf("project manifest bindings array is required")
+	}
+	seen := make(map[string]struct{}, len(manifest.Bindings))
+	for i, binding := range manifest.Bindings {
+		if binding.Item == "" {
+			return fmt.Errorf("bindings[%d].item is required", i)
+		}
+		if binding.Field == "" {
+			return fmt.Errorf("bindings[%d].field is required", i)
+		}
+		if binding.Env == "" {
+			return fmt.Errorf("bindings[%d].env is required", i)
+		}
+		if err := vault.ValidateEnvName(binding.Env); err != nil {
+			return fmt.Errorf("invalid bindings[%d].env: %s", i, binding.Env)
+		}
+		key := binding.Key()
+		if _, ok := seen[key]; ok {
+			return fmt.Errorf("duplicate binding item/field: %s", key)
+		}
+		seen[key] = struct{}{}
 	}
 	return nil
 }

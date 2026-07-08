@@ -82,7 +82,7 @@ shelf project status
 shelf project configure
 ```
 
-Shelf writes `<git-root>/.shelf.json`. The manifest stores paths, prefixes, tag selectors, env overrides, and required/optional flags; it does not store values.
+Shelf writes `<git-root>/.shelf.json`. Version 1 manifests store legacy paths, prefixes, tag selectors, env overrides, and required/optional flags. Version 2 manifests store concrete item/field/env bindings. Neither format stores secret values.
 
 When `project status` reports env-file variables that need bindings, run the interactive configurator:
 
@@ -90,7 +90,7 @@ When `project status` reports env-file variables that need bindings, run the int
 shelf project configure
 ```
 
-Project configuration queues value-free manifest changes and applies them only from the review screen. Tag project bindings expand during `project status`, `project export`, and `project run`. Prefix and tag entries cannot carry `--env` because they may expand to multiple secrets.
+Project configuration queues value-free manifest changes and applies them only from the review screen. In v1 manifests, tag project bindings expand during `project status`, `project export`, and `project run`; prefix and tag entries cannot carry `--env` because they may expand to multiple secrets. In v2 manifests, bindings are concrete item fields.
 
 Export sourceable shell lines when you want to update your current shell manually:
 

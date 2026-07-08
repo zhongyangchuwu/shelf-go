@@ -82,7 +82,7 @@ shelf project status
 
 ## Required secret or tag binding is missing
 
-`project status`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For tag entries, this means no secret has all listed tags.
+`project status`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For v1 tag entries, this means no secret has all listed tags. For v2 bindings, this means the bound item or field is missing, or the field has no value.
 
 Add the secret, adjust the project binding, or mark the entry optional:
 
@@ -94,7 +94,7 @@ shelf project add app-token --optional
 
 ## Env name conflict
 
-Two project entries resolved to the same env name. Resolution order is project `env`, then secret `env`, then derived name.
+Two project entries resolved to the same env name. V1 exact path entries can override env names in the manifest; v1 prefix/tag entries cannot use `--env` because they may expand to multiple secrets. V2 manifests bind concrete item/field/env records.
 
 Fix exact path entries by using explicit env overrides:
 
@@ -103,7 +103,7 @@ shelf project rm app:token
 shelf project add app:token --env APP_TOKEN
 ```
 
-Prefix and tag entries cannot use `--env` because they may expand to multiple secrets.
+Fix v2 bindings by removing the binding and re-adding it with a different `--env`.
 
 ## `project run` did not change my shell
 

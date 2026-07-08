@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
@@ -76,6 +77,7 @@ func newProjectStatusCmd(appSvc *app.App) *cobra.Command {
 
 func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 	var envName string
+	var field string
 	var optional bool
 	var tags []string
 	cmd := &cobra.Command{
@@ -93,7 +95,7 @@ func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 
 			configPath, _ := cmd.Flags().GetString("config")
 			vaultPath, _ := cmd.Flags().GetString("vault")
-			out, err := appSvc.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: selector, Env: envName, Optional: optional, Tags: tags})
+			out, err := appSvc.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: selector, Field: field, Env: envName, Optional: optional, Tags: tags})
 			if err != nil {
 				return err
 			}
@@ -101,10 +103,12 @@ func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&envName, "env", "", "Environment variable name override (path entries only)")
+	cmd.Flags().StringVar(&envName, "env", "", "Environment variable name override")
+	cmd.Flags().StringVar(&field, "field", "", "Field ID to bind for v2 project manifests")
 	cmd.Flags().BoolVar(&optional, "optional", false, "Mark entry as optional")
 	cmd.Flags().StringArrayVar(&tags, "tag", nil, "Tag selector for this project; repeat for AND matching")
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 	return cmd
 }
@@ -132,11 +136,17 @@ func completeProjectAddArg(appSvc *app.App, cmd *cobra.Command, args []string, t
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	configPath, vaultPath := runtimePaths(cmd)
-	paths, err := appSvc.AllSecretPaths(configPath, vaultPath)
+	paths, err := appSvc.ProjectAddCompletions(configPath, vaultPath)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	return completeSecretSetPath(paths, toComplete)
+	completions := make([]cobra.Completion, 0, len(paths))
+	for _, path := range paths {
+		if strings.HasPrefix(path, toComplete) {
+			completions = append(completions, cobra.Completion(path))
+		}
+	}
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func completeProjectEntries(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {

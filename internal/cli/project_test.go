@@ -325,6 +325,106 @@ func TestProjectExportDefaultsToShell(t *testing.T) {
 		t.Fatalf("unexpected default output:\n%s", out)
 	}
 }
+func TestProjectAddV2BindsItemEnvField(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "vault.v2.json")
+	if _, err := runShelfWithInput(t, "fake-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create v2 secret: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(`{"version":2,"bindings":[]}`), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "add", "item_github")
+	if err != nil {
+		t.Fatalf("project add v2: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "added item_github.value") {
+		t.Fatalf("unexpected add output: %q", out)
+	}
+	list, err := runShelf(t, "project", "list")
+	if err != nil {
+		t.Fatalf("project list v2: %v", err)
+	}
+	if !strings.Contains(list, "item   item_github.value -> GITHUB_TOKEN") {
+		t.Fatalf("unexpected v2 list output: %q", list)
+	}
+}
+
+func TestProjectExportV2MaterializesBoundField(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "vault.v2.json")
+	if _, err := runShelfWithInput(t, "fake-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create v2 secret: %v", err)
+	}
+	manifest := `{"version":2,"bindings":[{"item":"item_github","field":"value","env":"GITHUB_TOKEN"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
+	if err != nil {
+		t.Fatalf("project export v2: %v\n%s", err, out)
+	}
+	if out != "GITHUB_TOKEN=fake-token\n" {
+		t.Fatalf("unexpected export: %q", out)
+	}
+}
+
+func TestProjectRunV2InjectsBoundField(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "vault.v2.json")
+	if _, err := runShelfWithInput(t, "fake-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create v2 secret: %v", err)
+	}
+	manifest := `{"version":2,"bindings":[{"item":"item_github","field":"value","env":"GITHUB_TOKEN"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "printf %s \"$GITHUB_TOKEN\"")
+	if err != nil {
+		t.Fatalf("project run v2: %v\n%s", err, out)
+	}
+	if out != "fake-token" {
+		t.Fatalf("unexpected child output: %q", out)
+	}
+}
+
+func TestProjectStatusV2IsValueFree(t *testing.T) {
+	dir := t.TempDir()
+	chdirTest(t, dir)
+	if _, err := runGit(t, "init"); err != nil {
+		t.Fatalf("git init: %v", err)
+	}
+	data := filepath.Join(dir, "vault.v2.json")
+	if _, err := runShelfWithInput(t, "fake-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create v2 secret: %v", err)
+	}
+	manifest := `{"version":2,"bindings":[{"item":"item_github","field":"value","env":"GITHUB_TOKEN"}]}`
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "status")
+	if err != nil {
+		t.Fatalf("project status v2: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "fake-token") {
+		t.Fatalf("status leaked secret value: %q", out)
+	}
+	if !strings.Contains(out, "ok   item_github.value -> GITHUB_TOKEN") {
+		t.Fatalf("missing v2 binding status: %q", out)
+	}
+}
 
 func TestProjectExportFailsOnRequiredMissing(t *testing.T) {
 	dir, data := setupProjectTest(t)

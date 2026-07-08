@@ -145,13 +145,13 @@ Command handlers should stay thin: parse flags, call an injected `*app.App`, the
 
 `internal/project` owns Git project identity, `.shelf.json` schema/IO/validation, and manifest-to-env resolution.
 
-Resolution uses a local `*vault.Store` snapshot supplied by `internal/app`. Resolution order for env names:
+Version 1 resolution uses a local `*vault.Store` snapshot supplied by `internal/app`. Version 2 resolution uses `vaultmodel.Vault` loaded through the v2 JSON repository boundary. Env name rules:
 
-1. manifest entry `env`;
-2. v2 item env-name public field such as `value_env` or `credential_env`;
-3. env name derived from the selected legacy path during migration/cutover where applicable.
+1. v1 exact path entries may carry manifest `env` overrides;
+2. v2 project bindings carry explicit env names derived from item env-name public fields when added through CLI;
+3. v1 prefix/tag entries and migrated bindings use concrete resolved env names.
 
-Prefix and tag manifest entries may expand to multiple local vault secrets and cannot carry `env`. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
+V1 prefix and tag manifest entries may expand to multiple local vault secrets and cannot carry `env`. V2 bindings are concrete item/field/env records. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
 
 ## Secret editing workflow
 

@@ -211,21 +211,22 @@ shelf project configure
 
 ### `shelf project add`
 
-Adds an exact path, prefix, or tag selector to the project manifest.
+Adds a binding to the project manifest. Version 1 manifests accept exact paths, prefixes, or tag selectors. Version 2 manifests accept v2 item selectors and bind concrete item fields.
 
 ```bash
 shelf project add <path-or-prefix> [--env NAME] [--optional]
 shelf project add --tag TAG [--tag TAG ...] [--optional]
+shelf project add <item-id-or-title> [--field FIELD] [--env NAME] [--optional]
 ```
 
-`--env` is valid only for exact path entries. Prefix and tag entries may expand to multiple secrets and cannot carry an env override.
+For version 1 manifests, `--env` is valid only for exact path entries. Prefix and tag entries may expand to multiple secrets and cannot carry an env override. For version 2 manifests, `--field` defaults to the item's primary secret field and `--env` defaults to that field's public env-name field.
 
 ### `shelf project rm`
 
-Removes a manifest entry by exact path, prefix, or comma-joined tag selector key.
+Removes a manifest entry by exact path, prefix, comma-joined tag selector key, or v2 `item.field` key.
 
 ```bash
-shelf project rm <path-or-prefix-or-tag-key>
+shelf project rm <manifest-entry-key>
 ```
 
 ### `shelf project list`
@@ -276,6 +277,8 @@ shelf completion [bash|zsh|fish|powershell]
 
 Path: `<git-root>/.shelf.json`
 
+Version 1 manifests bind legacy `group:key` paths, prefixes, or tag selectors:
+
 ```json
 {
   "version": 1,
@@ -297,22 +300,29 @@ Path: `<git-root>/.shelf.json`
 }
 ```
 
+Version 2 manifests bind concrete v2 item fields:
+
+```json
+{
+  "version": 2,
+  "bindings": [
+    {
+      "item": "item_github",
+      "field": "value",
+      "env": "GITHUB_TOKEN",
+      "required": true
+    }
+  ]
+}
+```
+
 Rules:
 
-- `version` is required and fixed at `1`.
-- `secrets` is an array.
-- Each entry has exactly one selector: `path`, `prefix`, or `tags`.
-- `env` is a project-level env override for exact path entries only.
-- `required` defaults to `true`.
-- Duplicate path, prefix, or identical tag-selector entries are rejected.
+- `version` is required. `1` uses `secrets`; `2` uses `bindings`.
+- Version 1 entries have exactly one selector: `path`, `prefix`, or `tags`.
+- Version 1 `env` is a project-level env override for exact path entries only.
+- Version 2 bindings name `item`, `field`, and `env` explicitly.
+- `required` defaults to `true` in both versions.
+- Duplicate v1 path/prefix/tag entries and duplicate v2 item/field bindings are rejected.
 - Secret values are prohibited.
-
-Env name resolution order:
-
-1. manifest entry `env`;
-2. secret object's `env`;
-3. derived from the full secret path.
-
-Tag entries expand to every secret that has all listed tags. If a required tag entry matches no secrets, project status/export/run reports a missing required entry.
-
-Two entries resolving to the same env name are a conflict.
+- Duplicate resolved env names are a runtime conflict.

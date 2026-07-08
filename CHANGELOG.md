@@ -15,6 +15,7 @@ All notable user-facing changes will be recorded here.
 - Added `shelf project configure` as a TUI for value-free project binding setup, including env-file binding, existing-secret add, remove, review, and apply flows.
 - Added v2 vault profiles with an `openai` profile over the `api_credential` template.
 - Added env-name public fields such as `value_env` and `credential_env` so env names are ordinary item fields instead of special field bindings.
+- Added v2 `.shelf.json` project bindings with concrete item/field/env records for `project status`, `project export`, `project run`, `project add`, `project list`, and `project rm`.
 
 - Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
 - Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.

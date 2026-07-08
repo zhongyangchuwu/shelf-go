@@ -15,7 +15,7 @@ JSON remains the initial storage recommendation because it preserves the portabl
 - [x] Phase 36: JSON Codec and Repository Boundary
 - [x] Phase 37: Legacy Migration Adapter
 - [x] Phase 38: Secret CLI v2 Workflows
-- [ ] Phase 39: Project Manifest v2 Bindings
+- [x] Phase 39: Project Manifest v2 Bindings
 - [ ] Phase 40: Manager Adaptation and Cutover
 
 ## Phase 34: Template Item Vault Design
@@ -98,6 +98,10 @@ JSON remains the initial storage recommendation because it preserves the portabl
 
 **Plan:** `.planning/phases/039-project-manifest-v2-bindings/PLAN.md`
 
+**Completion Date:** 2026-07-08
+
+**Artifacts:** `CONTEXT.md`, `PLAN.md`, `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
+
 ## Phase 40: Manager Adaptation and Cutover
 
 **Goal:** Adapt or temporarily gate the local manager for v2 items after CLI/core behavior is stable.
@@ -117,7 +121,7 @@ JSON remains the initial storage recommendation because it preserves the portabl
 | Phase 36: JSON Codec and Repository Boundary | Complete | V2-IMPL-03 | `.planning/phases/036-json-codec-repository-boundary/PLAN.md` | 2026-07-07 |
 | Phase 37: Legacy Migration Adapter | Complete | V2-IMPL-04 | `.planning/phases/037-legacy-migration-adapter/PLAN.md` | 2026-07-07 |
 | Phase 38: Secret CLI v2 Workflows | Complete | V2-IMPL-05 | `.planning/phases/038-secret-cli-v2-workflows/PLAN.md` | 2026-07-08 |
-| Phase 39: Project Manifest v2 Bindings | Not Started | V2-IMPL-06 | `.planning/phases/039-project-manifest-v2-bindings/PLAN.md` | — |
+| Phase 39: Project Manifest v2 Bindings | Complete | V2-IMPL-06 | `.planning/phases/039-project-manifest-v2-bindings/PLAN.md` | 2026-07-08 |
 | Phase 40: Manager Adaptation and Cutover | Not Started | V2-IMPL-07 | `.planning/phases/040-manager-adaptation-cutover/PLAN.md` | — |
 
 ## Historical v0.1.1 Roadmap
@@ -363,4 +367,4 @@ SQLite and storage backend redesign are now active v0.2.0 design topics.
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-08 after completing Phase 38 secret CLI v2 workflows*
+*Last updated: 2026-07-08 after completing Phase 39 project manifest v2 bindings*

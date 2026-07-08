@@ -10,7 +10,7 @@ These files are value-free or encrypted and can usually be reviewed and synced:
 | --- | --- | --- |
 | `~/.local/share/shelf/vault.age` | Yes | Encrypted vault source of truth. Verify with `shelf vault status` before syncing. |
 | `~/.local/share/shelf/vault.age.bak` | Yes | Single last-write encrypted backup. Optional; not a history system. |
-| `<git-root>/.shelf.json` | Yes | Project manifest with paths/env names only; review before committing. |
+| `<git-root>/.shelf.json` | Yes | Project manifest with legacy paths or v2 item/field/env bindings only; review before committing. |
 | `~/.config/shelf/config.yaml` | Usually | May contain public recipients and local identity paths. Machine-specific paths may not be portable. |
 
 ## Files you must not sync

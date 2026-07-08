@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Project Manifest v2 Bindings
+- Phase: Manager Adaptation and Cutover
 - Status: ready
-- Active Artifact: .planning/phases/039-project-manifest-v2-bindings/PLAN.md
-- Next Action: Plan and implement v2 project manifest item/field/env bindings so project status/export/run can resolve v2 vault items without storing secret values.
+- Active Artifact: .planning/phases/040-manager-adaptation-cutover/PLAN.md
+- Next Action: Plan local manager adaptation or gating for v2 items after v2 secret CLI and project bindings are stable.
 
 ## Blockers
 - None
@@ -23,6 +23,8 @@
 - Verification passed for Phase 37: `go test ./internal/vaultmigrate`; `go test ./internal/vaultmodel ./internal/vaultjson ./internal/vaultmigrate`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 - Completed Phase 38: v2 secret CLI workflows create, set from stdin, get, list long, info, and remove over v2 items; env names are public fields; profiles include `openai`; value-free outputs and ambiguity errors are tested.
 - Verification passed for Phase 38: `go test ./internal/vaultmodel ./internal/vaultjson ./internal/vaultmigrate ./internal/app ./internal/cli`; `go test ./internal/app -run 'Test.*V2'`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
+- Completed Phase 39: `.shelf.json` version 2 supports concrete item/field/env bindings; project status/add/list/rm/export/run dispatch v1 vs v2 manifests; v2 diagnostics stay value-free.
+- Verification passed for Phase 39: `go test ./internal/project ./internal/app ./internal/cli`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 
 ## Updated
 - 2026-07-08

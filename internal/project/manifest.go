@@ -1,18 +1,21 @@
 package project
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
 
 const (
 	CurrentVersion = 1
+	V2Version      = 2
 	FileName       = ".shelf.json"
 )
 
 type Manifest struct {
-	Version int     `json:"version"`
-	Secrets []Entry `json:"secrets"`
+	Version  int         `json:"version"`
+	Secrets  []Entry     `json:"secrets"`
+	Bindings []V2Binding `json:"bindings,omitempty"`
 }
 
 type Entry struct {
@@ -23,12 +26,60 @@ type Entry struct {
 	Required *bool    `json:"required,omitempty"`
 }
 
+type V2Binding struct {
+	Item     string `json:"item"`
+	Field    string `json:"field"`
+	Env      string `json:"env"`
+	Required *bool  `json:"required,omitempty"`
+	Title    string `json:"title,omitempty"`
+}
+
+func (m Manifest) MarshalJSON() ([]byte, error) {
+	switch m.Version {
+	case CurrentVersion:
+		type v1Manifest struct {
+			Version int     `json:"version"`
+			Secrets []Entry `json:"secrets"`
+		}
+		secrets := m.Secrets
+		if secrets == nil {
+			secrets = []Entry{}
+		}
+		return json.Marshal(v1Manifest{Version: m.Version, Secrets: secrets})
+	case V2Version:
+		type v2Manifest struct {
+			Version  int         `json:"version"`
+			Bindings []V2Binding `json:"bindings"`
+		}
+		bindings := m.Bindings
+		if bindings == nil {
+			bindings = []V2Binding{}
+		}
+		return json.Marshal(v2Manifest{Version: m.Version, Bindings: bindings})
+	default:
+		type rawManifest Manifest
+		return json.Marshal(rawManifest(m))
+	}
+}
+
 func New() Manifest {
 	return Manifest{Version: CurrentVersion, Secrets: []Entry{}}
 }
 
+func NewV2() Manifest {
+	return Manifest{Version: V2Version, Bindings: []V2Binding{}}
+}
+
+func (m Manifest) IsV2() bool {
+	return m.Version == V2Version
+}
+
 func (e Entry) IsRequired() bool {
 	return e.Required == nil || *e.Required
+}
+
+func (b V2Binding) IsRequired() bool {
+	return b.Required == nil || *b.Required
 }
 
 // Key returns the unique identifier for this entry: path, prefix, or comma-joined tags.
@@ -40,6 +91,10 @@ func (e Entry) Key() string {
 		return e.Prefix
 	}
 	return strings.Join(e.Tags, ",")
+}
+
+func (b V2Binding) Key() string {
+	return b.Item + "." + b.Field
 }
 
 // IsPrefix returns true if this is a prefix entry.
@@ -69,11 +124,31 @@ func (m *Manifest) AddEntry(entry Entry) error {
 	return nil
 }
 
+func (m *Manifest) AddV2Binding(binding V2Binding) error {
+	for _, existing := range m.Bindings {
+		if existing.Item == binding.Item && existing.Field == binding.Field {
+			return fmt.Errorf("binding with item %q and field %q already exists", binding.Item, binding.Field)
+		}
+	}
+	m.Bindings = append(m.Bindings, binding)
+	return nil
+}
+
 // RemoveEntry removes an entry by path, prefix, or comma-joined tags. Returns false if not found.
 func (m *Manifest) RemoveEntry(key string) bool {
 	for i, entry := range m.Secrets {
 		if entry.Key() == key {
 			m.Secrets = append(m.Secrets[:i], m.Secrets[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Manifest) RemoveV2Binding(key string) bool {
+	for i, binding := range m.Bindings {
+		if binding.Key() == key {
+			m.Bindings = append(m.Bindings[:i], m.Bindings[i+1:]...)
 			return true
 		}
 	}
@@ -88,4 +163,13 @@ func (m *Manifest) FindEntry(key string) (Entry, bool) {
 		}
 	}
 	return Entry{}, false
+}
+
+func (m *Manifest) FindV2Binding(key string) (V2Binding, bool) {
+	for _, binding := range m.Bindings {
+		if binding.Key() == key {
+			return binding, true
+		}
+	}
+	return V2Binding{}, false
 }

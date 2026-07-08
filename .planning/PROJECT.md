@@ -32,10 +32,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.2.0 Phase 36 implemented the v2 plaintext JSON codec/repository boundary in `internal/vaultjson` with strict decode, validated encode/save, atomic writes, backup behavior, and missing-file errors.
 - [x] v0.2.0 Phase 37 implemented internal v1-to-v2 migration adapters that convert flat secrets to `generic_secret` items and value-free project manifest bindings without deleting source data.
 - [x] v0.2.0 Phase 38 replaced the old `group:key` secret CLI with v2 item/field workflows, env-name public fields, profile defaults, and value-free list/info/ambiguity output.
+- [x] v0.2.0 Phase 39 implemented v2 project manifest bindings for concrete item/field/env records and wired them into project status, add/list/rm, export, and run with value-free diagnostics.
 
 ### Active
 
-- [ ] v0.2.0 implementation is moving next to project manifest v2 item/field bindings after completing the first v2 secret CLI cutover.
+- [ ] v0.2.0 implementation is moving next to local manager adaptation or gating after completing v2 project bindings.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -94,6 +95,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Add v2 model behind a new internal package | Incremental cutover is safer than replacing the v1 vault package in place. | `internal/vaultmodel` now owns v2 model types, built-in templates/profiles, validation, and indexes. |
 | Add v2 JSON storage behind a separate package | v2 storage needs strict validation and atomic writes without changing current v1 vault runtime behavior. | `internal/vaultjson` now owns plaintext v2 JSON encode/decode and repository load/save behind the model boundary. |
 | Convert v1 records to generic v2 items by default | Inferring richer templates from old path names risks changing user intent. | `internal/vaultmigrate` converts all v1 secrets to `generic_secret`, preserves old paths as aliases, and expands project bindings value-free. |
+| Use concrete v2 project bindings | Prefix/tag-style selectors belong to v1 migration and can obscure runtime conflicts. | Phase 39 `.shelf.json` version 2 stores concrete `item`, `field`, and `env` bindings; export/run/status resolve those against v2 vault items with value-free diagnostics. |
 
 ## Evolution
 
@@ -107,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-07-08 after completing Phase 38 secret CLI v2 workflows*
+*Last updated: 2026-07-08 after completing Phase 39 project manifest v2 bindings*
