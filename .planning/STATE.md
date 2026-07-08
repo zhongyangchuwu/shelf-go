@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: Manager Adaptation and Cutover
-- Status: ready
-- Active Artifact: .planning/phases/040-manager-adaptation-cutover/PLAN.md
-- Next Action: Plan local manager adaptation or gating for v2 items after v2 secret CLI and project bindings are stable.
+- Phase: v0.2.0 Implementation Track
+- Status: ready for milestone audit
+- Active Artifact: .planning/ROADMAP.md
+- Next Action: Audit the completed v0.2.0 implementation track before deciding release/cutover follow-up work.
 
 ## Blockers
 - None
@@ -25,6 +25,8 @@
 - Verification passed for Phase 38: `go test ./internal/vaultmodel ./internal/vaultjson ./internal/vaultmigrate ./internal/app ./internal/cli`; `go test ./internal/app -run 'Test.*V2'`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 - Completed Phase 39: `.shelf.json` version 2 supports concrete item/field/env bindings; project status/add/list/rm/export/run dispatch v1 vs v2 manifests; v2 diagnostics stay value-free.
 - Verification passed for Phase 39: `go test ./internal/project ./internal/app ./internal/cli`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
+- Completed Phase 40: `shelf manager` is explicitly gated when a resolved valid v2 vault exists, preventing the v1 Web editor from operating over v2 item workflows while preserving v1 manager behavior.
+- Verification passed for Phase 40: `go test ./internal/app ./internal/cli ./internal/manager`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 
 ## Updated
 - 2026-07-08

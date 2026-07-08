@@ -123,7 +123,7 @@ shelf project run --dry-run -- npm run dev
 shelf manager
 ```
 
-The manager starts an on-demand loopback Web console. It can search, add, edit, rename, delete, reveal, copy, and tag secret records. List and detail responses stay metadata-only; values reveal only through explicit reveal/copy actions. Stop the process with Ctrl-C when finished.
+The manager starts an on-demand loopback Web console for the current v1 encrypted vault. It can search, add, edit, rename, delete, reveal, copy, and tag secret records. List and detail responses stay metadata-only; values reveal only through explicit reveal/copy actions. During the v2 cutover, `shelf manager` refuses to open when the resolved v2 vault file exists; use `shelf secret` and `shelf project` commands for v2 item workflows until the v2 manager is adapted. Stop the process with Ctrl-C when finished.
 
 ## Portability and recovery
 
@@ -158,7 +158,7 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 
 ## Safety notes
 
-- `shelf secret get`, `shelf project export`, `shelf project run`, and `shelf manager` can intentionally materialize plaintext values. `shelf secret info` and `shelf secret list` are value-free.
+- `shelf secret get`, `shelf project export`, `shelf project run`, and the v1 `shelf manager` can intentionally materialize plaintext values. `shelf secret info` and `shelf secret list` are value-free.
 - `.shelf.json` project manifests are value-free and can be committed after review.
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
 - Phase 38 v2 JSON vault files (`*.v2.json`) contain secret values in plaintext during the cutover. Do not commit or sync them.

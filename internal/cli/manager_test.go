@@ -57,6 +57,29 @@ func TestRootExcludesPreReleaseTopLevelCommands(t *testing.T) {
 	}
 }
 
+func TestManagerGatesExplicitV2Vault(t *testing.T) {
+	dir := t.TempDir()
+	vaultPath := filepath.Join(dir, "vault.v2.json")
+	if _, err := runShelfWithInput(t, "fake-secret", "--vault", vaultPath, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create v2 secret: %v", err)
+	}
+	_, err := runShelf(t, "--vault", vaultPath, "manager")
+	if err == nil {
+		t.Fatalf("expected manager v2 gate")
+	}
+	message := err.Error()
+	for _, want := range []string{"local manager is not available for v2 vaults yet", vaultPath, "shelf secret", "shelf project"} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("gate error missing %q: %v", want, err)
+		}
+	}
+	for _, leaked := range []string{"fake-secret", "GITHUB_TOKEN"} {
+		if strings.Contains(message, leaked) {
+			t.Fatalf("gate error leaked %q: %v", leaked, err)
+		}
+	}
+}
+
 func TestVaultStatusReportsEncryptedLoadableVault(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yaml")
@@ -242,6 +265,32 @@ func TestVaultStatusGuidesUndecryptableVault(t *testing.T) {
 	for _, want := range []string{"could not decrypt vault", "restore a known-good encrypted backup"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("status output missing %q:\n%s", want, out)
+		}
+	}
+}
+func TestManagerRejectsV2VaultSidecar(t *testing.T) {
+	dir := t.TempDir()
+	vaultPath := filepath.Join(dir, "vault.age")
+	configPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("version: 1\nvault_path: "+vaultPath+"\n"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if _, err := runShelfWithInput(t, "fake-secret", "--config", configPath, "secret", "create", "sidecar", "--env", "SIDECAR_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create v2 sidecar: %v", err)
+	}
+	_, err := runShelf(t, "--config", configPath, "manager")
+	if err == nil {
+		t.Fatal("expected gate error")
+	}
+	message := err.Error()
+	for _, want := range []string{"local manager is not available for v2 vaults yet", vaultPath + ".v2.json"} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("gate error missing %q: %v", want, err)
+		}
+	}
+	for _, leaked := range []string{"fake-secret", "SIDECAR_TOKEN"} {
+		if strings.Contains(message, leaked) {
+			t.Fatalf("gate error leaked %q: %v", leaked, err)
 		}
 	}
 }

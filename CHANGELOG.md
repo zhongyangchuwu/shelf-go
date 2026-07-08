@@ -9,6 +9,7 @@ All notable user-facing changes will be recorded here.
 - Replaced `shelf project explain` with `shelf project status`; status now reports project binding resolution and value-free local env-file summaries.
 - Replaced the old `group:key` secret CLI with v2 template-based `secret create`, `set --stdin`, `get`, `list --long`, `info`, and `rm --yes` item/field workflows.
 - Removed `secret add`, `secret edit`, and direct `secret export` from the v2 secret CLI; full interactive editing and direct export are deferred to later v2 surfaces.
+- Gated `shelf manager` when the resolved v2 vault exists; the v1 Web manager no longer opens over v2 item/field vault workflows.
 
 ### Added
 

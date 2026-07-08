@@ -21,7 +21,7 @@ Do not commit or sync these through Git or chezmoi:
 | --- | --- |
 | Private age identity files | They decrypt the vault. Their paths may appear in config, but the key material is secret. |
 | `.env`, `.env.local`, generated env files | They contain plaintext exported values. |
-| Phase 38 v2 JSON vault files (`*.v2.json`) | They contain plaintext secret values until v2 age wrapping is wired in. |
+| Cutover v2 JSON vault files (`*.v2.json`) | They contain plaintext secret values until v2 age wrapping is wired in. `shelf manager` is gated when the resolved v2 vault exists. |
 | TUI/editor temp files | Future interactive editing may handle plaintext during editing; cleanup must be best-effort on normal command exit. |
 
 ## First machine

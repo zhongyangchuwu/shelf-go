@@ -51,7 +51,7 @@ Shelf's source of truth is the local Shelf vault. gopass, 1Password, Bitwarden, 
 Runtime commands read local vault data only:
 
 - v2 `secret` item/field workflows;
-- manager list/reveal/edit/delete;
+- v1 manager list/reveal/edit/delete while no matching v2 vault is present;
 - `project status/export`;
 - `shelf run`.
 
@@ -138,7 +138,7 @@ Command handlers should stay thin: parse flags, call an injected `*app.App`, the
 - `App.ReadVault(configPath, vaultPath, fn)` runs read-only local vault work;
 - `App.UpdateVault(configPath, vaultPath, fn)` locks, loads, mutates, and saves through `vault.Repository.Update`;
 - `App.ProjectRun(req)` resolves the current project manifest against local vault data and runs the child process;
-- `App.OpenManager(configPath, vaultPath, addr)` opens the local manager using a manager-specific service adapter;
+- `App.OpenManager(configPath, vaultPath, addr)` gates v2 vaults, then opens the v1 local manager using a manager-specific service adapter;
 - `String()` returns the application version string from release ldflags or Go build info.
 
 ## Project workflows
@@ -163,7 +163,9 @@ The first v2 secret CLI is non-interactive and writes fields from stdin. Full-ob
 
 ## Local manager
 
-`internal/manager` is an on-demand local manager surface. Today it is implemented as loopback HTTP/Web, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept. CLI reaches it through `internal/app`; manager receives a narrow secret-service contract and does not import app.
+`internal/manager` is an on-demand local manager surface. Today it is implemented as a v1 loopback HTTP/Web editor, but the package name is intentionally not vault-only or Web-only so future config/project panels can live behind the same manager concept. CLI reaches it through `internal/app`; manager receives a narrow secret-service contract and does not import app.
+
+During the v2 cutover, `App.OpenManager` checks the resolved v2 vault path before opening the v1 manager. If a v2 vault is present, Shelf returns a value-free gate error instead of opening a v1 path-shaped editor against stale or mismatched data.
 
 Safety boundaries:
 

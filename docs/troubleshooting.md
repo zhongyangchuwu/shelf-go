@@ -139,6 +139,20 @@ shelf manager --addr 127.0.0.1:8080
 
 The printed URL contains a local access token and can remain in browser history. Treat it as sensitive local plaintext and stop the manager with Ctrl-C when finished.
 
+## Local manager is not available for v2 vaults yet
+
+During the v2 cutover, `shelf manager` refuses to open when the resolved v2 vault file exists. This prevents the v1 path-shaped Web editor from mutating the wrong vault model.
+
+Use CLI v2 workflows for now:
+
+```bash
+shelf secret list --long
+shelf secret info openai
+shelf project status
+```
+
+If you intentionally need the legacy v1 manager, point `--vault` or `SHELF_VAULT` at a v1 encrypted vault path that has no matching v2 JSON vault file.
+
 ## Shell completion is not installed
 
 Generate completion for your shell:

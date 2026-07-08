@@ -112,13 +112,13 @@ shelf vault check
 
 ### `shelf manager`
 
-Starts the on-demand local manager.
+Starts the on-demand local manager for v1 encrypted vault records.
 
 ```bash
 shelf manager [--addr 127.0.0.1:0]
 ```
 
-The manager prints a tokenized loopback URL and serves an embedded Web console for search, add, edit, rename, delete, reveal, copy, and tag workflows. List/detail responses are metadata-only; reveal/copy actions intentionally return plaintext values. Treat the URL and revealed values as sensitive local plaintext, and stop the process with Ctrl-C when finished.
+The manager prints a tokenized loopback URL and serves an embedded Web console for v1 search, add, edit, rename, delete, reveal, copy, and tag workflows. List/detail responses are metadata-only; reveal/copy actions intentionally return plaintext values. During the v2 cutover, `shelf manager` refuses to open when the resolved v2 vault file exists; use `shelf secret` and `shelf project` for v2 item workflows. Treat the URL and revealed values as sensitive local plaintext, and stop the process with Ctrl-C when finished.
 
 ### `shelf doctor`
 

@@ -17,7 +17,7 @@ Requirements for the active v0.2.0 implementation track plus completed v0.2.0 de
 - [x] **V2-IMPL-04**: Shelf implements a legacy migration adapter that converts v1 flat secrets and project manifests to v2 items and value-free env-name field mappings without deleting or rewriting source data before validation succeeds.
 - [x] **V2-IMPL-05**: Common secret CLI workflows create, set from stdin, get, list long, info, and remove operate over v2 items and preserve value-free output rules.
 - [x] **V2-IMPL-06**: Project manifest v2 item/field bindings resolve export/run environments without storing secret values and provide value-free diagnostics for missing items, missing fields, and duplicate env names.
-- [ ] **V2-IMPL-07**: The local manager is adapted or explicitly gated for v2 items after CLI/core behavior is stable, preserving value-free list/search and explicit reveal/copy semantics.
+- [x] **V2-IMPL-07**: The local manager is adapted or explicitly gated for v2 items after CLI/core behavior is stable, preserving value-free list/search and explicit reveal/copy semantics.
 
 ### v0.2.0 Template Item Vault Design
 
@@ -159,15 +159,15 @@ Explicitly excluded. Documented to prevent scope creep.
 | V2-IMPL-04 | Phase 37 | Complete |
 | V2-IMPL-05 | Phase 38 | Complete |
 | V2-IMPL-06 | Phase 39 | Complete |
-| V2-IMPL-07 | Phase 40 | Not Started |
+| V2-IMPL-07 | Phase 40 | Complete |
 
 **Coverage:**
 - Current requirements: 48 total
 - Mapped to phases: 48
 - Unmapped: 0
-- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-06
+- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-07
 - Completed in v0.1.1: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-07, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-08 after completing Phase 39 project manifest v2 bindings*
+*Last updated: 2026-07-08 after completing Phase 40 manager v2 gating*

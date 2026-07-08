@@ -145,7 +145,7 @@ The backup is a normal encrypted Shelf vault file. Shelf overwrites this single 
 shelf manager
 ```
 
-The manager binds to loopback, prints a tokenized local URL, and provides a Web console for search, add, edit, rename, delete, reveal, copy, and tag workflows. List/detail responses do not include secret values; reveal/copy actions intentionally handle plaintext locally.
+The manager binds to loopback, prints a tokenized local URL, and provides a Web console for v1 vault search, add, edit, rename, delete, reveal, copy, and tag workflows. List/detail responses do not include secret values; reveal/copy actions intentionally handle plaintext locally. During the v2 cutover, the manager is gated when the resolved v2 vault exists; use CLI v2 item commands until the v2 manager is adapted.
 
 ## Next steps
 

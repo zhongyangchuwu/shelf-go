@@ -33,10 +33,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.2.0 Phase 37 implemented internal v1-to-v2 migration adapters that convert flat secrets to `generic_secret` items and value-free project manifest bindings without deleting source data.
 - [x] v0.2.0 Phase 38 replaced the old `group:key` secret CLI with v2 item/field workflows, env-name public fields, profile defaults, and value-free list/info/ambiguity output.
 - [x] v0.2.0 Phase 39 implemented v2 project manifest bindings for concrete item/field/env records and wired them into project status, add/list/rm, export, and run with value-free diagnostics.
+- [x] v0.2.0 Phase 40 explicitly gated the v1 local manager when a resolved v2 vault is present, preserving v1 manager behavior while avoiding wrong-model edits during cutover.
 
 ### Active
 
-- [ ] v0.2.0 implementation is moving next to local manager adaptation or gating after completing v2 project bindings.
+- [ ] v0.2.0 implementation track is ready for milestone audit after completing v2 model, storage boundary, migration adapter, secret CLI, project bindings, and manager gating.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -96,6 +97,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Add v2 JSON storage behind a separate package | v2 storage needs strict validation and atomic writes without changing current v1 vault runtime behavior. | `internal/vaultjson` now owns plaintext v2 JSON encode/decode and repository load/save behind the model boundary. |
 | Convert v1 records to generic v2 items by default | Inferring richer templates from old path names risks changing user intent. | `internal/vaultmigrate` converts all v1 secrets to `generic_secret`, preserves old paths as aliases, and expands project bindings value-free. |
 | Use concrete v2 project bindings | Prefix/tag-style selectors belong to v1 migration and can obscure runtime conflicts. | Phase 39 `.shelf.json` version 2 stores concrete `item`, `field`, and `env` bindings; export/run/status resolve those against v2 vault items with value-free diagnostics. |
+| Gate the v1 manager for v2 vaults | A v1 path/env/tag Web editor would misrepresent template item/field vaults and could mutate stale data. | Phase 40 checks for the resolved v2 vault before opening the manager and returns a value-free CLI fallback message when v2 data is present. |
 
 ## Evolution
 
@@ -109,4 +111,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-07-08 after completing Phase 39 project manifest v2 bindings*
+*Last updated: 2026-07-08 after completing Phase 40 manager v2 gating*
