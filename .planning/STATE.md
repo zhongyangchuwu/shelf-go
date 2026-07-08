@@ -4,7 +4,7 @@
 - Phase: Secret CLI v2 Workflows
 - Status: executing
 - Active Artifact: .planning/phases/038-secret-cli-v2-workflows/PLAN.md
-- Next Action: Decide v2 secret command compatibility and implement common non-interactive create/set/get/list/info workflows.
+- Next Action: Refactor v2 env bindings into env-name fields, add profile registry support, then implement the first-version v2 secret CLI from `CLI-SPEC.md`.
 
 ## Blockers
 - None
