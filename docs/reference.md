@@ -13,7 +13,7 @@
 | --- | --- |
 | `SHELF_CONFIG` | Overrides the config file path. |
 | `SHELF_VAULT` | Overrides the encrypted vault path. |
-| `EDITOR` | Fallback editor for `shelf secret edit` when config has no editor. |
+| `EDITOR` | Fallback editor for editor-based workflows when config has no editor value. |
 | `FPATH` / `fpath` | Used by `shelf doctor` to check zsh completion installation. |
 
 ## Default paths
@@ -50,40 +50,28 @@ editor: vim
 
 `recipients` are public age recipients. `identity_paths` point to private age identity files; the private key material is not stored in config.
 
-## Secret paths
+## Secret items
 
-Secret paths use this shape:
+The v2 secret model stores template-based items. A template defines fields and sensitivity; a profile supplies default public field values over a template.
 
-```text
-<group_path>:<key>
-```
+Built-in templates:
 
-Examples:
+- `generic_secret` (`generic`): `value` secret field plus public `value_env` env-name field.
+- `api_credential` (`api`): `credential` secret field plus public `credential_env`, `provider`, `website`, `expires_at`, and `scopes` fields.
 
-```text
-app:token
-providers/openai/accounts/personal:api_key
-github/accounts/personal:token
-```
+Built-in profiles:
 
-Rules:
+- `openai`: `api_credential` defaults for `provider`, `website`, and `credential_env`.
 
-- exactly one `:` separator;
-- non-empty group path;
-- non-empty key;
-- group path segments are separated by `/`;
-- key must not contain `/` or `:`.
-
-## Secret values
-
-`secret set` JSON-parses the value when possible. Otherwise it stores a string.
+Secret values are written from stdin. Env names are ordinary public fields such as `value_env` and `credential_env`, not a separate binding object.
 
 ```bash
-shelf secret set app:port 34222
-shelf secret set flags:enabled true
-shelf secret set app:options '{"debug":false}'
-shelf secret set app:token sk-example
+printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
+printf %s "$OPENAI_API_KEY" | shelf secret create openai --profile openai --stdin
+printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
 ```
+
+During the Phase 38 cutover, v2 secret commands use the plaintext v2 JSON repository boundary. If `--vault` is supplied, that path is used directly. Without `--vault`, Shelf writes to `<resolved-vault-path>.v2.json` so the default v2 CLI does not overwrite the existing v1 encrypted vault during development/cutover. Treat that v2 JSON file as secret data and do not commit or sync it until v2 age wrapping is added.
 
 ## CLI commands
 
@@ -140,75 +128,62 @@ Checks config resolution, version, vault existence/mode/format/loadability, Git 
 shelf doctor
 ```
 
-### `shelf secret add`
+### `shelf secret create`
 
-Interactively creates a secret. Reads the value through hidden terminal input.
+Creates a v2 secret item. Secret values enter through stdin when `--stdin` is set.
 
 ```bash
-shelf secret add [path-or-group]
+shelf secret create <title> [--template generic|api] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
 ```
+
+Useful public-field flags for `api_credential` are `--provider`, `--website`, `--expires`, and repeatable `--scope`. Explicit flags override profile defaults.
 
 ### `shelf secret set`
 
-Creates or replaces a secret.
+Sets a field from stdin. Without `--field`, Shelf sets the template primary secret field.
 
 ```bash
-shelf secret set <path> <value> [--env NAME] [--description TEXT] [--tag TAG ...] [--force]
+shelf secret set <selector> [--field FIELD] --stdin
 ```
 
 ### `shelf secret get`
 
-Prints a plaintext value.
+Prints a plaintext field value. Without `--field`, Shelf prints the template primary secret field.
 
 ```bash
-shelf secret get <path>
+shelf secret get <selector> [--field FIELD]
+shelf secret get --env ENV [--field FIELD]
 ```
+
+`--env` resolves through env-name fields such as `credential_env`. Duplicate env-name matches fail with a value-free ambiguity error.
 
 ### `shelf secret list`
 
-Prints matching secret paths only.
+Prints v2 secret items without secret values.
 
 ```bash
-shelf secret list [prefix] [--tag TAG ...]
+shelf secret list [query] [--long]
 ```
 
-Repeated `--tag` selectors use AND semantics. With a prefix, the tag filter is applied inside that prefix.
+`--long` prints item ID, title, template, primary env name, and value-set state.
 
 ### `shelf secret info`
 
-Prints non-secret metadata as JSON.
+Prints item metadata as JSON. Public field values are shown. Secret field values are not printed; only `value_set` is shown.
 
 ```bash
-shelf secret info <path>
+shelf secret info <selector>
 ```
-
-### `shelf secret edit`
-
-Opens the full secret object as JSON in `$EDITOR` or configured editor.
-
-```bash
-shelf secret edit <path>
-```
-
-The editor buffer contains plaintext while editing. Shelf creates the temporary file with restrictive permissions and removes it on normal command exit where possible.
 
 ### `shelf secret rm`
 
-Removes a secret.
+Removes a v2 secret item after explicit confirmation.
 
 ```bash
-shelf secret rm <path>
+shelf secret rm <selector> --yes
 ```
 
-### `shelf secret export`
-
-Exports an exact path, prefix, or tag-selected set in shell, env, or JSON format.
-
-```bash
-shelf secret export [path-or-prefix] --format shell|env|json [--all] [--tag TAG ...]
-```
-
-At least one path, prefix, or `--tag` selector is required. Repeated `--tag` selectors use AND semantics. For prefix or tag-set export, the default includes only secrets with explicit `env`; `--all` also derives env names for secrets without `env`.
+Removed or deferred from the v2 secret CLI: `secret add`, `secret edit`, direct `secret export`, `secret copy`, and env binding subcommands.
 
 ### `shelf project id`
 

@@ -1,6 +1,7 @@
 package vaultjson
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -28,14 +29,19 @@ func TestJSONCodecRoundTripsVaultOrderAndMetadata(t *testing.T) {
 		t.Fatalf("item order changed: %+v", decoded.Items)
 	}
 	fields := decoded.Items[1].Fields
-	if len(fields) != 5 {
+	if len(fields) != 6 {
 		t.Fatalf("fields length = %d", len(fields))
 	}
-	if fields[0].ID != "credential" || fields[4].ID != "scopes" {
+	if fields[0].ID != "credential" || fields[5].ID != "scopes" {
 		t.Fatalf("field order changed: %+v", fields)
 	}
-	if fields[0].Bindings[0].Name != "OPENAI_API_KEY" {
-		t.Fatalf("field[0].bindings[0].name = %q, want OPENAI_API_KEY", fields[0].Bindings[0].Name)
+	// Env name is stored as the value of the credential_env field.
+	var envName string
+	if err := json.Unmarshal(fields[1].Value, &envName); err != nil {
+		t.Fatalf("unmarshal credential_env value: %v", err)
+	}
+	if envName != "OPENAI_API_KEY" {
+		t.Fatalf("credential_env value = %q, want OPENAI_API_KEY", envName)
 	}
 	if decoded.Items[0].Aliases[0] != "app:token" {
 		t.Fatalf("items[0].aliases[0] = %q, want app:token", decoded.Items[0].Aliases[0])
@@ -242,15 +248,24 @@ func validVault() vaultmodel.Vault {
 			Title:    "Local app token",
 			Template: vaultmodel.TemplateGenericSecret,
 			Aliases:  []string{"app:token"},
-			Fields: []vaultmodel.Field{{
-				ID:          "value",
-				Label:       "Value",
-				Type:        vaultmodel.FieldTypeConcealed,
-				Sensitivity: vaultmodel.SensitivitySecret,
-				Purpose:     vaultmodel.PurposePrimarySecret,
-				Value:       []byte(`"fake-app-token"`),
-				Bindings:    []vaultmodel.Binding{{Type: vaultmodel.BindingTypeEnv, Name: "APP_TOKEN"}},
-			}},
+			Fields: []vaultmodel.Field{
+				{
+					ID:          "value",
+					Label:       "Value",
+					Type:        vaultmodel.FieldTypeConcealed,
+					Sensitivity: vaultmodel.SensitivitySecret,
+					Purpose:     vaultmodel.PurposePrimarySecret,
+					Value:       []byte(`"fake-app-token"`),
+				},
+				{
+					ID:          "value_env",
+					Label:       "Value Env",
+					Type:        vaultmodel.FieldTypeString,
+					Sensitivity: vaultmodel.SensitivityPublic,
+					Purpose:     vaultmodel.PurposeEnvName,
+					Value:       []byte(`"APP_TOKEN"`),
+				},
+			},
 		},
 		{
 			ID:        "item_openai",
@@ -261,7 +276,8 @@ func validVault() vaultmodel.Vault {
 			CreatedAt: "2026-01-15T00:00:00Z",
 			UpdatedAt: "2026-06-20T00:00:00Z",
 			Fields: []vaultmodel.Field{
-				{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: []byte(`"fake-openai-key"`), Bindings: []vaultmodel.Binding{{Type: vaultmodel.BindingTypeEnv, Name: "OPENAI_API_KEY"}}},
+				{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: []byte(`"fake-openai-key"`)},
+				{ID: "credential_env", Label: "Credential Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: []byte(`"OPENAI_API_KEY"`)},
 				{ID: "provider", Label: "Provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: "provider/source", Value: []byte(`"openai"`)},
 				{ID: "website", Label: "Website", Type: vaultmodel.FieldTypeURL, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeWebsite, Value: []byte(`"https://platform.openai.com/api-keys"`)},
 				{ID: "expires_at", Label: "Expires", Type: vaultmodel.FieldTypeDate, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeExpiry, Value: []byte(`"2026-12-31"`)},
@@ -269,4 +285,143 @@ func validVault() vaultmodel.Vault {
 			},
 		},
 	}}
+}
+
+func TestJSONCodecRoundTripsMinimalVault(t *testing.T) {
+	codec := JSONCodec{}
+	vault := vaultmodel.Vault{Version: vaultmodel.CurrentVersion}
+	content, err := codec.Encode(vault)
+	if err != nil {
+		t.Fatalf("encode empty vault: %v", err)
+	}
+	decoded, err := codec.Decode(content)
+	if err != nil {
+		t.Fatalf("decode empty vault: %v", err)
+	}
+	if decoded.Version != vaultmodel.CurrentVersion {
+		t.Errorf("version = %d, want %d", decoded.Version, vaultmodel.CurrentVersion)
+	}
+	if len(decoded.Items) != 0 {
+		t.Errorf("items = %d, want 0", len(decoded.Items))
+	}
+}
+
+func TestJSONCodecRejectsUnknownFieldOnFieldObject(t *testing.T) {
+	codec := JSONCodec{}
+	content := `{"version":2,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","type":"concealed","sensitivity":"secret","purpose":"primary_secret","value":"s","unknown_field":true}]}]}`
+	if _, err := codec.Decode([]byte(content)); err == nil {
+		t.Fatal("expected error for unknown field on field, got nil")
+	}
+}
+
+func TestJSONCodecRoundTripsEnvNameValuesPreserved(t *testing.T) {
+	codec := JSONCodec{}
+	vault := validVault()
+	content, err := codec.Encode(vault)
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	decoded, err := codec.Decode(content)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// item 0: generic_secret — value_env holds the env name
+	item0 := decoded.Items[0]
+	if len(item0.Fields) != 2 {
+		t.Fatalf("items[0] fields = %d, want 2", len(item0.Fields))
+	}
+	var envName string
+	if err := json.Unmarshal(item0.Fields[1].Value, &envName); err != nil {
+		t.Fatalf("unmarshal value_env: %v", err)
+	}
+	if envName != "APP_TOKEN" {
+		t.Errorf("value_env = %q, want APP_TOKEN", envName)
+	}
+
+	// item 1: api_credential — credential_env holds the env name
+	item1 := decoded.Items[1]
+	if len(item1.Fields) != 6 {
+		t.Fatalf("items[1] fields = %d, want 6", len(item1.Fields))
+	}
+	if err := json.Unmarshal(item1.Fields[1].Value, &envName); err != nil {
+		t.Fatalf("unmarshal credential_env: %v", err)
+	}
+	if envName != "OPENAI_API_KEY" {
+		t.Errorf("credential_env = %q, want OPENAI_API_KEY", envName)
+	}
+}
+
+func TestJSONCodecRoundTripsFieldValuesPreserved(t *testing.T) {
+	codec := JSONCodec{}
+	vault := validVault()
+	content, err := codec.Encode(vault)
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	decoded, err := codec.Decode(content)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	item1 := decoded.Items[1]
+	var provider string
+	if err := json.Unmarshal(item1.Fields[2].Value, &provider); err != nil {
+		t.Fatalf("unmarshal provider value: %v", err)
+	}
+	if provider != "openai" {
+		t.Errorf("provider = %q, want openai", provider)
+	}
+	var website string
+	if err := json.Unmarshal(item1.Fields[3].Value, &website); err != nil {
+		t.Fatalf("unmarshal website value: %v", err)
+	}
+	if website != "https://platform.openai.com/api-keys" {
+		t.Errorf("website = %q", website)
+	}
+}
+
+func TestJSONCodecEncodeRejectsInvalidVault(t *testing.T) {
+	codec := JSONCodec{}
+	invalid := vaultmodel.Vault{Version: vaultmodel.CurrentVersion, Items: []vaultmodel.Item{
+		{ID: "x", Title: "X", Template: "nonexistent"},
+	}}
+	if _, err := codec.Encode(invalid); err == nil {
+		t.Fatal("expected error encoding vault with unknown template, got nil")
+	}
+}
+
+func TestJSONCodecDecodeRejectsTrailingJSON(t *testing.T) {
+	codec := JSONCodec{}
+	content := `{"version":2,"items":[]} trailing`
+	if _, err := codec.Decode([]byte(content)); err == nil {
+		t.Fatal("expected error for trailing content, got nil")
+	}
+}
+
+func TestJSONCodecDecodeRejectsMultipleValues(t *testing.T) {
+	codec := JSONCodec{}
+	content := `{"version":2,"items":[]}{"version":2,"items":[]}`
+	if _, err := codec.Decode([]byte(content)); err == nil {
+		t.Fatal("expected error for multiple JSON values, got nil")
+	}
+}
+
+func TestJSONCodecRoundTripsTemplateFieldOrderStrict(t *testing.T) {
+	codec := JSONCodec{}
+	vault := validVault()
+	content, err := codec.Encode(vault)
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	decoded, err := codec.Decode(content)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// api_credential field order must be: credential, credential_env, provider, website, expires_at, scopes
+	item1 := decoded.Items[1]
+	expected := []string{"credential", "credential_env", "provider", "website", "expires_at", "scopes"}
+	for i, f := range item1.Fields {
+		if f.ID != expected[i] {
+			t.Errorf("field[%d].id = %q, want %q", i, f.ID, expected[i])
+		}
+	}
 }

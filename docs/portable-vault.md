@@ -21,7 +21,8 @@ Do not commit or sync these through Git or chezmoi:
 | --- | --- |
 | Private age identity files | They decrypt the vault. Their paths may appear in config, but the key material is secret. |
 | `.env`, `.env.local`, generated env files | They contain plaintext exported values. |
-| Editor temp files | `secret edit` handles plaintext during editing; cleanup is best-effort on normal command exit. |
+| Phase 38 v2 JSON vault files (`*.v2.json`) | They contain plaintext secret values until v2 age wrapping is wired in. |
+| TUI/editor temp files | Future interactive editing may handle plaintext during editing; cleanup must be best-effort on normal command exit. |
 
 ## First machine
 
@@ -36,9 +37,9 @@ shelf doctor
 Add secrets and project bindings:
 
 ```bash
-shelf secret set app:token sk-example --env APP_TOKEN
+printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
 shelf project init
-shelf project add app:token
+shelf project configure
 ```
 
 Commit or sync only the encrypted vault and value-free project manifest after review.

@@ -3,6 +3,7 @@ package vaultmigrate
 import (
 	"crypto/sha256"
 	"encoding/base32"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -36,24 +37,33 @@ func ConvertVault(data vault.Data) (VaultResult, error) {
 			return VaultResult{}, fmt.Errorf("invalid v1 secret %s: %w", path, err)
 		}
 		itemID := itemIDForPath(path)
-		field := vaultmodel.Field{
-			ID:          primaryFieldID,
-			Label:       "Value",
-			Type:        vaultmodel.FieldTypeConcealed,
-			Sensitivity: vaultmodel.SensitivitySecret,
-			Purpose:     vaultmodel.PurposePrimarySecret,
-			Value:       append([]byte(nil), secret.Value...),
-		}
 		resolvedEnv, err := vault.EnvName(path, secret)
 		if err != nil {
 			return VaultResult{}, err
 		}
-		field.Bindings = []vaultmodel.Binding{{Type: vaultmodel.BindingTypeEnv, Name: resolvedEnv}}
+		fields := []vaultmodel.Field{
+			{
+				ID:          primaryFieldID,
+				Label:       "Value",
+				Type:        vaultmodel.FieldTypeConcealed,
+				Sensitivity: vaultmodel.SensitivitySecret,
+				Purpose:     vaultmodel.PurposePrimarySecret,
+				Value:       append([]byte(nil), secret.Value...),
+			},
+			{
+				ID:          primaryFieldID + "_env",
+				Label:       "Value Env",
+				Type:        vaultmodel.FieldTypeString,
+				Sensitivity: vaultmodel.SensitivityPublic,
+				Purpose:     vaultmodel.PurposeEnvName,
+				Value:       func() json.RawMessage { v, _ := json.Marshal(resolvedEnv); return v }(),
+			},
+		}
 		item := vaultmodel.Item{
 			ID:       itemID,
 			Title:    path,
 			Template: vaultmodel.TemplateGenericSecret,
-			Fields:   []vaultmodel.Field{field},
+			Fields:   fields,
 			Aliases:  []string{path},
 			Notes:    secret.Description,
 			Labels:   append([]string(nil), secret.Tags...),

@@ -7,10 +7,14 @@ All notable user-facing changes will be recorded here.
 ### Breaking changes
 
 - Replaced `shelf project explain` with `shelf project status`; status now reports project binding resolution and value-free local env-file summaries.
+- Replaced the old `group:key` secret CLI with v2 template-based `secret create`, `set --stdin`, `get`, `list --long`, `info`, and `rm --yes` item/field workflows.
+- Removed `secret add`, `secret edit`, and direct `secret export` from the v2 secret CLI; full interactive editing and direct export are deferred to later v2 surfaces.
 
 ### Added
 
 - Added `shelf project configure` as a TUI for value-free project binding setup, including env-file binding, existing-secret add, remove, review, and apply flows.
+- Added v2 vault profiles with an `openai` profile over the `api_credential` template.
+- Added env-name public fields such as `value_env` and `credential_env` so env names are ordinary item fields instead of special field bindings.
 
 - Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
 - Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.

@@ -14,7 +14,7 @@ JSON remains the initial storage recommendation because it preserves the portabl
 - [x] Phase 35: Vault Model and Validation Core
 - [x] Phase 36: JSON Codec and Repository Boundary
 - [x] Phase 37: Legacy Migration Adapter
-- [ ] Phase 38: Secret CLI v2 Workflows
+- [x] Phase 38: Secret CLI v2 Workflows
 - [ ] Phase 39: Project Manifest v2 Bindings
 - [ ] Phase 40: Manager Adaptation and Cutover
 
@@ -84,6 +84,10 @@ JSON remains the initial storage recommendation because it preserves the portabl
 
 **Plan:** `.planning/phases/038-secret-cli-v2-workflows/PLAN.md`
 
+**Completion Date:** 2026-07-08
+
+**Artifacts:** `CLI-SPEC.md`, `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
+
 ## Phase 39: Project Manifest v2 Bindings
 
 **Goal:** Implement project manifest v2 item/field env bindings and project export/run resolution.
@@ -112,7 +116,7 @@ JSON remains the initial storage recommendation because it preserves the portabl
 | Phase 35: Vault Model and Validation Core | Complete | V2-IMPL-01, V2-IMPL-02 | `.planning/phases/035-vault-model-validation-core/PLAN.md` | 2026-07-07 |
 | Phase 36: JSON Codec and Repository Boundary | Complete | V2-IMPL-03 | `.planning/phases/036-json-codec-repository-boundary/PLAN.md` | 2026-07-07 |
 | Phase 37: Legacy Migration Adapter | Complete | V2-IMPL-04 | `.planning/phases/037-legacy-migration-adapter/PLAN.md` | 2026-07-07 |
-| Phase 38: Secret CLI v2 Workflows | Executing | V2-IMPL-05 | `.planning/phases/038-secret-cli-v2-workflows/PLAN.md` | — |
+| Phase 38: Secret CLI v2 Workflows | Complete | V2-IMPL-05 | `.planning/phases/038-secret-cli-v2-workflows/PLAN.md` | 2026-07-08 |
 | Phase 39: Project Manifest v2 Bindings | Not Started | V2-IMPL-06 | `.planning/phases/039-project-manifest-v2-bindings/PLAN.md` | — |
 | Phase 40: Manager Adaptation and Cutover | Not Started | V2-IMPL-07 | `.planning/phases/040-manager-adaptation-cutover/PLAN.md` | — |
 
@@ -359,4 +363,4 @@ SQLite and storage backend redesign are now active v0.2.0 design topics.
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-07 after completing Phase 37 and starting Phase 38*
+*Last updated: 2026-07-08 after completing Phase 38 secret CLI v2 workflows*

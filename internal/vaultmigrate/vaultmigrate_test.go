@@ -60,8 +60,8 @@ func TestConvertVault_HappyPath(t *testing.T) {
 	if item0.Template != vaultmodel.TemplateGenericSecret {
 		t.Fatalf("item0 template = %q, want %q", item0.Template, vaultmodel.TemplateGenericSecret)
 	}
-	if len(item0.Fields) != 1 {
-		t.Fatalf("item0 has %d fields, want 1", len(item0.Fields))
+	if len(item0.Fields) != 2 {
+		t.Fatalf("item0 has %d fields, want 2 (value + value_env)", len(item0.Fields))
 	}
 	f0 := item0.Fields[0]
 	if f0.ID != "value" {
@@ -82,15 +82,8 @@ func TestConvertVault_HappyPath(t *testing.T) {
 	if string(f0.Value) != string(valAPIKey) {
 		t.Fatalf("item0 field value = %q, want %q", string(f0.Value), string(valAPIKey))
 	}
-	if len(f0.Bindings) != 1 {
-		t.Fatalf("item0 has %d bindings, want 1", len(f0.Bindings))
-	}
-	if f0.Bindings[0].Type != vaultmodel.BindingTypeEnv {
-		t.Fatalf("item0 binding type = %q", f0.Bindings[0].Type)
-	}
-	if f0.Bindings[0].Name != "API_KEY" {
-		t.Fatalf("item0 binding name = %q, want %q", f0.Bindings[0].Name, "API_KEY")
-	}
+	// Env name lives in PathMapping, not Field.Bindings
+
 	// Aliases from path
 	if len(item0.Aliases) != 1 || item0.Aliases[0] != "prod/api:key" {
 		t.Fatalf("item0 aliases = %v, want [prod/api:key]", item0.Aliases)
@@ -106,16 +99,7 @@ func TestConvertVault_HappyPath(t *testing.T) {
 
 	// --- item1: derived env ---
 	f1 := item1.Fields[0]
-	if len(f1.Bindings) != 1 {
-		t.Fatalf("item1 has %d bindings, want 1", len(f1.Bindings))
-	}
-	if f1.Bindings[0].Type != vaultmodel.BindingTypeEnv {
-		t.Fatalf("item1 binding type = %q", f1.Bindings[0].Type)
-	}
-	// Derived from "prod/db:password" -> "PROD_DB_PASSWORD"
-	if f1.Bindings[0].Name != "PROD_DB_PASSWORD" {
-		t.Fatalf("item1 binding name = %q, want %q", f1.Bindings[0].Name, "PROD_DB_PASSWORD")
-	}
+	// Env name lives in PathMapping, not Field.Bindings
 	if string(f1.Value) != string(valSecret) {
 		t.Fatalf("item1 field value = %q, want %q", string(f1.Value), string(valSecret))
 	}
@@ -307,11 +291,206 @@ func TestConvertVault_EnvDerivation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ConvertVault: %v", err)
 			}
-			got := result.Vault.Items[0].Fields[0].Bindings[0].Name
+			got := result.Paths[tc.path].EnvName
 			if got != tc.want {
-				t.Fatalf("binding name = %q, want %q", got, tc.want)
+				t.Fatalf("env name = %q, want %q (from PathMapping)", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestConvertVault_EnvNameFieldExists(t *testing.T) {
+	// After Phase 38, env names live in a value_env public field,
+	// not in Field.Bindings (which no longer exists at the type level).
+	// Verify the value_env field is created correctly.
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"prod/api:key": {
+				Value: valSecret,
+				Env:   "MY_SECRET_KEY",
+			},
+		},
+	}
+
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault failed: %v", err)
+	}
+
+	item := result.Vault.Items[0]
+	if len(item.Fields) != 2 {
+		t.Fatalf("expected 2 fields (value + value_env), got %d", len(item.Fields))
+	}
+
+	// Find the value_env field
+	var envField *vaultmodel.Field
+	for i := range item.Fields {
+		if item.Fields[i].ID == "value_env" {
+			envField = &item.Fields[i]
+			break
+		}
+	}
+	if envField == nil {
+		t.Fatal("value_env field not found on converted item")
+	}
+
+	if envField.Type != vaultmodel.FieldTypeString {
+		t.Fatalf("value_env type = %q, want %q", envField.Type, vaultmodel.FieldTypeString)
+	}
+	if envField.Sensitivity != vaultmodel.SensitivityPublic {
+		t.Fatalf("value_env sensitivity = %q, want %q", envField.Sensitivity, vaultmodel.SensitivityPublic)
+	}
+	if envField.Purpose != vaultmodel.PurposeEnvName {
+		t.Fatalf("value_env purpose = %q, want %q", envField.Purpose, vaultmodel.PurposeEnvName)
+	}
+	var envName string
+	if err := json.Unmarshal(envField.Value, &envName); err != nil {
+		t.Fatalf("value_env value not a valid JSON string: %v", err)
+	}
+	if envName != "MY_SECRET_KEY" {
+		t.Fatalf("value_env = %q, want %q", envName, "MY_SECRET_KEY")
+	}
+}
+
+func TestConvertVault_ValueIsConcealed(t *testing.T) {
+	// The migrated primary secret field must be concealed and secret-sensitivity.
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"app:secret": {Value: json.RawMessage(`"hidden-value"`)},
+		},
+	}
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault: %v", err)
+	}
+	f := result.Vault.Items[0].Fields[0]
+	if f.Type != vaultmodel.FieldTypeConcealed {
+		t.Fatalf("field type = %q, want %q", f.Type, vaultmodel.FieldTypeConcealed)
+	}
+	if f.Sensitivity != vaultmodel.SensitivitySecret {
+		t.Fatalf("field sensitivity = %q, want %q", f.Sensitivity, vaultmodel.SensitivitySecret)
+	}
+	if f.Purpose != vaultmodel.PurposePrimarySecret {
+		t.Fatalf("field purpose = %q, want %q", f.Purpose, vaultmodel.PurposePrimarySecret)
+	}
+	// Value must be set (non-empty)
+	if len(f.Value) == 0 {
+		t.Fatal("primary field value is empty after migration")
+	}
+}
+
+func TestConvertVault_AliasesPreserveOldPath(t *testing.T) {
+	// Old v1 path must appear in the item's Aliases list.
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"prod/staging:db_password": {Value: valSecret},
+		},
+	}
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault: %v", err)
+	}
+	item := result.Vault.Items[0]
+	if len(item.Aliases) != 1 || item.Aliases[0] != "prod/staging:db_password" {
+		t.Fatalf("aliases = %v, want [prod/staging:db_password]", item.Aliases)
+	}
+}
+
+func TestConvertVault_DescriptionAndTagsPreserved(t *testing.T) {
+	// v1 description → item Notes; v1 Tags → item Labels.
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"app:creds": {
+				Value:       valSecret,
+				Description: "my app credentials",
+				Tags:        []string{"app", "prod", "us-east"},
+			},
+		},
+	}
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault: %v", err)
+	}
+	item := result.Vault.Items[0]
+	if item.Notes != "my app credentials" {
+		t.Fatalf("notes = %q, want %q", item.Notes, "my app credentials")
+	}
+	if len(item.Labels) != 3 ||
+		item.Labels[0] != "app" ||
+		item.Labels[1] != "prod" ||
+		item.Labels[2] != "us-east" {
+		t.Fatalf("labels = %v, want [app prod us-east]", item.Labels)
+	}
+}
+
+func TestConvertVault_ExplicitEnvNameInPathMapping(t *testing.T) {
+	// Explicit Env on a v1 secret must appear in PathMapping.EnvName.
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"prod:key": {
+				Value: valSecret,
+				Env:   "MY_CUSTOM_VAR",
+			},
+		},
+	}
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault: %v", err)
+	}
+	if result.Paths["prod:key"].EnvName != "MY_CUSTOM_VAR" {
+		t.Fatalf("env name = %q, want %q", result.Paths["prod:key"].EnvName, "MY_CUSTOM_VAR")
+	}
+}
+
+func TestConvertVault_DerivedEnvNameInPathMapping(t *testing.T) {
+	// Derived env (from path) must appear in PathMapping.EnvName.
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"staging/api:token": {Value: valSecret},
+		},
+	}
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault: %v", err)
+	}
+	// Derived from "staging/api:token" -> "STAGING_API_TOKEN"
+	if result.Paths["staging/api:token"].EnvName != "STAGING_API_TOKEN" {
+		t.Fatalf("env name = %q, want %q", result.Paths["staging/api:token"].EnvName, "STAGING_API_TOKEN")
+	}
+}
+
+func TestConvertVault_PathMappingIsValueFree(t *testing.T) {
+	// PathMapping must not contain secret values.
+	secretVal := json.RawMessage(`"supersecret"`)
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"app:secret": {Value: secretVal},
+		},
+	}
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault: %v", err)
+	}
+	for path, pm := range result.Paths {
+		if pm.EnvName == "" {
+			t.Fatalf("PathMapping[%q].EnvName is empty, should be set by migration", path)
+		}
+		if pm.ItemID == "" {
+			t.Fatalf("PathMapping[%q].ItemID is empty", path)
+		}
+		if pm.FieldID != "value" {
+			t.Fatalf("PathMapping[%q].FieldID = %q, want %q", path, pm.FieldID, "value")
+		}
+		if pm.Title != path {
+			t.Fatalf("PathMapping[%q].Title = %q, want %q", path, pm.Title, path)
+		}
 	}
 }
 

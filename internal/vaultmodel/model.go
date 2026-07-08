@@ -18,6 +18,9 @@ const (
 	TemplateAPICredential = "api_credential"
 )
 
+// Profile identifiers for built-in profiles.
+const ProfileOpenAI = "openai"
+
 // FieldType enumerates the supported field value types.
 type FieldType string
 
@@ -38,12 +41,10 @@ const (
 	SensitivitySecret Sensitivity = "secret"
 )
 
-// Binding type constants.
-const BindingTypeEnv = "env"
-
 // Purpose constants for built-in template fields.
 const (
 	PurposePrimarySecret = "primary_secret"
+	PurposeEnvName       = "env_name"
 	PurposeProvider      = "provider/source"
 	PurposeWebsite       = "website"
 	PurposeExpiry        = "expiry"
@@ -55,6 +56,7 @@ type Vault struct {
 	Version   int        `json:"version"`
 	Items     []Item     `json:"items"`
 	Templates []Template `json:"templates,omitempty"`
+	Profiles  []Profile  `json:"profiles,omitempty"`
 }
 
 // Item represents a single secret item inside a vault.
@@ -78,19 +80,13 @@ type Field struct {
 	Sensitivity Sensitivity     `json:"sensitivity"`
 	Purpose     string          `json:"purpose,omitempty"`
 	Value       json.RawMessage `json:"value,omitempty"`
-	Bindings    []Binding       `json:"bindings,omitempty"`
-}
-
-// Binding attaches a field value to an environment variable name.
-type Binding struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
 }
 
 // Template describes a reusable field layout for items.
 type Template struct {
 	ID          string          `json:"id"`
 	Name        string          `json:"name"`
+	Aliases     []string        `json:"aliases,omitempty"`
 	Description string          `json:"description,omitempty"`
 	Fields      []FieldTemplate `json:"fields"`
 }
@@ -102,6 +98,16 @@ type FieldTemplate struct {
 	Type        FieldType   `json:"type"`
 	Sensitivity Sensitivity `json:"sensitivity"`
 	Purpose     string      `json:"purpose,omitempty"`
+	EnvFor      string      `json:"env_for,omitempty"`
 	Required    bool        `json:"required,omitempty"`
 	Repeatable  bool        `json:"repeatable,omitempty"`
+}
+
+// Profile describes default field values over a template.
+type Profile struct {
+	ID       string                     `json:"id"`
+	Name     string                     `json:"name"`
+	Aliases  []string                   `json:"aliases,omitempty"`
+	Template string                     `json:"template"`
+	Defaults map[string]json.RawMessage `json:"defaults,omitempty"`
 }

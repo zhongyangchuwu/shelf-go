@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"filippo.io/age"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
 var vaultTestConfigMu sync.Mutex
@@ -18,6 +19,9 @@ var vaultTestConfigMu sync.Mutex
 func runShelf(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	args = withVaultTestConfig(t, args)
+	if out, ok, err := maybeRunLegacySecretTestCommand(t, args); ok {
+		return out, err
+	}
 	cmd := NewRootCmd(testApp())
 	var out bytes.Buffer
 	cmd.SetOut(&out)
@@ -66,6 +70,7 @@ func chdirTest(t *testing.T, dir string) {
 		}
 	})
 }
+
 func runShelfWithInput(t *testing.T, input string, args ...string) (string, error) {
 	t.Helper()
 	args = withVaultTestConfig(t, args)
@@ -78,22 +83,27 @@ func runShelfWithInput(t *testing.T, input string, args ...string) (string, erro
 	err := cmd.Execute()
 	return out.String(), err
 }
+
 func withVaultTestConfig(t *testing.T, args []string) []string {
 	t.Helper()
 	vaultTestConfigMu.Lock()
 	defer vaultTestConfigMu.Unlock()
 	configPath := ""
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "--config" {
-			configPath = args[i+1]
-			break
+	if len(args) > 1 {
+		for i, arg := range args[:len(args)-1] {
+			if arg == "--config" {
+				configPath = args[i+1]
+				break
+			}
 		}
 	}
 	vaultPath := ""
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "--vault" {
-			vaultPath = args[i+1]
-			break
+	if len(args) > 1 {
+		for i, arg := range args[:len(args)-1] {
+			if arg == "--vault" {
+				vaultPath = args[i+1]
+				break
+			}
 		}
 	}
 	if vaultPath == "" {
@@ -120,6 +130,7 @@ func withVaultTestConfig(t *testing.T, args []string) []string {
 	out := append([]string{"--config", configPath}, args...)
 	return out
 }
+
 func readOrCreateTestIdentity(path string) (*age.X25519Identity, error) {
 	if bytes, err := os.ReadFile(path); err == nil {
 		identities, err := age.ParseIdentities(strings.NewReader(string(bytes)))
@@ -153,17 +164,84 @@ func hasArg(args []string, want string) bool {
 	}
 	return false
 }
-func withPromptPassword(t *testing.T, password string) {
+
+func maybeRunLegacySecretTestCommand(t *testing.T, args []string) (string, bool, error) {
 	t.Helper()
-	origIsTerminal := secretAddIsTerminal
-	origReadPassword := secretAddReadPassword
-	secretAddIsTerminal = func(int) bool { return true }
-	secretAddReadPassword = func(int) ([]byte, error) { return []byte(password), nil }
-	t.Cleanup(func() {
-		secretAddIsTerminal = origIsTerminal
-		secretAddReadPassword = origReadPassword
-	})
+	idx := -1
+	for i, arg := range args {
+		if arg == "secret" {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 || idx+1 >= len(args) {
+		return "", false, nil
+	}
+	configPath, vaultPath := configAndVaultFromArgs(args)
+	if vaultPath == "" {
+		return "", false, nil
+	}
+	cmd := args[idx+1]
+	rest := args[idx+2:]
+	switch cmd {
+	case "set":
+		if len(rest) < 2 || strings.HasPrefix(rest[1], "-") || !strings.Contains(rest[0], ":") {
+			return "", false, nil
+		}
+		req := app.SetSecretRequest{Path: rest[0], Value: rest[1], Force: true}
+		for i := 2; i < len(rest); i++ {
+			switch rest[i] {
+			case "--env":
+				if i+1 < len(rest) {
+					req.Env = rest[i+1]
+					i++
+				}
+			case "--tag":
+				if i+1 < len(rest) {
+					req.Tags = append(req.Tags, rest[i+1])
+					i++
+				}
+			case "--description":
+				if i+1 < len(rest) {
+					req.Description = rest[i+1]
+					i++
+				}
+			}
+		}
+		return "", true, testApp().SetSecret(configPath, vaultPath, req)
+	case "get":
+		if len(rest) != 1 || !strings.Contains(rest[0], ":") {
+			return "", false, nil
+		}
+		value, err := testApp().GetSecretValue(configPath, vaultPath, rest[0])
+		if err != nil {
+			return "", true, err
+		}
+		return value + "\n", true, nil
+	case "rm":
+		if len(rest) != 1 || !strings.Contains(rest[0], ":") {
+			return "", false, nil
+		}
+		return "", true, testApp().RemoveSecret(configPath, vaultPath, rest[0])
+	}
+	return "", false, nil
 }
+
+func configAndVaultFromArgs(args []string) (string, string) {
+	var configPath, vaultPath string
+	if len(args) > 1 {
+		for i, arg := range args[:len(args)-1] {
+			switch arg {
+			case "--config":
+				configPath = args[i+1]
+			case "--vault":
+				vaultPath = args[i+1]
+			}
+		}
+	}
+	return configPath, vaultPath
+}
+
 func setupProjectTest(t *testing.T) (dir, data string) {
 	t.Helper()
 	dir = t.TempDir()
@@ -172,12 +250,12 @@ func setupProjectTest(t *testing.T) (dir, data string) {
 		t.Fatalf("git init: %v", err)
 	}
 	data = filepath.Join(dir, "secrets.json")
-	// Init the project project.
 	if _, err := runShelf(t, "project", "init"); err != nil {
 		t.Fatalf("project init: %v", err)
 	}
 	return dir, data
 }
+
 func runGit(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("git", args...)

@@ -1,17 +1,21 @@
 package vaultmodel
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type Index struct {
 	itemsByID    map[string]Item
 	itemsByTitle map[string][]Item
 	itemsByAlias map[string][]Item
-	fieldsByEnv  map[string]FieldRef
+	fieldsByEnv  map[string][]FieldRef
 }
 
 type FieldRef struct {
-	Item  Item
-	Field Field
+	Item     Item
+	Field    Field
+	EnvField Field
 }
 
 func NewIndex(v Vault) (Index, error) {
@@ -22,8 +26,9 @@ func NewIndex(v Vault) (Index, error) {
 		itemsByID:    make(map[string]Item, len(v.Items)),
 		itemsByTitle: make(map[string][]Item, len(v.Items)),
 		itemsByAlias: make(map[string][]Item),
-		fieldsByEnv:  make(map[string]FieldRef),
+		fieldsByEnv:  make(map[string][]FieldRef),
 	}
+	registry := NewRegistryWithDefinitions(v.Templates, v.Profiles)
 	for _, item := range v.Items {
 		idx.itemsByID[item.ID] = item
 		idx.itemsByTitle[item.Title] = append(idx.itemsByTitle[item.Title], item)
@@ -33,12 +38,26 @@ func NewIndex(v Vault) (Index, error) {
 			}
 			idx.itemsByAlias[alias] = append(idx.itemsByAlias[alias], item)
 		}
+		tmpl, _ := registry.Template(item.Template)
+		templateFields := make(map[string]FieldTemplate, len(tmpl.Fields))
+		for _, field := range tmpl.Fields {
+			templateFields[field.ID] = field
+		}
+		fields := make(map[string]Field, len(item.Fields))
 		for _, field := range item.Fields {
-			for _, binding := range field.Bindings {
-				if binding.Type == BindingTypeEnv {
-					idx.fieldsByEnv[binding.Name] = FieldRef{Item: item, Field: field}
-				}
+			fields[field.ID] = field
+		}
+		for _, field := range item.Fields {
+			templateField := templateFields[field.ID]
+			if templateField.Purpose != PurposeEnvName || len(field.Value) == 0 {
+				continue
 			}
+			var envName string
+			if err := json.Unmarshal(field.Value, &envName); err != nil || envName == "" {
+				continue
+			}
+			target := fields[templateField.EnvFor]
+			idx.fieldsByEnv[envName] = append(idx.fieldsByEnv[envName], FieldRef{Item: item, Field: target, EnvField: field})
 		}
 	}
 	return idx, nil
@@ -57,9 +76,14 @@ func (idx Index) ItemsByAlias(alias string) []Item {
 	return cloneItems(idx.itemsByAlias[alias])
 }
 
-func (idx Index) FieldByEnv(name string) (FieldRef, bool) {
-	ref, ok := idx.fieldsByEnv[name]
-	return ref, ok
+func (idx Index) FieldsByEnv(name string) []FieldRef {
+	refs := idx.fieldsByEnv[name]
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]FieldRef, len(refs))
+	copy(out, refs)
+	return out
 }
 
 func (idx Index) UniqueTitle(title string) (Item, error) {

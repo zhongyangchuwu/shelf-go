@@ -1,6 +1,6 @@
 # Shelf Go
 
-Shelf Go is a local-first encrypted secret environment manager for solo developers. It stores secrets in a portable age-encrypted vault file, keeps project manifests value-free, and preserves scriptable CLI workflows for direct secret export and `shelf project run`.
+Shelf Go is a local-first encrypted secret environment manager for solo developers. It stores secrets in a portable age-encrypted vault file, keeps project manifests value-free, and preserves scriptable CLI workflows for explicit secret reads and `shelf project run`.
 
 Shelf is pre-release software. Planning, roadmap, and phase records live in `.planning/`; public documentation stays focused on current user-facing behavior.
 
@@ -50,40 +50,41 @@ shelf setup \
 
 The private age identity decrypts the vault. Do not commit it.
 
-## Store, tag, and inspect secrets
+## Store and inspect secrets
 
-Add secrets with optional environment names, descriptions, and tags:
-
-```bash
-shelf secret set app:token sk-example --env APP_TOKEN --tag app --tag local
-shelf secret set providers/openai:api_key sk-openai --env OPENAI_API_KEY --tag ai --tag prod
-```
-
-Inspect metadata without printing values:
+Create v2 secret items with templates or profiles. Secret values enter through stdin, not argv:
 
 ```bash
-shelf secret info app:token
-shelf secret list app
-shelf secret list --tag ai --tag prod
+printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
+printf %s "$OPENAI_API_KEY" | shelf secret create openai --profile openai --stdin
 ```
 
-Repeated `--tag` selectors use AND semantics. `secret list` prints paths only; it does not print secret values.
+Inspect metadata without printing secret field values:
+
+```bash
+shelf secret info openai
+shelf secret list --long
+```
+
+`secret info` shows public fields such as `credential_env`, `provider`, and `website`, plus `value_set` for secret fields. It does not print secret field values.
 
 Print a value only when you intentionally need plaintext:
 
 ```bash
-shelf secret get app:token
+shelf secret get openai
+shelf secret get --env OPENAI_API_KEY
 ```
 
-Export a single secret, prefix, or tag-selected set for scripts:
+Update fields from stdin:
 
 ```bash
-shelf secret export app:token --format shell
-shelf secret export app --format env --all
-shelf secret export --tag ai --tag prod --format env
+printf %s "$NEW_TOKEN" | shelf secret set openai --stdin
+printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
 ```
 
-Export output contains plaintext. Do not commit redirected `.env` files. Use `shelf manager` for full-object editing when you need to rename a path or change env, description, tags, or values comfortably.
+`secret add`, `secret edit`, and direct `secret export` are removed from the v2 secret CLI. Full interactive editing is deferred to the later TUI.
+
+Phase 38 v2 secret commands currently use the plaintext v2 JSON repository boundary and write to `<resolved-vault-path>.v2.json` unless `--vault` is supplied. Treat that file as secret data: do not commit or sync it until age encryption is wired into the v2 repository.
 
 ## Use secrets in a project
 
@@ -157,9 +158,10 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 
 ## Safety notes
 
-- `shelf secret get`, `shelf secret export`, `shelf project export`, `shelf project run`, `shelf secret edit`, and `shelf manager` can intentionally materialize plaintext values.
+- `shelf secret get`, `shelf project export`, `shelf project run`, and `shelf manager` can intentionally materialize plaintext values. `shelf secret info` and `shelf secret list` are value-free.
 - `.shelf.json` project manifests are value-free and can be committed after review.
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
+- Phase 38 v2 JSON vault files (`*.v2.json`) contain secret values in plaintext during the cutover. Do not commit or sync them.
 - `config.yaml` may contain public age recipients and identity file paths. It must not contain private identity contents or secret values.
 - If all matching private age identities are lost, Shelf cannot recover the encrypted vault or its `.bak` backup.
 

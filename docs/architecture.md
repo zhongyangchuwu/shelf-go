@@ -50,11 +50,10 @@ Shelf's source of truth is the local Shelf vault. gopass, 1Password, Bitwarden, 
 
 Runtime commands read local vault data only:
 
-- `secret` CRUD;
+- v2 `secret` item/field workflows;
 - manager list/reveal/edit/delete;
 - `project status/export`;
-- `shelf run`;
-- `secret export`.
+- `shelf run`.
 
 This avoids split-brain behavior where one command reads gopass while another command reads the local vault.
 
@@ -149,14 +148,14 @@ Command handlers should stay thin: parse flags, call an injected `*app.App`, the
 Resolution uses a local `*vault.Store` snapshot supplied by `internal/app`. Resolution order for env names:
 
 1. manifest entry `env`;
-2. secret object's `env`;
-3. env name derived from the full secret path.
+2. v2 item env-name public field such as `value_env` or `credential_env`;
+3. env name derived from the selected legacy path during migration/cutover where applicable.
 
 Prefix and tag manifest entries may expand to multiple local vault secrets and cannot carry `env`. Required missing entries and duplicate env names are diagnostics; commands decide whether diagnostics are fatal.
 
-## Secret edit workflow
+## Secret editing workflow
 
-`internal/secret` owns reusable editor-based secret updates. It converts a stored secret into editable JSON, invokes the configured editor through the CLI seam, validates the edited object, and ensures the temporary plaintext file is removed on normal exits where possible.
+The first v2 secret CLI is non-interactive and writes fields from stdin. Full-object editing is deferred to a later TUI/wizard so template fields, env-name fields, and secret values can be edited without reintroducing raw JSON editor UX.
 
 ## Utilities
 

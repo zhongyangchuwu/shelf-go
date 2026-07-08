@@ -31,10 +31,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.2.0 Phase 35 implemented the v2 model/validation core in `internal/vaultmodel` with built-in templates, field-level env bindings, validation, indexes, and architecture boundary coverage while preserving current v1 behavior.
 - [x] v0.2.0 Phase 36 implemented the v2 plaintext JSON codec/repository boundary in `internal/vaultjson` with strict decode, validated encode/save, atomic writes, backup behavior, and missing-file errors.
 - [x] v0.2.0 Phase 37 implemented internal v1-to-v2 migration adapters that convert flat secrets to `generic_secret` items and value-free project manifest bindings without deleting source data.
+- [x] v0.2.0 Phase 38 replaced the old `group:key` secret CLI with v2 item/field workflows, env-name public fields, profile defaults, and value-free list/info/ambiguity output.
 
 ### Active
 
-- [ ] v0.2.0 implementation is building non-interactive v2 secret CLI workflows before project manifest runtime or manager cutover work.
+- [ ] v0.2.0 implementation is moving next to project manifest v2 item/field bindings after completing the first v2 secret CLI cutover.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -85,11 +86,12 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Keep CLI editing compact | Fine-grained `meta`/`tag` edit commands increase command surface while WebUI is the intended editing surface. | v0.1.1 does not add `secret meta` or `secret tag`; CLI focuses on list/export/project tag application flows. |
 | Release hardening is final, not next | Install/tag/release scripts, docs, and architecture naming cleanup are prerequisites for a maintainable release. | Completed in Phase 24; v0.1.1 is ready to tag after review. |
 | Enforce package dependency direction | Architecture notes drift unless import boundaries are executable. | `.go-arch-lint.yml` now checks the light adapter/app/domain package boundary. |
-| Design v0.2.0 around template-based items and fields | API credentials and future developer-secret shapes need clearer structure than flat `path -> value/env/description/tags` records. | Active design phase 34 defines `Item`, `Field`, `Template`, field sensitivity, env bindings on fields, and storage adapters before implementation. |
+| Design v0.2.0 around template-based items and fields | API credentials and future developer-secret shapes need clearer structure than flat `path -> value/env/description/tags` records. | Active design phase 34 defines `Item`, `Field`, `Template`, field sensitivity, env-name public fields, and storage adapters before implementation. |
 | Prefer JSON as the initial v0.2 storage candidate | JSON best preserves Shelf's portable encrypted-file model and age wrapping. SQLite remains a comparison point because WAL/journal/temp files and encryption choices need more evidence. | Phase 34 plan recommends JSON behind repository/codec interfaces unless design review records stronger evidence for SQLite. |
-| Keep `group:key` as a migration alias, not the v2 product model | Repeated keys like `api_key` and `token` hide the useful domain object. | Phase 34 defines stable item IDs, titles, templates, fields, and optional aliases for migration. |
-| Attach env bindings to fields | Env values resolve from a specific secret-bearing field, not from an item or project-level value. | v2 project manifests bind item ID + field ID + env name and remain value-free. |
-| Add v2 model behind a new internal package | Incremental cutover is safer than replacing the v1 vault package in place. | `internal/vaultmodel` now owns v2 model types, built-in templates, validation, and indexes without changing v1 CLI behavior. |
+| Keep `group:key` as a migration alias, not the v2 product model | Repeated keys like `api_key` and `token` hide the useful domain object. | Phase 38 secret CLI exposes item titles, templates, fields, and env-name fields instead of old path/key arguments. |
+| Store env names as public fields | Env names need to be editable and inspectable without a special binding subsystem. | `generic_secret.value_env` and `api_credential.credential_env` are ordinary public fields linked to secret-bearing fields by template metadata. |
+| Use profiles for provider defaults | Provider-specific defaults should not become CLI switch statements or one-template-per-provider sprawl. | The `openai` profile supplies defaults over `api_credential`; provider remains an ordinary public field. |
+| Add v2 model behind a new internal package | Incremental cutover is safer than replacing the v1 vault package in place. | `internal/vaultmodel` now owns v2 model types, built-in templates/profiles, validation, and indexes. |
 | Add v2 JSON storage behind a separate package | v2 storage needs strict validation and atomic writes without changing current v1 vault runtime behavior. | `internal/vaultjson` now owns plaintext v2 JSON encode/decode and repository load/save behind the model boundary. |
 | Convert v1 records to generic v2 items by default | Inferring richer templates from old path names risks changing user intent. | `internal/vaultmigrate` converts all v1 secrets to `generic_secret`, preserves old paths as aliases, and expands project bindings value-free. |
 
@@ -105,4 +107,4 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? -> Update if drifted.
 
 ---
-*Last updated: 2026-07-07 after completing Phase 37 legacy migration adapter*
+*Last updated: 2026-07-08 after completing Phase 38 secret CLI v2 workflows*

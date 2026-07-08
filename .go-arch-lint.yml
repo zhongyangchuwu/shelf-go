@@ -73,6 +73,8 @@ deps:
       - jsonvault
       - importer_gopass
       - util
+      - vaultmodel
+      - vaultjson
 
   manager:
     mayDependOn:

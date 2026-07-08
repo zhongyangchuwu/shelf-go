@@ -1,0 +1,573 @@
+package app
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultjson"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
+)
+
+var itemIDPattern = regexp.MustCompile(`[^a-z0-9_]+`)
+
+type CreateSecretRequest struct {
+	Title    string
+	ID       string
+	Template string
+	Profile  string
+	Env      string
+	Stdin    bool
+	In       io.Reader
+	Provider string
+	Website  string
+	Expires  string
+	Scopes   []string
+}
+
+type SetSecretFieldRequest struct {
+	Selector string
+	Field    string
+	Stdin    bool
+	In       io.Reader
+}
+
+type GetSecretFieldRequest struct {
+	Selector string
+	Env      string
+	Field    string
+}
+
+type ListSecretItemsRequest struct {
+	Query string
+	Long  bool
+}
+
+type SecretItemSummaryV2 struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Template string `json:"template"`
+	Env      string `json:"env,omitempty"`
+	ValueSet bool   `json:"value_set"`
+}
+
+type SecretFieldInfoV2 struct {
+	ID          string                 `json:"id"`
+	Type        vaultmodel.FieldType   `json:"type"`
+	Sensitivity vaultmodel.Sensitivity `json:"sensitivity"`
+	Value       string                 `json:"value,omitempty"`
+	ValueSet    bool                   `json:"value_set"`
+}
+
+type SecretInfoV2 struct {
+	ID       string              `json:"id"`
+	Title    string              `json:"title"`
+	Template string              `json:"template"`
+	Labels   []string            `json:"labels,omitempty"`
+	Aliases  []string            `json:"aliases,omitempty"`
+	Fields   []SecretFieldInfoV2 `json:"fields"`
+}
+
+func (a *App) CreateSecretV2(configPathFlag, vaultPathFlag string, req CreateSecretRequest) (string, error) {
+	if strings.TrimSpace(req.Title) == "" {
+		return "", fmt.Errorf("title is required")
+	}
+	vault, repo, err := a.loadV2VaultForWrite(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
+	item, err := buildSecretItem(req, registry)
+	if err != nil {
+		return "", err
+	}
+	if _, exists := findItemByID(vault.Items, item.ID); exists {
+		return "", fmt.Errorf("item already exists: %s", item.ID)
+	}
+	for _, existing := range vault.Items {
+		if existing.Title == item.Title {
+			return "", fmt.Errorf("item title already exists: %s", item.Title)
+		}
+	}
+	vault.Items = append(vault.Items, item)
+	if err := repo.Save(vault); err != nil {
+		return "", err
+	}
+	return item.ID, nil
+}
+
+func (a *App) SetSecretFieldV2(configPathFlag, vaultPathFlag string, req SetSecretFieldRequest) error {
+	if !req.Stdin {
+		return fmt.Errorf("secret set requires --stdin")
+	}
+	vault, repo, err := a.loadV2VaultForWrite(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return err
+	}
+	itemIndex, item, err := resolveItem(vault, req.Selector)
+	if err != nil {
+		return err
+	}
+	fieldID, err := defaultFieldID(vault, item, req.Field)
+	if err != nil {
+		return err
+	}
+	fieldIndex, field, err := findField(item, fieldID)
+	if err != nil {
+		return err
+	}
+	value, err := readFieldValue(req.In, field.Type)
+	if err != nil {
+		return err
+	}
+	item.Fields[fieldIndex].Value = value
+	vault.Items[itemIndex] = item
+	if err := repo.Save(vault); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *App) GetSecretFieldV2(configPathFlag, vaultPathFlag string, req GetSecretFieldRequest) (string, error) {
+	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	var item vaultmodel.Item
+	var field vaultmodel.Field
+	if req.Env != "" {
+		idx, err := vaultmodel.NewIndex(vault)
+		if err != nil {
+			return "", err
+		}
+		refs := idx.FieldsByEnv(req.Env)
+		if len(refs) == 0 {
+			return "", fmt.Errorf("env selector not found: %s", req.Env)
+		}
+		if len(refs) > 1 {
+			return "", ambiguousEnvError(req.Env, refs)
+		}
+		item = refs[0].Item
+		field = refs[0].Field
+		if req.Field != "" {
+			_, override, err := findField(item, req.Field)
+			if err != nil {
+				return "", err
+			}
+			field = override
+		}
+	} else {
+		_, resolved, err := resolveItem(vault, req.Selector)
+		if err != nil {
+			return "", err
+		}
+		item = resolved
+		fieldID, err := defaultFieldID(vault, item, req.Field)
+		if err != nil {
+			return "", err
+		}
+		_, field, err = findField(item, fieldID)
+		if err != nil {
+			return "", err
+		}
+	}
+	return valueForOutput(field)
+}
+
+func (a *App) ListSecretItemsV2(configPathFlag, vaultPathFlag string, req ListSecretItemsRequest) ([]SecretItemSummaryV2, error) {
+	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]SecretItemSummaryV2, 0, len(vault.Items))
+	for _, item := range vault.Items {
+		if req.Query != "" && !matchesItemQuery(item, req.Query) {
+			continue
+		}
+		primary, _ := primaryFieldTemplate(vault, item)
+		env := ""
+		if envField, ok := envFieldFor(vault, item, primary.ID); ok {
+			env, _ = stringValue(envField.Value)
+		}
+		_, field, _ := findField(item, primary.ID)
+		out = append(out, SecretItemSummaryV2{ID: item.ID, Title: item.Title, Template: item.Template, Env: env, ValueSet: len(field.Value) > 0})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
+	return out, nil
+}
+
+func (a *App) SecretInfoV2(configPathFlag, vaultPathFlag, selector string) (SecretInfoV2, error) {
+	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return SecretInfoV2{}, err
+	}
+	_, item, err := resolveItem(vault, selector)
+	if err != nil {
+		return SecretInfoV2{}, err
+	}
+	info := SecretInfoV2{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...)}
+	for _, field := range item.Fields {
+		fieldInfo := SecretFieldInfoV2{ID: field.ID, Type: field.Type, Sensitivity: field.Sensitivity, ValueSet: len(field.Value) > 0}
+		if field.Sensitivity == vaultmodel.SensitivityPublic && len(field.Value) > 0 {
+			fieldInfo.Value, _ = valueForOutput(field)
+		}
+		info.Fields = append(info.Fields, fieldInfo)
+	}
+	return info, nil
+}
+
+func (a *App) RemoveSecretV2(configPathFlag, vaultPathFlag, selector string) error {
+	vault, repo, err := a.loadV2VaultForWrite(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return err
+	}
+	idx, _, err := resolveItem(vault, selector)
+	if err != nil {
+		return err
+	}
+	vault.Items = append(vault.Items[:idx], vault.Items[idx+1:]...)
+	return repo.Save(vault)
+}
+
+func (a *App) loadV2VaultForRead(configPathFlag, vaultPathFlag string) (vaultmodel.Vault, error) {
+	path, err := v2VaultPath(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return vaultmodel.Vault{}, err
+	}
+	repo := vaultjson.NewRepository(path)
+	vault, err := repo.Load()
+	if errors.Is(err, os.ErrNotExist) {
+		return vaultmodel.Vault{}, fmt.Errorf("v2 vault not found: %s", path)
+	}
+	return vault, err
+}
+
+func (a *App) loadV2VaultForWrite(configPathFlag, vaultPathFlag string) (vaultmodel.Vault, vaultjson.Repository, error) {
+	path, err := v2VaultPath(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return vaultmodel.Vault{}, vaultjson.Repository{}, err
+	}
+	repo := vaultjson.NewRepository(path)
+	vault, err := repo.Load()
+	if errors.Is(err, os.ErrNotExist) {
+		return vaultmodel.Vault{Version: vaultmodel.CurrentVersion}, repo, nil
+	}
+	return vault, repo, err
+}
+
+func v2VaultPath(configPathFlag, vaultPathFlag string) (string, error) {
+	runtime, err := config.Resolve(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	if vaultPathFlag != "" {
+		return runtime.VaultPath, nil
+	}
+	return runtime.VaultPath + ".v2.json", nil
+}
+
+func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vaultmodel.Item, error) {
+	templateID := req.Template
+	profileID := req.Profile
+	defaults := map[string]json.RawMessage{}
+	if profileID != "" {
+		profile, ok := registry.Profile(profileID)
+		if !ok {
+			return vaultmodel.Item{}, fmt.Errorf("profile not found: %s", profileID)
+		}
+		templateID = profile.Template
+		for id, value := range profile.Defaults {
+			defaults[id] = append([]byte(nil), value...)
+		}
+	}
+	if templateID == "" {
+		templateID = vaultmodel.TemplateGenericSecret
+	}
+	tmpl, ok := registry.Template(templateID)
+	if !ok {
+		return vaultmodel.Item{}, fmt.Errorf("template not found: %s", templateID)
+	}
+	item := vaultmodel.Item{ID: req.ID, Title: req.Title, Template: tmpl.ID}
+	if item.ID == "" {
+		item.ID = itemIDFromTitle(req.Title)
+	}
+	for _, templateField := range tmpl.Fields {
+		field := vaultmodel.Field{ID: templateField.ID, Label: templateField.Label, Type: templateField.Type, Sensitivity: templateField.Sensitivity, Purpose: templateField.Purpose}
+		if value, ok := defaults[templateField.ID]; ok {
+			field.Value = append([]byte(nil), value...)
+		}
+		item.Fields = append(item.Fields, field)
+	}
+	if req.Env != "" {
+		primary, err := primaryFieldTemplateForTemplate(tmpl)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		if err := setEnvNameField(&item, tmpl, primary.ID, rawString(req.Env)); err != nil {
+			return vaultmodel.Item{}, err
+		}
+	}
+	if req.Provider != "" {
+		setFieldValueIfPresent(&item, "provider", rawString(req.Provider))
+	}
+	if req.Website != "" {
+		setFieldValueIfPresent(&item, "website", rawString(req.Website))
+	}
+	if req.Expires != "" {
+		setFieldValueIfPresent(&item, "expires_at", rawString(req.Expires))
+	}
+	if len(req.Scopes) > 0 {
+		value, err := json.Marshal(req.Scopes)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		setFieldValueIfPresent(&item, "scopes", value)
+	}
+	if req.Stdin {
+		primary, err := primaryFieldTemplateForTemplate(tmpl)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		idx, field, err := findField(item, primary.ID)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		value, err := readFieldValue(req.In, field.Type)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		item.Fields[idx].Value = value
+	}
+	if err := vaultmodel.Validate(vaultmodel.Vault{Version: vaultmodel.CurrentVersion, Items: []vaultmodel.Item{item}}); err != nil {
+		return vaultmodel.Item{}, err
+	}
+	return item, nil
+}
+
+func rawString(value string) json.RawMessage {
+	content, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return content
+}
+
+func itemIDFromTitle(title string) string {
+	id := strings.ToLower(strings.TrimSpace(title))
+	id = itemIDPattern.ReplaceAllString(id, "_")
+	id = strings.Trim(id, "_")
+	if id == "" {
+		id = "secret"
+	}
+	return "item_" + id
+}
+
+func readFieldValue(r io.Reader, fieldType vaultmodel.FieldType) (json.RawMessage, error) {
+	if r == nil {
+		r = strings.NewReader("")
+	}
+	content, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	text := stripFinalNewline(string(content))
+	switch fieldType {
+	case vaultmodel.FieldTypeString, vaultmodel.FieldTypeConcealed, vaultmodel.FieldTypeURL, vaultmodel.FieldTypeDate:
+		return json.Marshal(text)
+	case vaultmodel.FieldTypeStringList:
+		lines := strings.Split(text, "\n")
+		values := make([]string, 0, len(lines))
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				values = append(values, line)
+			}
+		}
+		return json.Marshal(values)
+	case vaultmodel.FieldTypeJSON:
+		if !json.Valid([]byte(text)) {
+			return nil, fmt.Errorf("stdin value must be valid json")
+		}
+		return json.RawMessage(text), nil
+	default:
+		return nil, fmt.Errorf("unsupported field type: %s", fieldType)
+	}
+}
+
+func stripFinalNewline(value string) string {
+	if strings.HasSuffix(value, "\r\n") {
+		return strings.TrimSuffix(value, "\r\n")
+	}
+	return strings.TrimSuffix(value, "\n")
+}
+
+func valueForOutput(field vaultmodel.Field) (string, error) {
+	if len(field.Value) == 0 {
+		return "", nil
+	}
+	switch field.Type {
+	case vaultmodel.FieldTypeString, vaultmodel.FieldTypeConcealed, vaultmodel.FieldTypeURL, vaultmodel.FieldTypeDate:
+		return stringValue(field.Value)
+	case vaultmodel.FieldTypeStringList, vaultmodel.FieldTypeJSON:
+		return string(field.Value), nil
+	default:
+		return "", fmt.Errorf("unsupported field type: %s", field.Type)
+	}
+}
+
+func stringValue(value json.RawMessage) (string, error) {
+	var out string
+	if err := json.Unmarshal(value, &out); err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+func resolveItem(vault vaultmodel.Vault, selector string) (int, vaultmodel.Item, error) {
+	if selector == "" {
+		return 0, vaultmodel.Item{}, fmt.Errorf("selector is required")
+	}
+	var matches []int
+	for i, item := range vault.Items {
+		if item.ID == selector || item.Title == selector || hasString(item.Aliases, selector) {
+			matches = append(matches, i)
+		}
+	}
+	if len(matches) == 0 {
+		return 0, vaultmodel.Item{}, fmt.Errorf("item not found: %s", selector)
+	}
+	if len(matches) > 1 {
+		return 0, vaultmodel.Item{}, ambiguousItemError(selector, vault.Items, matches)
+	}
+	idx := matches[0]
+	return idx, vault.Items[idx], nil
+}
+
+func ambiguousItemError(selector string, items []vaultmodel.Item, matches []int) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "selector matched multiple items: %s", selector)
+	for _, idx := range matches {
+		item := items[idx]
+		fmt.Fprintf(&b, "\n- %s %s", item.ID, item.Title)
+	}
+	return fmt.Errorf("%s", b.String())
+}
+
+func ambiguousEnvError(envName string, refs []vaultmodel.FieldRef) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "env selector matched multiple fields: %s", envName)
+	for _, ref := range refs {
+		fmt.Fprintf(&b, "\n- %s %s %s", ref.Item.ID, ref.Item.Title, ref.Field.ID)
+	}
+	return fmt.Errorf("%s", b.String())
+}
+
+func defaultFieldID(vault vaultmodel.Vault, item vaultmodel.Item, fieldID string) (string, error) {
+	if fieldID != "" {
+		return fieldID, nil
+	}
+	primary, err := primaryFieldTemplate(vault, item)
+	if err != nil {
+		return "", err
+	}
+	return primary.ID, nil
+}
+
+func primaryFieldTemplate(vault vaultmodel.Vault, item vaultmodel.Item) (vaultmodel.FieldTemplate, error) {
+	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
+	tmpl, ok := registry.Template(item.Template)
+	if !ok {
+		return vaultmodel.FieldTemplate{}, fmt.Errorf("template not found: %s", item.Template)
+	}
+	return primaryFieldTemplateForTemplate(tmpl)
+}
+
+func primaryFieldTemplateForTemplate(tmpl vaultmodel.Template) (vaultmodel.FieldTemplate, error) {
+	for _, field := range tmpl.Fields {
+		if field.Purpose == vaultmodel.PurposePrimarySecret {
+			return field, nil
+		}
+	}
+	return vaultmodel.FieldTemplate{}, fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
+}
+
+func envFieldFor(vault vaultmodel.Vault, item vaultmodel.Item, fieldID string) (vaultmodel.Field, bool) {
+	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
+	tmpl, ok := registry.Template(item.Template)
+	if !ok {
+		return vaultmodel.Field{}, false
+	}
+	for _, templateField := range tmpl.Fields {
+		if templateField.Purpose != vaultmodel.PurposeEnvName || templateField.EnvFor != fieldID {
+			continue
+		}
+		_, field, err := findField(item, templateField.ID)
+		return field, err == nil
+	}
+	return vaultmodel.Field{}, false
+}
+
+func setEnvNameField(item *vaultmodel.Item, tmpl vaultmodel.Template, fieldID string, value json.RawMessage) error {
+	for _, templateField := range tmpl.Fields {
+		if templateField.Purpose != vaultmodel.PurposeEnvName || templateField.EnvFor != fieldID {
+			continue
+		}
+		return setFieldValueIfPresent(item, templateField.ID, value)
+	}
+	return fmt.Errorf("template field has no env-name field: %s", fieldID)
+}
+
+func setFieldValueIfPresent(item *vaultmodel.Item, fieldID string, value json.RawMessage) error {
+	for i := range item.Fields {
+		if item.Fields[i].ID == fieldID {
+			item.Fields[i].Value = value
+			return nil
+		}
+	}
+	return fmt.Errorf("field not found: %s", fieldID)
+}
+
+func findField(item vaultmodel.Item, fieldID string) (int, vaultmodel.Field, error) {
+	for i, field := range item.Fields {
+		if field.ID == fieldID {
+			return i, field, nil
+		}
+	}
+	return 0, vaultmodel.Field{}, fmt.Errorf("field not found: %s", fieldID)
+}
+
+func findItemByID(items []vaultmodel.Item, id string) (vaultmodel.Item, bool) {
+	for _, item := range items {
+		if item.ID == id {
+			return item, true
+		}
+	}
+	return vaultmodel.Item{}, false
+}
+
+func matchesItemQuery(item vaultmodel.Item, query string) bool {
+	if strings.Contains(item.ID, query) || strings.Contains(item.Title, query) || strings.Contains(item.Template, query) {
+		return true
+	}
+	for _, alias := range item.Aliases {
+		if strings.Contains(alias, query) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}

@@ -11,21 +11,21 @@ Requirements for the active v0.2.0 implementation track plus completed v0.2.0 de
 
 ### v0.2.0 Implementation Track
 
-- [x] **V2-IMPL-01**: Shelf implements v2 vault model types, built-in templates, field sensitivity, field purpose, field bindings, and runtime indexes behind a package boundary that does not change current CLI behavior.
-- [x] **V2-IMPL-02**: v2 validation rejects duplicate item IDs, duplicate field IDs, unknown templates, missing required fields, invalid field values, invalid env bindings, duplicate env binding names, and public-field env bindings.
+- [x] **V2-IMPL-01**: Shelf implements v2 vault model types, built-in templates, field sensitivity, field purpose, public env-name fields, and runtime indexes behind a package boundary that does not change current CLI behavior.
+- [x] **V2-IMPL-02**: v2 validation rejects duplicate item IDs, duplicate field IDs, unknown templates/profiles, missing required fields, invalid field values, invalid env-name field values, invalid env-name metadata, and secret-field profile defaults.
 - [x] **V2-IMPL-03**: Shelf implements a v2 JSON codec and repository boundary with version checks, strict decoding, round-trip preservation, atomic save, and backup behavior.
-- [x] **V2-IMPL-04**: Shelf implements a legacy migration adapter that converts v1 flat secrets and project manifests to v2 items and field bindings without deleting or rewriting source data before validation succeeds.
-- [ ] **V2-IMPL-05**: Common secret CLI workflows create, set from stdin, get, copy, list long, and info operate over v2 items and preserve value-free output rules.
+- [x] **V2-IMPL-04**: Shelf implements a legacy migration adapter that converts v1 flat secrets and project manifests to v2 items and value-free env-name field mappings without deleting or rewriting source data before validation succeeds.
+- [x] **V2-IMPL-05**: Common secret CLI workflows create, set from stdin, get, list long, info, and remove operate over v2 items and preserve value-free output rules.
 - [ ] **V2-IMPL-06**: Project manifest v2 item/field bindings resolve export/run environments without storing secret values and provide value-free diagnostics for missing items, missing fields, and duplicate env names.
 - [ ] **V2-IMPL-07**: The local manager is adapted or explicitly gated for v2 items after CLI/core behavior is stable, preserving value-free list/search and explicit reveal/copy semantics.
 
 ### v0.2.0 Template Item Vault Design
 
 - [x] **V2-MODEL-01**: Shelf defines a core item/field/template model where items have stable IDs, titles, template IDs, ordered fields, labels, notes, and timestamps.
-- [x] **V2-MODEL-02**: Fields define type, sensitivity, purpose, value, and bindings so public metadata can be listed while concealed values remain hidden unless explicitly materialized.
-- [x] **V2-MODEL-03**: Built-in templates include at least `generic_secret` and `api_credential`; API credentials include a concealed credential field plus public provider, website, expiration, and scopes fields.
-- [x] **V2-MODEL-04**: Environment bindings attach to fields rather than whole items, and export/run workflows resolve only explicitly bound fields.
-- [x] **V2-MODEL-05**: Common non-interactive CLI workflows are redesigned around create, set, get, copy, list, and info before any new interactive prompt or TUI is planned.
+- [x] **V2-MODEL-02**: Fields define type, sensitivity, purpose, value, and env-name metadata so public metadata can be listed while concealed values remain hidden unless explicitly materialized.
+- [x] **V2-MODEL-03**: Built-in templates include at least `generic_secret` and `api_credential`; API credentials include a concealed credential field plus public credential env name, provider, website, expiration, and scopes fields.
+- [x] **V2-MODEL-04**: Environment names are ordinary public fields associated with secret-bearing fields; export/run workflows resolve only explicitly selected secret fields.
+- [x] **V2-MODEL-05**: Common non-interactive CLI workflows are redesigned around create, set, get, list, and info before any new interactive prompt or TUI is planned.
 - [x] **V2-MODEL-06**: Project manifest v2 remains value-free while binding item IDs, field IDs, env names, required state, and optional review snapshots.
 - [x] **V2-MODEL-07**: Value exposure rules distinguish public fields from secret fields across CLI, manager, project status/export/run, and future adapters.
 - [x] **V2-STORE-01**: v0.2.0 compares JSON, age-wrapped JSON, plaintext SQLite, age-wrapped SQLite, and encrypted SQLite/SQLCipher-like storage against portability, leakage, migration, and distribution constraints before implementation.
@@ -157,7 +157,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | V2-IMPL-01..V2-IMPL-02 | Phase 35 | Complete |
 | V2-IMPL-03 | Phase 36 | Complete |
 | V2-IMPL-04 | Phase 37 | Complete |
-| V2-IMPL-05 | Phase 38 | Not Started |
+| V2-IMPL-05 | Phase 38 | Complete |
 | V2-IMPL-06 | Phase 39 | Not Started |
 | V2-IMPL-07 | Phase 40 | Not Started |
 
@@ -165,9 +165,9 @@ Explicitly excluded. Documented to prevent scope creep.
 - Current requirements: 48 total
 - Mapped to phases: 48
 - Unmapped: 0
-- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-04
+- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-05
 - Completed in v0.1.1: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-07, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-07 after completing Phase 37 legacy migration adapter*
+*Last updated: 2026-07-08 after completing Phase 38 secret CLI v2 workflows*

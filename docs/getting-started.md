@@ -48,28 +48,29 @@ shelf vault status
 
 Expected output reports the config path, vault path, configured recipient count, vault format, and loadability without printing secret values.
 
-## Add and tag secrets
+## Add secrets
 
 ```bash
-shelf secret set app:token sk-example --env APP_TOKEN --tag app --tag local
-shelf secret set providers/openai:api_key sk-openai --env OPENAI_API_KEY --tag ai --tag prod
-shelf secret info app:token
+printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
+printf %s "$OPENAI_API_KEY" | shelf secret create openai --profile openai --stdin
+shelf secret info openai
 ```
 
-`secret info` prints metadata and `value_set`, not the value. To intentionally print the value:
+`secret info` prints public fields and `value_set`, not secret field values. To intentionally print the primary secret field value:
 
 ```bash
-shelf secret get app:token
+shelf secret get openai
+shelf secret get --env OPENAI_API_KEY
 ```
 
-List or export by tag when a workflow needs a selected set:
+Update fields through stdin:
 
 ```bash
-shelf secret list --tag ai --tag prod
-shelf secret export --tag ai --tag prod --format env
+printf %s "$NEW_TOKEN" | shelf secret set openai --stdin
+printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
 ```
 
-Repeated `--tag` selectors use AND semantics. `secret list` stays value-free; `secret export` contains plaintext values. Redirected `.env` files must not be committed.
+The first v2 secret CLI is intentionally non-interactive. TUI-based creation and editing will handle richer UX later.
 
 ## Use a project manifest
 

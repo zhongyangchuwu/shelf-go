@@ -84,12 +84,12 @@ shelf project status
 
 `project status`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For tag entries, this means no secret has all listed tags.
 
-Add the secret, adjust tags, or mark the entry optional:
+Add the secret, adjust the project binding, or mark the entry optional:
 
 ```bash
-shelf secret set app:token sk-example --env APP_TOKEN --tag app
-shelf project add app:token --optional
-shelf project add --tag app --optional
+printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
+shelf project configure
+shelf project add app-token --optional
 ```
 
 ## Env name conflict
