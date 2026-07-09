@@ -54,15 +54,19 @@ The `just install` recipe delegates to the same script.
 cmd/shelf/           process entry point
 
 internal/cli/        Cobra command surface, flags, completions, and output routing
-internal/manager/    local manager surface, currently loopback HTTP/Web
+internal/manager/    local manager surface, currently v1 loopback HTTP/Web
 
-internal/app/        runtime, vault construction, app workflows, manager orchestration, status, and version composition
-internal/project/    project identity, .shelf.json schema/IO/validation, and binding resolution
-internal/secret/     reusable secret workflows such as interactive add and editor-based updates
+internal/app/        runtime, vault construction, app workflows, manager gating, status, and version composition
+internal/project/    project identity, .shelf.json schema/IO/validation, and v1/v2 binding resolution
+internal/secret/     legacy v1 editing helpers used by manager/app paths
 
+internal/vaultmodel/ v2 item/field/template model, validation, profiles, and indexes
+internal/vaultjson/  v2 plaintext JSON codec/repository boundary during cutover
+internal/vault/      v1 vault domain model and repository contracts
+internal/jsonvault/  current shelf-vault/v1 encrypted JSON implementation
+internal/age/        age encryption/decryption helpers
 internal/config/     runtime config resolution
-internal/vault/      encrypted vault core, persistence, locking, diagnostics
-internal/exportfmt/  env/shell/JSON export formatting
+internal/util/       atomic write and env/shell/JSON binding formatting
 ```
 
 `docs/architecture.md` is the source of truth for dependency direction. Keep `internal/cli` command-family oriented; reusable behavior belongs in the feature/base packages above.

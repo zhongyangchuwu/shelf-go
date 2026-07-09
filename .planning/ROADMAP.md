@@ -13,10 +13,11 @@ JSON remains the initial storage recommendation because it preserves the portabl
 - [x] Phase 34: Template Item Vault Design
 - [x] Phase 35: Vault Model and Validation Core
 - [x] Phase 36: JSON Codec and Repository Boundary
-- [x] Phase 37: Legacy Migration Adapter
+- [x] Phase 37: Legacy Migration Adapter (retired by Phase 41 audit)
 - [x] Phase 38: Secret CLI v2 Workflows
 - [x] Phase 39: Project Manifest v2 Bindings
 - [x] Phase 40: Manager Adaptation and Cutover
+- [ ] Phase 41: v0.2.0 Milestone Audit and Migration Scope Reset
 
 ## Phase 34: Template Item Vault Design
 
@@ -72,6 +73,8 @@ JSON remains the initial storage recommendation because it preserves the portabl
 
 **Completion Date:** 2026-07-07
 
+**Audit Status:** Retired by Phase 41 before release. The migration package had no production consumers and automatic v1-to-v2 migration is deferred until a user-facing review/rollback workflow is designed.
+
 **Artifacts:** `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
 
 ## Phase 38: Secret CLI v2 Workflows
@@ -116,6 +119,22 @@ JSON remains the initial storage recommendation because it preserves the portabl
 
 **Artifacts:** `CONTEXT.md`, `PLAN.md`, `SUMMARY.md`, `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
 
+## Phase 41: v0.2.0 Milestone Audit and Migration Scope Reset
+
+**Goal:** Audit the v0.2.0 implementation track across architecture, functional behavior, documentation, and release readiness; remove premature migration automation from production scope.
+
+**Depends on:** Phase 40 complete.
+
+**Requirements:** V2-IMPL-04 scope reset, milestone audit readiness.
+
+**Plan:** `.planning/phases/041-v0.2-milestone-audit/REVIEW.md`
+
+**Status:** Complete
+
+**Completion Date:** 2026-07-09
+
+**Artifacts:** `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
+
 ## v0.2.0 Progress
 
 | Phase | Status | Requirements | Plan | Completion Date |
@@ -123,10 +142,11 @@ JSON remains the initial storage recommendation because it preserves the portabl
 | Phase 34: Template Item Vault Design | Complete | V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03 | `.planning/phases/034-v0.2-template-item-vault-design/PLAN.md` | 2026-07-07 |
 | Phase 35: Vault Model and Validation Core | Complete | V2-IMPL-01, V2-IMPL-02 | `.planning/phases/035-vault-model-validation-core/PLAN.md` | 2026-07-07 |
 | Phase 36: JSON Codec and Repository Boundary | Complete | V2-IMPL-03 | `.planning/phases/036-json-codec-repository-boundary/PLAN.md` | 2026-07-07 |
-| Phase 37: Legacy Migration Adapter | Complete | V2-IMPL-04 | `.planning/phases/037-legacy-migration-adapter/PLAN.md` | 2026-07-07 |
+| Phase 37: Legacy Migration Adapter | Retired | V2-IMPL-04 | `.planning/phases/037-legacy-migration-adapter/PLAN.md` | 2026-07-07 |
 | Phase 38: Secret CLI v2 Workflows | Complete | V2-IMPL-05 | `.planning/phases/038-secret-cli-v2-workflows/PLAN.md` | 2026-07-08 |
 | Phase 39: Project Manifest v2 Bindings | Complete | V2-IMPL-06 | `.planning/phases/039-project-manifest-v2-bindings/PLAN.md` | 2026-07-08 |
 | Phase 40: Manager Adaptation and Cutover | Complete | V2-IMPL-07 | `.planning/phases/040-manager-adaptation-cutover/PLAN.md` | 2026-07-08 |
+| Phase 41: v0.2.0 Milestone Audit and Migration Scope Reset | Complete | V2-IMPL-04 scope reset | `.planning/phases/041-v0.2-milestone-audit/REVIEW.md` | 2026-07-09 |
 
 ## Historical v0.1.1 Roadmap
 

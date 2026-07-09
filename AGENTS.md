@@ -71,9 +71,9 @@ Shelf is CLI-first, but it should also provide a local vault manager over localh
 
 - Install Go 1.26.4 or compatible toolchain as declared in `go.mod`.
 - Install `just` only if using `justfile`; equivalent `go build`, `go install`, and `go test` commands work without it.
-- Git is required for project-aware commands such as `shelf project id`, `shelf project init`, `shelf project explain`, and `shelf run` in `internal/cli/project.go` and `internal/cli/run.go`.
-- A terminal is required for hidden interactive password input in `shelf secret add` from `internal/cli/secret.go`.
-- A shell and editor are required for `shelf secret edit`, which invokes `sh -c "$SHELF_EDITOR \"$SHELF_EDIT_FILE\""` in `internal/cli/secret.go`.
+- Git is required for project-aware commands such as `shelf project id`, `shelf project init`, `shelf project status`, and `shelf project run` in `internal/cli/project.go` and `internal/cli/run.go`.
+- A terminal is required for stdin-based secret value entry in v2 commands such as `shelf secret create --stdin` and `shelf secret set --stdin`.
+- Full v2 interactive secret editing is deferred; legacy editor helpers remain internal v1 manager support code rather than active v2 CLI commands.
 - Deployment target is a local CLI binary named `shelf`.
 - Build output defaults to `./bin/shelf` via `justfile`.
 - No server runtime, container runtime, hosted platform, or daemon process is detected.

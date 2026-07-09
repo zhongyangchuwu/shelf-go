@@ -47,7 +47,7 @@ Config may contain:
 - `vault_path`: path to the encrypted vault.
 - `recipients`: public age recipients.
 - `identity_paths`: filesystem paths to private age identities.
-- `editor`: editor command for `secret edit`.
+- `editor`: preferred editor for legacy or future interactive flows; v2 secret writes currently enter through stdin.
 
 Config must not contain:
 
@@ -81,10 +81,12 @@ These operations intentionally handle plaintext values:
 - `shelf secret export` prints values in shell/env/JSON form.
 - `shelf project export` prints resolved project values. Its default `shell` output is intended for explicit workflows such as `shelf project export > .env.local` followed by `source .env.local`.
 - `shelf project run` puts values in a child process environment.
-- `shelf secret edit` writes a temporary editor buffer containing the secret object. Shelf creates that file with restrictive permissions and removes it on normal command exit, including editor and JSON validation errors; a crash or forced kill can still leave local plaintext behind.
-- `shelf vault open` can reveal values in the local browser and can update the encrypted vault. Its tokenized local URL may remain visible in browser history or local process/UI surfaces.
+- `shelf secret set --stdin` and `shelf secret create --stdin` read plaintext values from stdin.
+- `shelf manager` can reveal values in the local browser for v1 vaults and can update the encrypted v1 vault. Its tokenized local URL may remain visible in browser history or local process/UI surfaces. During the v2 cutover it is gated when a valid v2 vault exists.
 
 Generated `.env` and `.env.local` files are plaintext artifacts. Add them to `.gitignore`, do not commit them, and delete them when they are no longer needed.
+
+Cutover v2 JSON vault files (`*.v2.json`) are plaintext secret stores until v2 age wrapping is implemented. Treat them like generated secret material: keep permissions restrictive, do not commit or sync them, and prefer the encrypted v1 vault for portable storage until v2 encryption is wired in.
 
 ## Migration safety
 
@@ -113,7 +115,7 @@ The backup is still encrypted. A configured identity must be able to decrypt it.
 
 ## Localhost manager safety
 
-`shelf vault open` starts an on-demand local HTTP manager. It is not a hosted service and not a permanent daemon.
+`shelf manager` starts an on-demand local HTTP manager for v1 vaults. It is not a hosted service and not a permanent daemon. During the v2 cutover it refuses to open when the resolved v2 vault exists.
 
 Current safety boundaries:
 

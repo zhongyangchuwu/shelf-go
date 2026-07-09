@@ -14,7 +14,7 @@ Requirements for the active v0.2.0 implementation track plus completed v0.2.0 de
 - [x] **V2-IMPL-01**: Shelf implements v2 vault model types, built-in templates, field sensitivity, field purpose, public env-name fields, and runtime indexes behind a package boundary that does not change current CLI behavior.
 - [x] **V2-IMPL-02**: v2 validation rejects duplicate item IDs, duplicate field IDs, unknown templates/profiles, missing required fields, invalid field values, invalid env-name field values, invalid env-name metadata, and secret-field profile defaults.
 - [x] **V2-IMPL-03**: Shelf implements a v2 JSON codec and repository boundary with version checks, strict decoding, round-trip preservation, atomic save, and backup behavior.
-- [x] **V2-IMPL-04**: Shelf implements a legacy migration adapter that converts v1 flat secrets and project manifests to v2 items and value-free env-name field mappings without deleting or rewriting source data before validation succeeds.
+- [ ] **V2-IMPL-04**: Public v1-to-v2 migration automation is deferred; v0.2.0 should not ship an internal automatic merge/conversion adapter until the migration UX, review steps, and rollback policy are explicitly designed.
 - [x] **V2-IMPL-05**: Common secret CLI workflows create, set from stdin, get, list long, info, and remove operate over v2 items and preserve value-free output rules.
 - [x] **V2-IMPL-06**: Project manifest v2 item/field bindings resolve export/run environments without storing secret values and provide value-free diagnostics for missing items, missing fields, and duplicate env names.
 - [x] **V2-IMPL-07**: The local manager is adapted or explicitly gated for v2 items after CLI/core behavior is stable, preserving value-free list/search and explicit reveal/copy semantics.
@@ -113,6 +113,10 @@ Tracked for future releases. These are not current implementation commitments.
 - **V2-REL-01**: Shelf can add optional package-manager distribution after initial usage validates demand.
 - **V2-REL-02**: Shelf can add native Windows smoke tests for setup, secret set/get, and project run on a real Windows runner.
 
+### v2 Migration Automation
+
+- **V2-MIG-AUTO-01**: A future release may add a reviewed v1-to-v2 migration command after defining explicit backup, dry-run, user review, rollback, and no-secret-log requirements. The previous internal `vaultmigrate` adapter was removed during the v0.2.0 audit because one-user local migration evidence is not enough to ship automatic conversion code.
+
 ## Out of Scope
 
 Explicitly excluded. Documented to prevent scope creep.
@@ -156,7 +160,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | V2-MIG-01..V2-MIG-03 | Phase 34 | Complete |
 | V2-IMPL-01..V2-IMPL-02 | Phase 35 | Complete |
 | V2-IMPL-03 | Phase 36 | Complete |
-| V2-IMPL-04 | Phase 37 | Complete |
+| V2-IMPL-04 | Phase 37, Phase 41 audit | Deferred; implementation removed before release |
 | V2-IMPL-05 | Phase 38 | Complete |
 | V2-IMPL-06 | Phase 39 | Complete |
 | V2-IMPL-07 | Phase 40 | Complete |
@@ -165,9 +169,9 @@ Explicitly excluded. Documented to prevent scope creep.
 - Current requirements: 48 total
 - Mapped to phases: 48
 - Unmapped: 0
-- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-07
+- Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-03, V2-IMPL-05..V2-IMPL-07
 - Completed in v0.1.1: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-07, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-08 after completing Phase 40 manager v2 gating*
+*Last updated: 2026-07-09 during v0.2.0 audit and migration automation scope reset*

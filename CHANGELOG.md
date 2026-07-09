@@ -10,6 +10,7 @@ All notable user-facing changes will be recorded here.
 - Replaced the old `group:key` secret CLI with v2 template-based `secret create`, `set --stdin`, `get`, `list --long`, `info`, and `rm --yes` item/field workflows.
 - Removed `secret add`, `secret edit`, and old path/prefix direct secret export from the v2 secret CLI; full interactive editing is deferred to later v2 surfaces.
 - Gated `shelf manager` when the resolved v2 vault exists; the v1 Web manager no longer opens over v2 item/field vault workflows.
+- Removed the internal v1-to-v2 migration adapter from the v0.2.0 release scope; automatic migration is deferred until backup, dry-run, user review, and rollback requirements are designed.
 
 ### Added
 

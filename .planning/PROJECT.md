@@ -30,14 +30,14 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.2.0 Phase 34 defined the template-based item/field vault model, built-in `generic_secret` and `api_credential` templates, repository/codec adapter boundaries, JSON-first storage decision, project manifest v2 direction, and v1 migration safety rules.
 - [x] v0.2.0 Phase 35 implemented the v2 model/validation core in `internal/vaultmodel` with built-in templates, field-level env bindings, validation, indexes, and architecture boundary coverage while preserving current v1 behavior.
 - [x] v0.2.0 Phase 36 implemented the v2 plaintext JSON codec/repository boundary in `internal/vaultjson` with strict decode, validated encode/save, atomic writes, backup behavior, and missing-file errors.
-- [x] v0.2.0 Phase 37 implemented internal v1-to-v2 migration adapters that convert flat secrets to `generic_secret` items and value-free project manifest bindings without deleting source data.
+- [x] v0.2.0 Phase 37 produced an internal v1-to-v2 migration adapter, then the v0.2.0 audit removed it from production scope because automatic migration is too risky without a reviewed user-facing migration UX and rollback contract.
 - [x] v0.2.0 Phase 38 replaced the old `group:key` secret CLI with v2 item/field workflows, env-name public fields, profile defaults, and value-free list/info/ambiguity output.
 - [x] v0.2.0 Phase 39 implemented v2 project manifest bindings for concrete item/field/env records and wired them into project status, add/list/rm, export, and run with value-free diagnostics.
 - [x] v0.2.0 Phase 40 explicitly gated the v1 local manager when a resolved v2 vault is present, preserving v1 manager behavior while avoiding wrong-model edits during cutover.
 
 ### Active
 
-- [ ] v0.2.0 implementation track is ready for milestone audit after completing v2 model, storage boundary, migration adapter, secret CLI, project bindings, and manager gating.
+- [ ] v0.2.0 implementation track is under milestone audit after completing v2 model, storage boundary, secret CLI, project bindings, manager gating, and migration automation scope reset.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -52,7 +52,7 @@ A developer can safely manage project secrets in an encrypted local vault and us
 
 ## Context
 
-The repository is a Go CLI using Cobra. The display layer lives in `cmd/shelf`, `internal/cli`, and `internal/manager`. Feature support lives in `internal/app`, `internal/project`, and `internal/secret`; base support lives in `internal/config`, `internal/vault`, and `internal/exportfmt`.
+The repository is a Go CLI using Cobra. The display layer lives in `cmd/shelf`, `internal/cli`, and `internal/manager`. Feature support lives in `internal/app`, `internal/project`, and `internal/secret`; base support lives in `internal/config`, `internal/vault`, `internal/vaultmodel`, `internal/vaultjson`, `internal/jsonvault`, `internal/age`, and `internal/util`.
 
 The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and tag-based workflows rather than storage migration. Manager editing, tag workflows, script consolidation, architecture repartitioning, documentation alignment, release hardening, CLI boundary refactors, and architecture lint enforcement are complete; the release is ready to tag and publish after review.
 
@@ -66,7 +66,7 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 - **Local-first:** Shelf should not require a hosted backend, account, CDN, or daemon for core CLI/Web manager workflows.
 - **Usability:** CLI workflows must stay scriptable; full editing should be comfortable in the local Web manager.
 - **Non-secret config:** Shelf config and `.shelf.json` project manifests must not contain secret values.
-- **Brownfield architecture:** Keep `internal/cli` as a Cobra adapter for command wiring, flags, completions, terminal interaction, stdout/stderr routing, and child process lifecycle; keep reusable application orchestration in `internal/app`, project manifest/session behavior in `internal/project`, secret editing workflows in `internal/secret`, encrypted vault core in `internal/vault`, export formatting in `internal/exportfmt`, local manager behavior in `internal/manager`, and config resolution in `internal/config`.
+- **Brownfield architecture:** Keep `internal/cli` as a Cobra adapter for command wiring, flags, completions, terminal interaction, stdout/stderr routing, and child process lifecycle; keep reusable application orchestration in `internal/app`, project manifest/session behavior in `internal/project`, legacy v1 editing helpers in `internal/secret`, v1 encrypted vault core in `internal/vault`/`internal/jsonvault`, v2 model/storage boundaries in `internal/vaultmodel`/`internal/vaultjson`, local manager behavior in `internal/manager`, and config/util support in `internal/config` and `internal/util`.
 - **Workflow automation:** Common install, tag, and release flows should live in scripts instead of only in `justfile` or remembered manual commands.
 
 ## Key Decisions
@@ -95,8 +95,8 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Use profiles for provider defaults | Provider-specific defaults should not become CLI switch statements or one-template-per-provider sprawl. | The `openai` profile supplies defaults over `api_credential`; provider remains an ordinary public field. |
 | Add v2 model behind a new internal package | Incremental cutover is safer than replacing the v1 vault package in place. | `internal/vaultmodel` now owns v2 model types, built-in templates/profiles, validation, and indexes. |
 | Add v2 JSON storage behind a separate package | v2 storage needs strict validation and atomic writes without changing current v1 vault runtime behavior. | `internal/vaultjson` now owns plaintext v2 JSON encode/decode and repository load/save behind the model boundary. |
-| Convert v1 records to generic v2 items by default | Inferring richer templates from old path names risks changing user intent. | `internal/vaultmigrate` converts all v1 secrets to `generic_secret`, preserves old paths as aliases, and expands project bindings value-free. |
-| Use concrete v2 project bindings | Prefix/tag-style selectors belong to v1 migration and can obscure runtime conflicts. | Phase 39 `.shelf.json` version 2 stores concrete `item`, `field`, and `env` bindings; export/run/status resolve those against v2 vault items with value-free diagnostics. |
+| Defer automatic v1-to-v2 migration | One-user local migration evidence is not enough to ship conversion code that rewrites a large secret model. | The internal `vaultmigrate` adapter is removed; future migration automation needs explicit backup, dry-run, review, rollback, and no-secret-log requirements. |
+| Use concrete v2 project bindings | Selector expansion can obscure runtime conflicts and makes review harder. | Phase 39 `.shelf.json` version 2 stores concrete `item`, `field`, and `env` bindings; export/run/status resolve those against v2 vault items with value-free diagnostics. |
 | Gate the v1 manager for v2 vaults | A v1 path/env/tag Web editor would misrepresent template item/field vaults and could mutate stale data. | Phase 40 checks for the resolved v2 vault before opening the manager and returns a value-free CLI fallback message when v2 data is present. |
 
 ## Evolution
@@ -110,5 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Decisions to log? -> Add to Key Decisions.
 5. "What This Is" still accurate? -> Update if drifted.
 
----
-*Last updated: 2026-07-08 after completing Phase 40 manager v2 gating*
+*Last updated: 2026-07-09 during v0.2.0 audit and migration automation scope reset*

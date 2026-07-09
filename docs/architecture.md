@@ -7,14 +7,16 @@ Shelf Go is a local-first Go CLI. The runtime secret store is a local encrypted 
 ```text
 cmd/shelf/                    process entry point
 
-internal/cli/                 Cobra command tree, flags, argument validation, and text rendering
-internal/manager/             local manager surface, currently loopback HTTP/Web
+internal/cli/                 Cobra command tree, flags, argument validation, completions, and text rendering
+internal/manager/             local manager surface, currently v1 loopback HTTP/Web
 
-internal/app/                 application service, runtime construction, workflow orchestration, manager orchestration, import services, and version composition
-internal/project/             project identity, .shelf.json schema/IO/validation, and binding resolution
-internal/secret/              reusable secret workflows such as editor-based updates
+internal/app/                 application service, runtime construction, workflow orchestration, manager gating, import services, and version composition
+internal/project/             project identity, .shelf.json schema/IO/validation, and v1/v2 binding resolution
+internal/secret/              reusable legacy secret workflows such as editor-based updates
 
-internal/vault/               Shelf vault domain model, repository abstraction, path/env/tag rules, and in-memory store
+internal/vaultmodel/          v2 item/field/template model, validation, profiles, and runtime indexes
+internal/vaultjson/           v2 plaintext JSON codec/repository boundary; temporary cutover storage, not safe to sync
+internal/vault/               v1 Shelf vault domain model, repository abstraction, path/env/tag rules, and in-memory store
 internal/jsonvault/           current shelf-vault/v1 encrypted JSON implementation
 internal/age/                 age encryption/decryption and identity helpers
 internal/importer/gopass/     gopass CLI import client
@@ -30,11 +32,12 @@ Surface:
   internal/cli -> app
 
 Workflow:
-  app -> config, project, secret, vault, jsonvault, importer/gopass, manager, util
-  project -> vault, util
+  app -> config, project, secret, vault, jsonvault, importer/gopass, manager, util, vaultmodel, vaultjson
+  project -> vault, util, vaultmodel
   secret -> vault
 
 Domain/persistence/support:
+  vaultjson -> vaultmodel, util
   jsonvault -> vault, age, util, flock
   age -> filippo.io/age
   importer/gopass -> standard library
@@ -42,7 +45,7 @@ Domain/persistence/support:
   util -> standard library
 ```
 
-Base packages must not import `internal/cli`. Feature packages should expose concrete functions and data types, not speculative backend interfaces.
+Base packages must not import `internal/cli`. Feature packages should expose concrete functions and data types, not speculative backend interfaces. Automatic v1-to-v2 migration code is intentionally absent from the production package map until migration UX, review, and rollback contracts are designed.
 
 ## Product data model
 
@@ -50,10 +53,10 @@ Shelf's source of truth is the local Shelf vault. gopass, 1Password, Bitwarden, 
 
 Runtime commands read local vault data only:
 
-- v2 `secret` item/field workflows;
-- v1 manager list/reveal/edit/delete while no matching v2 vault is present;
-- `project status/export`;
-- `shelf run`.
+- v2 `secret` item/field workflows use the temporary v2 JSON sidecar;
+- v2 `project status/export/run` resolve concrete item/field bindings against v2 items;
+- v1 manager list/reveal/edit/delete is available only while no matching valid v2 vault is present;
+- v1 project/export/run behavior remains available for v1 manifests during cutover.
 
 This avoids split-brain behavior where one command reads gopass while another command reads the local vault.
 
@@ -68,6 +71,22 @@ This avoids split-brain behavior where one command reads gopass while another co
 - application-facing vault repository contracts: `Options`, `Repository`, `Provider`, and status `Report`.
 
 The domain package defines the application-facing contract for an encrypted Shelf vault, including recipients and identity paths needed to open one. It does not know the file format, encryption algorithm, lock strategy, or project manifests. Future SQL/NoSQL persistence should implement the `vault.Repository` contract rather than replacing the model prematurely.
+
+## V2 vault model and JSON repository
+
+`internal/vaultmodel` owns the v2 item model:
+
+- `Vault`, `Item`, `Field`, templates, profiles, sensitivity, and field purposes;
+- validation for item IDs, field IDs, required fields, public env-name fields, and profile defaults;
+- runtime indexes for item selectors and env-name lookups.
+
+`internal/vaultjson` owns the current v2 JSON codec/repository boundary:
+
+- strict JSON decode with unknown-field and trailing-content rejection;
+- validated encode/save through `vaultmodel.Validate`;
+- atomic save and backup behavior through `internal/util`.
+
+This repository is plaintext during cutover and is not safe to commit or sync. It is a temporary boundary so age wrapping or a different storage backend can replace file persistence without changing item semantics. There is intentionally no production v1-to-v2 migration package in the current release scope.
 
 ## JSON vault persistence
 
@@ -141,6 +160,8 @@ Command handlers should stay thin: parse flags, call an injected `*app.App`, the
 - `App.OpenManager(configPath, vaultPath, addr)` gates v2 vaults, then opens the v1 local manager using a manager-specific service adapter;
 - `String()` returns the application version string from release ldflags or Go build info.
 
+V2 repository use is currently concrete: `internal/app` constructs `vaultjson.Repository` directly for v2 secret, project, and manager-gate workflows. A future storage phase should introduce a v2 provider/repository interface before adding encrypted v2 storage or alternate backends.
+
 ## Project workflows
 
 `internal/project` owns Git project identity, `.shelf.json` schema/IO/validation, and manifest-to-env resolution.
@@ -155,7 +176,7 @@ V1 prefix and tag manifest entries may expand to multiple local vault secrets an
 
 ## Secret editing workflow
 
-The first v2 secret CLI is non-interactive and writes fields from stdin. Full-object editing is deferred to a later TUI/wizard so template fields, env-name fields, and secret values can be edited without reintroducing raw JSON editor UX.
+The first v2 secret CLI is non-interactive and writes fields from stdin. `internal/secret` remains a legacy v1 editing-workflow helper used by manager/app paths; new v2 editing logic should not be added there without renaming or splitting the package. Full-object v2 editing is deferred to a later TUI/wizard so template fields, env-name fields, and secret values can be edited without reintroducing raw JSON editor UX.
 
 ## Utilities
 
