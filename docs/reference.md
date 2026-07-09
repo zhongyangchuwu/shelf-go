@@ -175,6 +175,23 @@ Prints item metadata as JSON. Public field values are shown. Secret field values
 shelf secret info <selector>
 ```
 
+### `shelf secret export`
+
+Materializes v2 secret values for items that have all requested labels. This is intended for explicit shell initialization, not metadata inspection.
+
+```bash
+shelf secret export --label LABEL [--label LABEL ...] [--format shell|env|json]
+```
+
+Default format is `shell`, which prints `export NAME=...` lines suitable for zsh/bash process substitution:
+
+```zsh
+source <(shelf secret export --label ai --format shell)
+```
+
+Repeated `--label` flags use AND matching. Missing labels, missing env-name fields, missing secret values, and duplicate env names fail with value-free diagnostics.
+
+
 ### `shelf secret rm`
 
 Removes a v2 secret item after explicit confirmation.
@@ -183,7 +200,7 @@ Removes a v2 secret item after explicit confirmation.
 shelf secret rm <selector> --yes
 ```
 
-Removed or deferred from the v2 secret CLI: `secret add`, `secret edit`, direct `secret export`, `secret copy`, and env binding subcommands.
+Removed or deferred from the v2 secret CLI: `secret add`, `secret edit`, `secret copy`, and env binding subcommands. Label-scoped `secret export` remains available for intentional plaintext materialization.
 
 ### `shelf project id`
 

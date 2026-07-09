@@ -82,9 +82,17 @@ printf %s "$NEW_TOKEN" | shelf secret set openai --stdin
 printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
 ```
 
-`secret add`, `secret edit`, and direct `secret export` are removed from the v2 secret CLI. Full interactive editing is deferred to the later TUI.
+`secret add` and `secret edit` are removed from the v2 secret CLI. Use label-scoped `secret export --label LABEL --format shell` only when you intentionally want to materialize matching secret values, for example from `.zshrc` without storing values there.
 
 Phase 38 v2 secret commands currently use the plaintext v2 JSON repository boundary and write to `<resolved-vault-path>.v2.json` unless `--vault` is supplied. Treat that file as secret data: do not commit or sync it until age encryption is wired into the v2 repository.
+
+Load a label group into the current shell without writing values into shell config:
+
+```bash
+source <(shelf secret export --label ai --format shell)
+```
+
+Repeated labels use AND matching.
 
 ## Use secrets in a project
 
@@ -158,7 +166,7 @@ After verifying the encrypted vault, move, delete, or securely archive the plain
 
 ## Safety notes
 
-- `shelf secret get`, `shelf project export`, `shelf project run`, and the v1 `shelf manager` can intentionally materialize plaintext values. `shelf secret info` and `shelf secret list` are value-free.
+- `shelf secret get`, `shelf secret export`, `shelf project export`, `shelf project run`, and the v1 `shelf manager` can intentionally materialize plaintext values. `shelf secret info` and `shelf secret list` are value-free.
 - `.shelf.json` project manifests are value-free and can be committed after review.
 - Generated `.env` / `.env.local` files contain plaintext values. Do not commit them.
 - Phase 38 v2 JSON vault files (`*.v2.json`) contain secret values in plaintext during the cutover. Do not commit or sync them.

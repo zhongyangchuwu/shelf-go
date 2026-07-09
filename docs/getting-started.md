@@ -72,6 +72,13 @@ printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
 
 The first v2 secret CLI is intentionally non-interactive. TUI-based creation and editing will handle richer UX later.
 
+To load a label group into your shell startup without storing secret values in `.zshrc`:
+
+```zsh
+source <(shelf secret export --label ai --format shell)
+```
+
+
 ## Use a project manifest
 
 Inside a Git project:

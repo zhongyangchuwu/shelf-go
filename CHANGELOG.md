@@ -8,7 +8,7 @@ All notable user-facing changes will be recorded here.
 
 - Replaced `shelf project explain` with `shelf project status`; status now reports project binding resolution and value-free local env-file summaries.
 - Replaced the old `group:key` secret CLI with v2 template-based `secret create`, `set --stdin`, `get`, `list --long`, `info`, and `rm --yes` item/field workflows.
-- Removed `secret add`, `secret edit`, and direct `secret export` from the v2 secret CLI; full interactive editing and direct export are deferred to later v2 surfaces.
+- Removed `secret add`, `secret edit`, and old path/prefix direct secret export from the v2 secret CLI; full interactive editing is deferred to later v2 surfaces.
 - Gated `shelf manager` when the resolved v2 vault exists; the v1 Web manager no longer opens over v2 item/field vault workflows.
 
 ### Added
@@ -17,6 +17,7 @@ All notable user-facing changes will be recorded here.
 - Added v2 vault profiles with an `openai` profile over the `api_credential` template.
 - Added env-name public fields such as `value_env` and `credential_env` so env names are ordinary item fields instead of special field bindings.
 - Added v2 `.shelf.json` project bindings with concrete item/field/env records for `project status`, `project export`, `project run`, `project add`, `project list`, and `project rm`.
+- Added label-scoped v2 `shelf secret export --label LABEL` in shell, env, and JSON formats for intentional shell initialization without storing values in shell config.
 
 - Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
 - Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.

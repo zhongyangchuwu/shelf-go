@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
+	"github.com/zhongyangchuwu/shelf-go/internal/util"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultjson"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
@@ -47,6 +48,11 @@ type GetSecretFieldRequest struct {
 type ListSecretItemsRequest struct {
 	Query string
 	Long  bool
+}
+
+type ExportSecretItemsRequest struct {
+	Labels []string
+	Format string
 }
 
 type SecretItemSummaryV2 struct {
@@ -200,6 +206,31 @@ func (a *App) ListSecretItemsV2(configPathFlag, vaultPathFlag string, req ListSe
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
 	return out, nil
+}
+
+func (a *App) ExportSecretItemsV2(configPathFlag, vaultPathFlag string, req ExportSecretItemsRequest) (string, error) {
+	labels := normalizeLabels(req.Labels)
+	if len(labels) == 0 {
+		return "", fmt.Errorf("secret export requires --label")
+	}
+	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return "", err
+	}
+	bindings, err := exportBindingsForLabels(vault, labels)
+	if err != nil {
+		return "", err
+	}
+	switch req.Format {
+	case "", "shell":
+		return util.ShellBindings(bindings)
+	case "env":
+		return util.EnvBindings(bindings)
+	case "json":
+		return util.JSONBindings(bindings)
+	default:
+		return "", fmt.Errorf("unsupported export format: %s", req.Format)
+	}
 }
 
 func (a *App) SecretInfoV2(configPathFlag, vaultPathFlag, selector string) (SecretInfoV2, error) {
@@ -549,6 +580,80 @@ func findItemByID(items []vaultmodel.Item, id string) (vaultmodel.Item, bool) {
 		}
 	}
 	return vaultmodel.Item{}, false
+}
+
+func exportBindingsForLabels(vault vaultmodel.Vault, labels []string) ([]util.Binding, error) {
+	bindings := make([]util.Binding, 0)
+	seenEnv := map[string]string{}
+	matched := 0
+	for _, item := range vault.Items {
+		if !itemHasLabels(item, labels) {
+			continue
+		}
+		matched++
+		primary, err := primaryFieldTemplate(vault, item)
+		if err != nil {
+			return nil, err
+		}
+		_, field, err := findField(item, primary.ID)
+		if err != nil {
+			return nil, fmt.Errorf("missing secret field for %s: %s", item.Title, primary.ID)
+		}
+		if len(field.Value) == 0 {
+			return nil, fmt.Errorf("missing value for %s", item.Title)
+		}
+		envField, ok := envFieldFor(vault, item, primary.ID)
+		if !ok || len(envField.Value) == 0 {
+			return nil, fmt.Errorf("missing env name for %s", item.Title)
+		}
+		envName, err := stringValue(envField.Value)
+		if err != nil {
+			return nil, fmt.Errorf("read env name for %s: %w", item.Title, err)
+		}
+		if envName == "" {
+			return nil, fmt.Errorf("missing env name for %s", item.Title)
+		}
+		if previous, exists := seenEnv[envName]; exists {
+			return nil, fmt.Errorf("duplicate env name %s: %s, %s", envName, previous, item.Title)
+		}
+		value, err := valueForOutput(field)
+		if err != nil {
+			return nil, err
+		}
+		seenEnv[envName] = item.Title
+		bindings = append(bindings, util.Binding{EnvName: envName, Value: value})
+	}
+	if matched == 0 {
+		return nil, fmt.Errorf("no items matched labels: %s", strings.Join(labels, ","))
+	}
+	sort.Slice(bindings, func(i, j int) bool { return bindings[i].EnvName < bindings[j].EnvName })
+	return bindings, nil
+}
+
+func normalizeLabels(labels []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(labels))
+	for _, label := range labels {
+		label = strings.TrimSpace(label)
+		if label == "" {
+			continue
+		}
+		if _, exists := seen[label]; exists {
+			continue
+		}
+		seen[label] = struct{}{}
+		out = append(out, label)
+	}
+	return out
+}
+
+func itemHasLabels(item vaultmodel.Item, labels []string) bool {
+	for _, label := range labels {
+		if !hasString(item.Labels, label) {
+			return false
+		}
+	}
+	return true
 }
 
 func matchesItemQuery(item vaultmodel.Item, query string) bool {
