@@ -353,6 +353,38 @@ func TestConvertVault_EnvNameFieldExists(t *testing.T) {
 	}
 }
 
+func TestConvertVault_DerivedEnvNameFieldIsUnset(t *testing.T) {
+	data := vault.Data{
+		Version: vault.CurrentVersion,
+		Secrets: map[string]vault.Secret{
+			"prod/api:key": {Value: valSecret},
+		},
+	}
+
+	result, err := vaultmigrate.ConvertVault(data)
+	if err != nil {
+		t.Fatalf("ConvertVault failed: %v", err)
+	}
+
+	item := result.Vault.Items[0]
+	var envField *vaultmodel.Field
+	for i := range item.Fields {
+		if item.Fields[i].ID == "value_env" {
+			envField = &item.Fields[i]
+			break
+		}
+	}
+	if envField == nil {
+		t.Fatal("value_env field not found on converted item")
+	}
+	if len(envField.Value) != 0 {
+		t.Fatalf("derived env should not be written to value_env, got %s", envField.Value)
+	}
+	if result.Paths["prod/api:key"].EnvName != "PROD_API_KEY" {
+		t.Fatalf("path mapping env = %q", result.Paths["prod/api:key"].EnvName)
+	}
+}
+
 func TestConvertVault_ValueIsConcealed(t *testing.T) {
 	// The migrated primary secret field must be concealed and secret-sensitivity.
 	data := vault.Data{

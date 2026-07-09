@@ -189,7 +189,7 @@ Default format is `shell`, which prints `export NAME=...` lines suitable for zsh
 source <(shelf secret export --label ai --format shell)
 ```
 
-Repeated `--label` flags use AND matching. Missing labels, missing env-name fields, missing secret values, and duplicate env names fail with value-free diagnostics.
+Repeated `--label` flags use AND matching. Items without an explicit env-name field are skipped by default. Missing labels, missing secret values for exportable items, and duplicate env names fail with value-free diagnostics.
 
 
 ### `shelf secret rm`

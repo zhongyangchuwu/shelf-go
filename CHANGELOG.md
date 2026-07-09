@@ -18,6 +18,7 @@ All notable user-facing changes will be recorded here.
 - Added env-name public fields such as `value_env` and `credential_env` so env names are ordinary item fields instead of special field bindings.
 - Added v2 `.shelf.json` project bindings with concrete item/field/env records for `project status`, `project export`, `project run`, `project add`, `project list`, and `project rm`.
 - Added label-scoped v2 `shelf secret export --label LABEL` in shell, env, and JSON formats for intentional shell initialization without storing values in shell config.
+- Changed v2 label export to skip items without an explicit env-name field, and v1-to-v2 migration now leaves derived env names out of item env fields.
 
 - Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
 - Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.

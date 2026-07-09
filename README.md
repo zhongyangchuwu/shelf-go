@@ -92,7 +92,7 @@ Load a label group into the current shell without writing values into shell conf
 source <(shelf secret export --label ai --format shell)
 ```
 
-Repeated labels use AND matching.
+Repeated labels use AND matching. Items without an explicit env-name field are skipped.
 
 ## Use secrets in a project
 

@@ -474,16 +474,23 @@ func TestExportSecretItemsV2_NoMatchingLabels(t *testing.T) {
 	}
 }
 
-func TestExportSecretItemsV2_MissingEnvName(t *testing.T) {
+func TestExportSecretItemsV2_SkipsMissingEnvName(t *testing.T) {
 	vaultPath, configPath := writeV2VaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "", "value-a", []string{"prod"}),
+		genericSecretItem("item_b", "Item B", "B_VAR", "value-b", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
+	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
 		Labels: []string{"prod"},
 		Format: "env",
 	})
-	if err == nil || !strings.Contains(err.Error(), "missing env name") {
-		t.Fatalf("expected missing env name error, got: %v", err)
+	if err != nil {
+		t.Fatalf("export with missing env item: %v", err)
+	}
+	if strings.Contains(out, "value-a") || strings.Contains(out, "Item A") {
+		t.Fatalf("item without env should be skipped:\n%s", out)
+	}
+	if !strings.Contains(out, "B_VAR=value-b") {
+		t.Fatalf("item with env missing from output:\n%s", out)
 	}
 }
 

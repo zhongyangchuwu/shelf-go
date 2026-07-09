@@ -50,15 +50,18 @@ func ConvertVault(data vault.Data) (VaultResult, error) {
 				Purpose:     vaultmodel.PurposePrimarySecret,
 				Value:       append([]byte(nil), secret.Value...),
 			},
-			{
-				ID:          primaryFieldID + "_env",
-				Label:       "Value Env",
-				Type:        vaultmodel.FieldTypeString,
-				Sensitivity: vaultmodel.SensitivityPublic,
-				Purpose:     vaultmodel.PurposeEnvName,
-				Value:       func() json.RawMessage { v, _ := json.Marshal(resolvedEnv); return v }(),
-			},
 		}
+		envField := vaultmodel.Field{
+			ID:          primaryFieldID + "_env",
+			Label:       "Value Env",
+			Type:        vaultmodel.FieldTypeString,
+			Sensitivity: vaultmodel.SensitivityPublic,
+			Purpose:     vaultmodel.PurposeEnvName,
+		}
+		if secret.Env != "" {
+			envField.Value = func() json.RawMessage { v, _ := json.Marshal(secret.Env); return v }()
+		}
+		fields = append(fields, envField)
 		item := vaultmodel.Item{
 			ID:       itemID,
 			Title:    path,

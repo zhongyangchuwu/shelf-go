@@ -595,23 +595,23 @@ func exportBindingsForLabels(vault vaultmodel.Vault, labels []string) ([]util.Bi
 		if err != nil {
 			return nil, err
 		}
-		_, field, err := findField(item, primary.ID)
-		if err != nil {
-			return nil, fmt.Errorf("missing secret field for %s: %s", item.Title, primary.ID)
-		}
-		if len(field.Value) == 0 {
-			return nil, fmt.Errorf("missing value for %s", item.Title)
-		}
 		envField, ok := envFieldFor(vault, item, primary.ID)
 		if !ok || len(envField.Value) == 0 {
-			return nil, fmt.Errorf("missing env name for %s", item.Title)
+			continue
 		}
 		envName, err := stringValue(envField.Value)
 		if err != nil {
 			return nil, fmt.Errorf("read env name for %s: %w", item.Title, err)
 		}
 		if envName == "" {
-			return nil, fmt.Errorf("missing env name for %s", item.Title)
+			continue
+		}
+		_, field, err := findField(item, primary.ID)
+		if err != nil {
+			return nil, fmt.Errorf("missing secret field for %s: %s", item.Title, primary.ID)
+		}
+		if len(field.Value) == 0 {
+			return nil, fmt.Errorf("missing value for %s", item.Title)
 		}
 		if previous, exists := seenEnv[envName]; exists {
 			return nil, fmt.Errorf("duplicate env name %s: %s, %s", envName, previous, item.Title)
