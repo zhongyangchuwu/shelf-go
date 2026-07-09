@@ -1,10 +1,10 @@
 # State
 
 ## Current Position
-- Phase: v0.2.0 Milestone Audit and Migration Scope Reset
-- Status: audit complete; release decision pending
-- Active Artifact: .planning/phases/041-v0.2-milestone-audit/VERIFICATION.md
-- Next Action: Decide whether v0.2.0 ships as a cutover/preview with plaintext v2 warnings or waits for v2 age wrapping before release.
+- Phase: Item Vault Storage and Crypto Boundary
+- Status: planned
+- Active Artifact: .planning/phases/042-item-vault-storage-crypto-boundary/PLAN.md
+- Next Action: Execute Phase 42: introduce an item-vault provider boundary, add age-wrapped encrypted item-vault storage, update setup key choice/generation, and remove temporary `v2` default storage naming before release.
 
 ## Blockers
 - None
@@ -28,6 +28,7 @@
 - Completed Phase 40: `shelf manager` is explicitly gated when a resolved valid v2 vault exists, preventing the v1 Web editor from operating over v2 item workflows while preserving v1 manager behavior.
 - Verification passed for Phase 40: `go test ./internal/app ./internal/cli ./internal/manager`; `go test ./...`; `go vet ./...`; `go-arch-lint check`.
 - Completed Phase 41 audit: removed `internal/vaultmigrate`, deferred public migration automation, fixed stale security/architecture docs, and verified `go test ./...`, `go vet ./...`, and `go-arch-lint check`.
+- Planned Phase 42: release-quality item-vault storage should use age encryption by default, keep encryption decoupled from `vaultmodel` and JSON codec, offer setup choice between existing and generated age identities, and defer Web/TUI/project expansion until CLI/model/file storage are stable.
 
 ## Updated
 - 2026-07-09

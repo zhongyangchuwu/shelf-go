@@ -19,6 +19,17 @@ Requirements for the active v0.2.0 implementation track plus completed v0.2.0 de
 - [x] **V2-IMPL-06**: Project manifest v2 item/field bindings resolve export/run environments without storing secret values and provide value-free diagnostics for missing items, missing fields, and duplicate env names.
 - [x] **V2-IMPL-07**: The local manager is adapted or explicitly gated for v2 items after CLI/core behavior is stable, preserving value-free list/search and explicit reveal/copy semantics.
 
+### v0.2.0 Item Vault Storage and Crypto Boundary
+
+- [ ] **V2-CRYPTO-01**: Item-vault persistence is encrypted at rest by default through age before v0.2.0 formal release; plaintext JSON remains a codec/test fixture, not the default runtime artifact.
+- [ ] **V2-CRYPTO-02**: Encryption is decoupled from `vaultmodel` and the JSON codec; production repositories compose model codec, crypto sealing/opening, config, atomic writes, and backups behind a provider boundary.
+- [ ] **V2-CRYPTO-03**: `shelf setup` can interactively choose an existing age identity or generate a new one, while preserving non-interactive flags for scripted setup.
+- [ ] **V2-CRYPTO-04**: Setup and vault initialization never print private key material or secret values and fail before writing partial vault/config state when identity or recipient validation fails.
+- [ ] **V2-CRYPTO-05**: Encrypted item-vault writes preserve encrypted backups and do not leave plaintext vault files or production temp files behind on normal success/failure paths.
+- [ ] **V2-NAME-01**: User-facing docs and CLI output use stable names such as Shelf vault or item vault instead of temporary `v2` naming for the release path.
+- [ ] **V2-NAME-02**: The canonical item-vault path no longer defaults to `<resolved-vault-path>.v2.json`; any legacy/cutover sidecar path is explicit and documented as temporary.
+- [ ] **V2-NAME-03**: CLI, secret model, and file/storage behavior are release-quality before Web manager, TUI, or broader project workflow expansion resumes.
+
 ### v0.2.0 Template Item Vault Design
 
 - [x] **V2-MODEL-01**: Shelf defines a core item/field/template model where items have stable IDs, titles, template IDs, ordered fields, labels, notes, and timestamps.
@@ -164,14 +175,16 @@ Explicitly excluded. Documented to prevent scope creep.
 | V2-IMPL-05 | Phase 38 | Complete |
 | V2-IMPL-06 | Phase 39 | Complete |
 | V2-IMPL-07 | Phase 40 | Complete |
+| V2-CRYPTO-01..V2-CRYPTO-05 | Phase 42 | Planned |
+| V2-NAME-01..V2-NAME-03 | Phase 42 | Planned |
 
 **Coverage:**
-- Current requirements: 48 total
-- Mapped to phases: 48
+- Current requirements: 56 total
+- Mapped to phases: 56
 - Unmapped: 0
 - Completed in v0.2.0 so far: V2-MODEL-01..V2-MODEL-07, V2-STORE-01..V2-STORE-03, V2-MIG-01..V2-MIG-03, V2-IMPL-01..V2-IMPL-03, V2-IMPL-05..V2-IMPL-07
 - Completed in v0.1.1: WEB-01..WEB-06, TAG-01..TAG-05, OPS-01..OPS-03, ARCH-01..ARCH-07, DOC-01..DOC-02, BOUND-01..BOUND-02, REL-011-01
 - Completed v0.1.0 requirements: archived at `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-09 during v0.2.0 audit and migration automation scope reset*
+*Last updated: 2026-07-09 after planning Phase 42 item-vault storage and crypto boundary*

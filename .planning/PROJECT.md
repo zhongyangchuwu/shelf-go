@@ -34,10 +34,11 @@ A developer can safely manage project secrets in an encrypted local vault and us
 - [x] v0.2.0 Phase 38 replaced the old `group:key` secret CLI with v2 item/field workflows, env-name public fields, profile defaults, and value-free list/info/ambiguity output.
 - [x] v0.2.0 Phase 39 implemented v2 project manifest bindings for concrete item/field/env records and wired them into project status, add/list/rm, export, and run with value-free diagnostics.
 - [x] v0.2.0 Phase 40 explicitly gated the v1 local manager when a resolved v2 vault is present, preserving v1 manager behavior while avoiding wrong-model edits during cutover.
+- [x] v0.2.0 Phase 41 completed milestone audit, removed `internal/vaultmigrate`, deferred migration automation, and reset release readiness around encrypted item-vault storage.
 
 ### Active
 
-- [ ] v0.2.0 implementation track is under milestone audit after completing v2 model, storage boundary, secret CLI, project bindings, manager gating, and migration automation scope reset.
+- [ ] v0.2.0 Phase 42 will make item-vault storage release-ready: encrypted at rest through age, setup key choice/generation, stable naming, and crypto/storage decoupling before Web/TUI/project expansion resumes.
 - [x] v0.1.1 keeps the current age-encrypted JSON vault format; SQLite/storage redesign moved into v0.2.0 design and remains deferred behind a repository adapter until justified.
 
 ### Out of Scope
@@ -98,6 +99,9 @@ The v0.1.0 release is published and archived. v0.1.1 focuses on editing UX and t
 | Defer automatic v1-to-v2 migration | One-user local migration evidence is not enough to ship conversion code that rewrites a large secret model. | The internal `vaultmigrate` adapter is removed; future migration automation needs explicit backup, dry-run, review, rollback, and no-secret-log requirements. |
 | Use concrete v2 project bindings | Selector expansion can obscure runtime conflicts and makes review harder. | Phase 39 `.shelf.json` version 2 stores concrete `item`, `field`, and `env` bindings; export/run/status resolve those against v2 vault items with value-free diagnostics. |
 | Gate the v1 manager for v2 vaults | A v1 path/env/tag Web editor would misrepresent template item/field vaults and could mutate stale data. | Phase 40 checks for the resolved v2 vault before opening the manager and returns a value-free CLI fallback message when v2 data is present. |
+| Encrypt item-vault storage before formal v0.2.0 release | A portable secret vault is not release-ready if its default item-vault file is plaintext. | Phase 42 plans age-wrapped item-vault persistence behind a provider boundary while keeping the item model and JSON codec encryption-agnostic. |
+| Let setup choose or generate age keys | The setup experience should match a password-manager-style first-run flow instead of requiring users to hand-edit key paths. | `shelf setup` should offer existing identity selection, new identity generation, and non-interactive flags without printing private key material. |
+| Remove temporary `v2` naming from release UX | Version labels are implementation scaffolding, not product language. | Docs and CLI should use stable names like Shelf vault or item vault; temporary sidecar naming remains explicit cutover terminology only. |
 
 ## Evolution
 
@@ -110,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Decisions to log? -> Add to Key Decisions.
 5. "What This Is" still accurate? -> Update if drifted.
 
-*Last updated: 2026-07-09 during v0.2.0 audit and migration automation scope reset*
+*Last updated: 2026-07-09 after planning Phase 42 item-vault storage and crypto boundary*

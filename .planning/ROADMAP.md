@@ -4,9 +4,9 @@
 
 Shelf Go v0.2.0 redesigns the vault data model around template-based items and fields. The goal is to replace the current flat path-keyed secret record model with a core model that can represent generic secrets, API credentials, and future developer-secret templates while preserving local-first, value-free project workflows.
 
-Phase 34 completed the design track for the item/field/template model, storage recommendation, and migration strategy. Active work now proceeds through implementation phases in dependency order.
+Phase 41 audit reset migration scope: automatic v1-to-item-vault migration is deferred, and v0.2.0 should focus first on release-quality item-vault storage, naming, setup, and CLI behavior before Web/TUI/project expansion.
 
-JSON remains the initial storage recommendation because it preserves the portable encrypted-file direction and keeps age wrapping simple. SQLite remains a comparison point behind a future repository adapter; it is not selected unless later evidence justifies the leakage, migration, and distribution costs.
+JSON remains the item-vault plaintext codec, but release storage must wrap it in encryption through a repository/provider boundary. SQLite remains a future comparison point only if later evidence justifies the leakage, migration, and distribution costs.
 
 ## v0.2.0 Phases
 
@@ -17,7 +17,8 @@ JSON remains the initial storage recommendation because it preserves the portabl
 - [x] Phase 38: Secret CLI v2 Workflows
 - [x] Phase 39: Project Manifest v2 Bindings
 - [x] Phase 40: Manager Adaptation and Cutover
-- [ ] Phase 41: v0.2.0 Milestone Audit and Migration Scope Reset
+- [x] Phase 41: v0.2.0 Milestone Audit and Migration Scope Reset
+- [ ] Phase 42: Item Vault Storage and Crypto Boundary
 
 ## Phase 34: Template Item Vault Design
 
@@ -135,6 +136,20 @@ JSON remains the initial storage recommendation because it preserves the portabl
 
 **Artifacts:** `REVIEW.md`, `VERIFICATION.md`, `CAPTURE.md`
 
+## Phase 42: Item Vault Storage and Crypto Boundary
+
+**Goal:** Replace temporary plaintext item-vault sidecar storage with a canonical encrypted item-vault repository, decouple encryption from the item model/JSON codec, and make setup choose an existing age identity or generate a new one.
+
+**Depends on:** Phase 41 complete.
+
+**Requirements:** V2-CRYPTO-01..V2-CRYPTO-05, V2-NAME-01..V2-NAME-03
+
+**Plan:** `.planning/phases/042-item-vault-storage-crypto-boundary/PLAN.md`
+
+**Status:** Planned
+
+**Artifacts:** `CONTEXT.md`, `PLAN.md`
+
 ## v0.2.0 Progress
 
 | Phase | Status | Requirements | Plan | Completion Date |
@@ -147,6 +162,7 @@ JSON remains the initial storage recommendation because it preserves the portabl
 | Phase 39: Project Manifest v2 Bindings | Complete | V2-IMPL-06 | `.planning/phases/039-project-manifest-v2-bindings/PLAN.md` | 2026-07-08 |
 | Phase 40: Manager Adaptation and Cutover | Complete | V2-IMPL-07 | `.planning/phases/040-manager-adaptation-cutover/PLAN.md` | 2026-07-08 |
 | Phase 41: v0.2.0 Milestone Audit and Migration Scope Reset | Complete | V2-IMPL-04 scope reset | `.planning/phases/041-v0.2-milestone-audit/REVIEW.md` | 2026-07-09 |
+| Phase 42: Item Vault Storage and Crypto Boundary | Planned | V2-CRYPTO-01..V2-CRYPTO-05, V2-NAME-01..V2-NAME-03 | `.planning/phases/042-item-vault-storage-crypto-boundary/PLAN.md` |  |
 
 ## Historical v0.1.1 Roadmap
 
@@ -391,4 +407,4 @@ SQLite and storage backend redesign are now active v0.2.0 design topics.
 - v0.1.0: `.planning/archive/releases/v0.1.0/SUMMARY.md`
 
 ---
-*Last updated: 2026-07-08 after completing Phase 40 manager v2 gating*
+*Last updated: 2026-07-09 after planning Phase 42 item-vault storage and crypto boundary*
