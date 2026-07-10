@@ -196,12 +196,21 @@ func (a *App) ListSecretItemsV2(configPathFlag, vaultPathFlag string, req ListSe
 		if req.Query != "" && !matchesItemQuery(item, req.Query) {
 			continue
 		}
-		primary, _ := primaryFieldTemplate(vault, item)
-		env := ""
-		if envField, ok := envFieldFor(vault, item, primary.ID); ok {
-			env, _ = stringValue(envField.Value)
+		primary, err := primaryFieldTemplate(vault, item)
+		if err != nil {
+			return nil, fmt.Errorf("list %s: %w", item.Title, err)
 		}
-		_, field, _ := findField(item, primary.ID)
+		env := ""
+		if envField, ok := envFieldFor(vault, item, primary.ID); ok && len(envField.Value) > 0 {
+			env, err = stringValue(envField.Value)
+			if err != nil {
+				return nil, fmt.Errorf("list %s env field %s: %w", item.Title, envField.ID, err)
+			}
+		}
+		_, field, err := findField(item, primary.ID)
+		if err != nil {
+			return nil, fmt.Errorf("list %s: %w", item.Title, err)
+		}
 		out = append(out, SecretItemSummaryV2{ID: item.ID, Title: item.Title, Template: item.Template, Env: env, ValueSet: len(field.Value) > 0})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
@@ -342,20 +351,28 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 		}
 	}
 	if req.Provider != "" {
-		setFieldValueIfPresent(&item, "provider", rawString(req.Provider))
+		if err := setFieldValueIfPresent(&item, "provider", rawString(req.Provider)); err != nil {
+			return vaultmodel.Item{}, fmt.Errorf("--provider is not supported by template %s: %w", tmpl.ID, err)
+		}
 	}
 	if req.Website != "" {
-		setFieldValueIfPresent(&item, "website", rawString(req.Website))
+		if err := setFieldValueIfPresent(&item, "website", rawString(req.Website)); err != nil {
+			return vaultmodel.Item{}, fmt.Errorf("--website is not supported by template %s: %w", tmpl.ID, err)
+		}
 	}
 	if req.Expires != "" {
-		setFieldValueIfPresent(&item, "expires_at", rawString(req.Expires))
+		if err := setFieldValueIfPresent(&item, "expires_at", rawString(req.Expires)); err != nil {
+			return vaultmodel.Item{}, fmt.Errorf("--expires is not supported by template %s: %w", tmpl.ID, err)
+		}
 	}
 	if len(req.Scopes) > 0 {
 		value, err := json.Marshal(req.Scopes)
 		if err != nil {
 			return vaultmodel.Item{}, err
 		}
-		setFieldValueIfPresent(&item, "scopes", value)
+		if err := setFieldValueIfPresent(&item, "scopes", value); err != nil {
+			return vaultmodel.Item{}, fmt.Errorf("--scope is not supported by template %s: %w", tmpl.ID, err)
+		}
 	}
 	if req.Stdin {
 		primary, err := primaryFieldTemplateForTemplate(tmpl)

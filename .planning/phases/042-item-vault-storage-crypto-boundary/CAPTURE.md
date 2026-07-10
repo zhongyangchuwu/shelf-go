@@ -23,6 +23,7 @@
 
 ## Next Work
 
-1. Final release docs pass.
-2. v0.2.0 release prep.
-3. Later: Web manager, TUI editing, project configure TUI, optional built-in encryption if needed.
+1. Local v0.2.0 wrap-up: code/framework review, docs/planning cleanup, and file hygiene.
+2. Installed-binary smoke tests for local workflows.
+3. Future v1.0.0: public repository/release packaging if the project is made public.
+4. Later product work: Web manager, TUI editing, project configure TUI, optional built-in encryption if needed.

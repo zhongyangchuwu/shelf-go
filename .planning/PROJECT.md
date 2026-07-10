@@ -11,10 +11,11 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] v0.2.0 item model, JSON repository, secret CLI, label export, project item bindings, and item-vault run/export workflows are implemented.
 - [x] Built-in age/v1 compatibility, v1 manager, v1 migration/import/export, and project configure TUI were removed for the personal-use CLI direction.
 - [x] Local workstation config now points at `/home/han/.local/share/shelf/vault.json`, copied from the previous item sidecar after backup.
+- [x] Human-facing secret list/create output is routed through `internal/cliui`.
 
 ### Active
 
-- [ ] Harden release docs and verify the item-vault-only CLI before tagging v0.2.0.
+- [ ] Finish local v0.2.0 wrap-up: code/framework review, docs/planning cleanup, file hygiene, and installed-binary smoke tests.
 
 ### Out of Scope
 
@@ -22,6 +23,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - v1 compatibility and automatic migration.
 - Web manager and TUI editing.
 - Team sharing, hosted sync, browser autofill, or daemon unlock flows.
+- Public repository/release packaging until a future v1.0.0 milestone.
 
 ## Constraints
 
@@ -47,8 +49,9 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | --- | --- | --- |
 | Use external encryption | User prefers chezmoi encryption and a simpler personal tool. | Removed age/jsonvault/v1 encryption code from active product. |
 | Use item vault JSON as canonical file | It is easy to inspect, back up, and encrypt externally. | Default vault path is `~/.local/share/shelf/vault.json`. |
-| Drop v1 compatibility | Personal-use project; compatibility burden slows release. | Removed v1 vault, manager, import/migrate/export, project selectors. |
+| Drop v1 compatibility | Personal-use project; compatibility burden slows local iteration. | Removed v1 vault, manager, import/migrate/export, project selectors. |
 | Keep CLI before Web/TUI | CLI is the daily workflow and easiest to verify. | Active commands are setup, doctor, secret, project, completion. |
+| Defer public release work | Repository stays private/local until a future v1.0.0 milestone. | Removed v0.2.0 tag/release preparation from active scope. |
 
 ---
-*Last updated: 2026-07-10 after item-vault-only cutover planning and implementation*
+*Last updated: 2026-07-10 during local v0.2.0 wrap-up*

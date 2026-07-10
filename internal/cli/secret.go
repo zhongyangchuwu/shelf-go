@@ -13,7 +13,7 @@ import (
 func newSecretCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "secret",
-		Short: "Manage v2 secret items",
+		Short: "Manage secret items",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				return fmt.Errorf("unknown secret command: %s", args[0])
@@ -35,7 +35,7 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	var req app.CreateSecretRequest
 	cmd := &cobra.Command{
 		Use:   "create <title>",
-		Short: "Create a v2 secret item",
+		Short: "Create a secret item",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req.Title = args[0]
@@ -78,7 +78,7 @@ func newSecretSetCmd(appSvc *app.App) *cobra.Command {
 	var stdin bool
 	cmd := &cobra.Command{
 		Use:   "set <selector>",
-		Short: "Set a v2 secret item field from stdin",
+		Short: "Set a secret item field from stdin",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
@@ -95,7 +95,7 @@ func newSecretGetCmd(appSvc *app.App) *cobra.Command {
 	var field, envName string
 	cmd := &cobra.Command{
 		Use:   "get [selector]",
-		Short: "Print a v2 secret item field value",
+		Short: "Print a secret item field value",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if envName != "" {
 				return cobra.MaximumNArgs(1)(cmd, args)
@@ -128,7 +128,7 @@ func newSecretExportCmd(appSvc *app.App) *cobra.Command {
 	var format string
 	cmd := &cobra.Command{
 		Use:   "export --label LABEL",
-		Short: "Export v2 secret items by label",
+		Short: "Export secret items by label",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
@@ -151,7 +151,7 @@ func newSecretListCmd(appSvc *app.App) *cobra.Command {
 	var long bool
 	cmd := &cobra.Command{
 		Use:   "list [query]",
-		Short: "List v2 secret items without secret values",
+		Short: "List secret items without secret values",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			query := ""
@@ -174,7 +174,7 @@ func newSecretListCmd(appSvc *app.App) *cobra.Command {
 func newSecretInfoCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "info <selector>",
-		Short: "Print v2 secret item metadata without secret values",
+		Short: "Print secret item metadata without secret values",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
@@ -197,7 +197,7 @@ func newSecretRmCmd(appSvc *app.App) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
 		Use:   "rm <selector>",
-		Short: "Remove a v2 secret item",
+		Short: "Remove a secret item",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {

@@ -1,12 +1,12 @@
 # Contributing
 
-Shelf Go is a Go CLI. Public product documentation lives under `docs/`; planning, roadmap, requirements, phase records, and durable workflow state live under `.planning/`.
+Shelf Go is currently a local-development Go CLI. Product documentation lives under `docs/`; planning, roadmap, requirements, phase records, and durable workflow state live under `.planning/`.
 
 ## Requirements
 
 - Go 1.26.4 or a compatible Go toolchain for this module.
 - Git for project-aware commands and tests.
-- `just` is optional; every recipe has an equivalent Go command.
+- `just` is optional; every recipe has an equivalent command.
 
 ## Build
 
@@ -54,28 +54,23 @@ The `just install` recipe delegates to the same script.
 cmd/shelf/           process entry point
 
 internal/cli/        Cobra command surface, flags, completions, and output routing
-internal/manager/    local manager surface, currently v1 loopback HTTP/Web
+internal/cliui/      Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
+internal/app/        application workflows for setup, doctor, secret, project, and run
 
-internal/app/        runtime, vault construction, app workflows, manager gating, status, and version composition
-internal/project/    project identity, .shelf.json schema/IO/validation, and v1/v2 binding resolution
-internal/secret/     legacy v1 editing helpers used by manager/app paths
-
-internal/vaultmodel/ v2 item/field/template model, validation, profiles, and indexes
-internal/vaultjson/  v2 plaintext JSON codec/repository boundary during cutover
-internal/vault/      v1 vault domain model and repository contracts
-internal/jsonvault/  current shelf-vault/v1 encrypted JSON implementation
-internal/age/        age encryption/decryption helpers
-internal/config/     runtime config resolution
+internal/vaultmodel/ item/field/template model, validation, profiles, and indexes
+internal/vaultjson/  strict JSON codec/repository for the local item vault
+internal/project/    Git project identity, .shelf.json schema/IO/validation, and item binding resolution
+internal/config/     config and vault path resolution
 internal/util/       atomic write and env/shell/JSON binding formatting
 ```
 
-`docs/architecture.md` is the source of truth for dependency direction. Keep `internal/cli` command-family oriented; reusable behavior belongs in the feature/base packages above.
+`docs/architecture.md` is the source of truth for dependency direction. Keep `internal/cli` command-family oriented; put reusable human output rendering in `internal/cliui` and reusable behavior in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
 
 ## Documentation policy
 
 - Keep user-facing docs current with implemented behavior.
 - Keep planning artifacts in `.planning/`, not `docs/`.
-- Do not publish stale generated codebase maps or agent plans as public docs.
+- Do not publish stale generated codebase maps or agent plans as product docs.
 - Security-sensitive docs must state plaintext boundaries explicitly in `SECURITY.md`.
 - Portable vault and chezmoi workflow guidance belongs in `docs/portable-vault.md`.
 - Architecture package boundaries belong in `docs/architecture.md`; implementation phase history stays in `.planning/`.
@@ -85,8 +80,9 @@ internal/util/       atomic write and env/shell/JSON binding formatting
 - Run `gofmt` on changed Go files.
 - Keep Cobra command constructors package-private and named `new<Name>Cmd`.
 - Return errors from package code instead of logging or exiting.
-- Use `cmd.OutOrStdout()` and `cmd.OutOrStderr()` for command output.
-- Avoid printing secret values except in explicit value-producing commands.
+- Use `cmd.OutOrStdout()` and `cmd.OutOrStderr()` in Cobra commands.
+- Use `internal/cliui` for human-facing command output.
+- Avoid printing secret values except in explicit value-producing commands: `secret get`, `secret export`, `project export`, and `project run`.
 
 ## Testing style
 
@@ -95,16 +91,15 @@ internal/util/       atomic write and env/shell/JSON binding formatting
 - Do not mock Git when behavior depends on a Git worktree; tests use real `git` commands.
 - Do not mock child process execution for `project run`; tests execute real local shell commands.
 
-## Release planning
+## Local wrap-up
 
-Use `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and phase directories for planning state. Public `docs/` should describe current behavior, not internal phase history.
-
-Release automation uses GoReleaser for GitHub Release binaries and checksums. For 0.1.x, package-manager distribution is intentionally deferred. Use the consolidated release script instead of remembered manual commands:
+This repository is not being prepared for public release yet. For v0.2.0 local development wrap-up, keep verification boring:
 
 ```bash
-./scripts/release.sh check
-./scripts/release.sh snapshot
-./scripts/release.sh tag 0.1.1
+./scripts/test.sh
+go build ./cmd/shelf
+go install ./cmd/shelf
+shelf doctor
 ```
 
-The `just tag <version>` recipe is a thin wrapper around `scripts/release.sh`. Local verification has one entrypoint: `just test` delegates to `scripts/test.sh`, which runs Go tests, `go vet`, and architecture lint.
+Public release packaging, tags, and GitHub Release automation are deferred until a future public v1.0.0 milestone.

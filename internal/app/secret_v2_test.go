@@ -137,6 +137,50 @@ func TestCreateSecretV2ProfileOpenAI(t *testing.T) {
 	}
 }
 
+func TestCreateSecretV2RejectsUnsupportedMetadataFlags(t *testing.T) {
+	vaultPath := filepath.Join(t.TempDir(), "vault.v2.json")
+	configPath := writeV2Config(t, vaultPath)
+
+	_, err := testApp().CreateSecretV2(configPath, vaultPath, CreateSecretRequest{
+		Title:    "generic-with-provider",
+		Provider: "Example",
+		Stdin:    true,
+		In:       strings.NewReader("fake-secret"),
+	})
+	if err == nil || !strings.Contains(err.Error(), "--provider is not supported by template generic_secret") {
+		t.Fatalf("expected unsupported provider error, got: %v", err)
+	}
+}
+
+func TestCreateSecretV2AcceptsAPIMetadataFlags(t *testing.T) {
+	vaultPath := filepath.Join(t.TempDir(), "vault.v2.json")
+	configPath := writeV2Config(t, vaultPath)
+
+	_, err := testApp().CreateSecretV2(configPath, vaultPath, CreateSecretRequest{
+		Title:    "api-token",
+		Template: vaultmodel.TemplateAPICredential,
+		Provider: "Example",
+		Website:  "https://example.test",
+		Expires:  "2026-12-31",
+		Scopes:   []string{"read", "write"},
+		Stdin:    true,
+		In:       strings.NewReader("fake-secret"),
+	})
+	if err != nil {
+		t.Fatalf("CreateSecretV2 with api metadata: %v", err)
+	}
+	info, err := testApp().SecretInfoV2(configPath, vaultPath, "api-token")
+	if err != nil {
+		t.Fatalf("SecretInfoV2: %v", err)
+	}
+	want := map[string]string{"provider": "Example", "website": "https://example.test", "expires_at": "2026-12-31"}
+	for _, field := range info.Fields {
+		if want[field.ID] != "" && field.Value != want[field.ID] {
+			t.Fatalf("%s = %q, want %q", field.ID, field.Value, want[field.ID])
+		}
+	}
+}
+
 func TestSetSecretFieldV2(t *testing.T) {
 	vaultPath := filepath.Join(t.TempDir(), "vault.v2.json")
 	configPath := writeV2Config(t, vaultPath)

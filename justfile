@@ -10,5 +10,3 @@ install:
 test:
     ./scripts/test.sh
 
-tag version:
-    ./scripts/release.sh tag {{version}}

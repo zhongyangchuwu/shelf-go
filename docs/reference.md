@@ -92,6 +92,8 @@ source <(shelf secret export --label ai --format shell)
 
 Repeated labels use AND matching. Items without an explicit env-name field are skipped. Missing labels, missing secret values for exportable items, and duplicate env names fail with value-free diagnostics.
 
+`env` format rejects values containing newline, carriage return, or NUL. Use `shell` or `json` for values that need escaping.
+
 ## `shelf secret rm`
 
 Removes an item after explicit confirmation.
@@ -158,6 +160,8 @@ Prints resolved project values in `shell`, `env`, or `json` format.
 shelf project export [--format shell|env|json]
 ```
 
+`env` format rejects values containing newline, carriage return, or NUL. Use `shell` or `json` for values that need escaping.
+
 ## `shelf project run`
 
 Runs a child process with manifest values injected.
@@ -167,3 +171,20 @@ shelf project run [--dry-run] -- <command> [args...]
 ```
 
 `--dry-run` prints env names that would be injected, never values.
+
+## `shelf completion`
+
+Generates shell completion for supported shells.
+
+```bash
+shelf completion [bash|zsh|fish|powershell]
+```
+
+Example zsh install:
+
+```bash
+mkdir -p ~/.zfunc
+shelf completion zsh > ~/.zfunc/_shelf
+```
+
+Ensure `~/.zfunc` is present in `fpath`; `shelf doctor` reports completion install status.
