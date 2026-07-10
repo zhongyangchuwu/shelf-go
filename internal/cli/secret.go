@@ -3,7 +3,8 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
+	"io"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
@@ -44,7 +45,11 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "created %s\n", id)
+			info, err := appSvc.SecretInfoV2(configPath, vaultPath, id)
+			if err != nil {
+				return err
+			}
+			renderSecretCreateResult(cmd.OutOrStdout(), info)
 			return nil
 		},
 	}
@@ -158,17 +163,7 @@ func newSecretListCmd(appSvc *app.App) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			for _, item := range items {
-				if long {
-					state := "unset"
-					if item.ValueSet {
-						state = "set"
-					}
-					fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\t%s\t%s\n", item.ID, item.Title, item.Template, item.Env, state)
-					continue
-				}
-				fmt.Fprintln(cmd.OutOrStdout(), item.Title)
-			}
+			renderSecretList(cmd.OutOrStdout(), items, long)
 			return nil
 		},
 	}
@@ -216,27 +211,46 @@ func newSecretRmCmd(appSvc *app.App) *cobra.Command {
 	return cmd
 }
 
-func completeSecretSetPathForArgs(paths []string, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
-	if len(args) > 0 {
-		return nil, cobra.ShellCompDirectiveNoFileComp
+func renderSecretCreateResult(w io.Writer, info app.SecretInfoV2) {
+	fmt.Fprintf(w, "created secret\n")
+	fmt.Fprintf(w, "  title:    %s\n", info.Title)
+	fmt.Fprintf(w, "  id:       %s\n", info.ID)
+	fmt.Fprintf(w, "  template: %s\n", info.Template)
+	if env := primaryEnvFromInfo(info); env != "" {
+		fmt.Fprintf(w, "  env:      %s\n", env)
 	}
-	return completeSecretSetPath(paths, toComplete)
 }
 
-func completeSecretSetKeyForGroup(paths []string, groupPath, keyPrefix string) ([]cobra.Completion, cobra.ShellCompDirective) {
-	return nil, cobra.ShellCompDirectiveNoFileComp
+func renderSecretList(w io.Writer, items []app.SecretItemSummaryV2, long bool) {
+	if len(items) == 0 {
+		fmt.Fprintln(w, "No secrets found.")
+		return
+	}
+	if !long {
+		fmt.Fprintf(w, "Secrets (%d):\n", len(items))
+		for _, item := range items {
+			fmt.Fprintf(w, "  %s\n", item.Title)
+		}
+		return
+	}
+	fmt.Fprintf(w, "Secrets (%d):\n", len(items))
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "ID\tTITLE\tTEMPLATE\tENV\tVALUE")
+	for _, item := range items {
+		state := "unset"
+		if item.ValueSet {
+			state = "set"
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.ID, item.Title, item.Template, item.Env, state)
+	}
+	_ = tw.Flush()
 }
 
-func completeSecretPaths(appSvc *app.App, cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
-	return nil, cobra.ShellCompDirectiveNoFileComp
-}
-
-func completeSecretSetPath(paths []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
-	comps := make([]cobra.Completion, 0, len(paths))
-	for _, path := range paths {
-		if strings.HasPrefix(path, toComplete) {
-			comps = append(comps, cobra.Completion(path))
+func primaryEnvFromInfo(info app.SecretInfoV2) string {
+	for _, field := range info.Fields {
+		if (field.ID == "value_env" || field.ID == "credential_env") && field.Value != "" {
+			return field.Value
 		}
 	}
-	return comps, cobra.ShellCompDirectiveNoFileComp
+	return ""
 }

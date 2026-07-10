@@ -27,6 +27,7 @@ Checks config resolution, version, item-vault path, permissions, JSON validity, 
 shelf doctor
 ```
 
+
 ## `shelf secret create`
 
 Creates an item. Secret values enter through stdin when `--stdin` is set.
@@ -34,6 +35,8 @@ Creates an item. Secret values enter through stdin when `--stdin` is set.
 ```bash
 shelf secret create <title> [--template generic|api] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
 ```
+
+On success, prints a metadata summary with title, id, template, and env name. Secret values are not echoed.
 
 Useful public-field flags for `api_credential` are `--provider`, `--website`, `--expires`, and repeatable `--scope`.
 
@@ -50,6 +53,7 @@ shelf secret set <selector> [--field FIELD] --stdin
 Prints a plaintext field value.
 
 ```bash
+
 shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]
 ```
@@ -61,6 +65,8 @@ Prints item metadata without secret values.
 ```bash
 shelf secret list [query] [--long]
 ```
+
+`--long` prints a titled, aligned table with `ID`, `TITLE`, `TEMPLATE`, `ENV`, and `VALUE` state columns.
 
 ## `shelf secret info`
 

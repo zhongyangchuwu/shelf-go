@@ -17,8 +17,10 @@ func TestSecretCreateSetGetListInfoRmV2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "created item_github") {
-		t.Fatalf("create output = %q", out)
+	for _, want := range []string{"created secret", "title:    github", "id:       item_github", "template: generic_secret", "env:      GITHUB_TOKEN"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("create output missing %q:\n%s", want, out)
+		}
 	}
 
 	out, err = runShelf(t, "--vault", data, "secret", "get", "github")
@@ -33,8 +35,10 @@ func TestSecretCreateSetGetListInfoRmV2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if !strings.Contains(out, "item_github\tgithub\tgeneric_secret\tGITHUB_TOKEN\tset") {
-		t.Fatalf("list output = %q", out)
+	for _, want := range []string{"Secrets (1):", "ID", "TITLE", "TEMPLATE", "ENV", "VALUE", "item_github", "github", "generic_secret", "GITHUB_TOKEN", "set"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("list output missing %q:\n%s", want, out)
+		}
 	}
 	if strings.Contains(out, "fake-token") {
 		t.Fatalf("list leaked value: %q", out)

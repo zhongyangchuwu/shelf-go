@@ -32,6 +32,8 @@ The vault JSON contains secret values. Do not commit it unless an external tool 
 
 Secret values enter through stdin, not argv:
 
+
+`secret create` prints a small summary with title, id, template, and env name. `secret list --long` prints a titled, aligned table without secret values.
 ```bash
 printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
 printf %s "$OPENAI_API_KEY" | shelf secret create openai --profile openai --stdin
