@@ -23,6 +23,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 - JSON item vault managed by `internal/vaultjson` and modeled by `internal/vaultmodel`.
 - YAML config parsed by `internal/config/config.go`.
 - Cobra command surface in `internal/cli`.
+- Lip Gloss-backed human CLI output helpers in `internal/cliui`.
 - Standard Go `testing` package for tests.
 
 ## Configuration
@@ -63,6 +64,7 @@ shelf completion <shell>
 | --- | --- | --- |
 | Entry point | Construct and execute root command | `cmd/shelf/main.go` |
 | CLI | Cobra commands, flags, completions, output routing | `internal/cli` |
+| CLI UI | Human output helpers for titles, summaries, empty states, and tables | `internal/cliui` |
 | App | Workflow orchestration for setup, doctor, secret, project, run | `internal/app` |
 | Item model | Vault/item/field/template/profile model and validation | `internal/vaultmodel` |
 | Item repository | Strict JSON codec/repository with atomic writes | `internal/vaultjson` |
@@ -70,7 +72,7 @@ shelf completion <shell>
 | Config | Config and vault path resolution | `internal/config` |
 | Util | Atomic write and env/shell/JSON binding formatting | `internal/util` |
 
-Dependency direction: `cli -> app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
+Dependency direction: `cli -> app/cliui`; `cliui -> lipgloss`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
 
 ## Data Rules
 

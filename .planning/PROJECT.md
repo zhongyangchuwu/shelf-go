@@ -33,6 +33,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 ## Package Boundaries
 
 - `internal/cli`: Cobra command surface.
+- `internal/cliui`: Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables.
 - `internal/app`: application workflows.
 - `internal/vaultmodel`: item/field/template/profile model and validation.
 - `internal/vaultjson`: JSON item-vault codec/repository.

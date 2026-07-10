@@ -17,7 +17,7 @@ func TestSecretCreateSetGetListInfoRmV2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v\n%s", err, out)
 	}
-	for _, want := range []string{"created secret", "title:    github", "id:       item_github", "template: generic_secret", "env:      GITHUB_TOKEN"} {
+	for _, want := range []string{"created secret", "title   : github", "id      : item_github", "template: generic_secret", "env     : GITHUB_TOKEN"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("create output missing %q:\n%s", want, out)
 		}

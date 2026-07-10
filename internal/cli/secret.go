@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
+	"github.com/zhongyangchuwu/shelf-go/internal/cliui"
 )
 
 func newSecretCmd(appSvc *app.App) *cobra.Command {
@@ -212,38 +212,35 @@ func newSecretRmCmd(appSvc *app.App) *cobra.Command {
 }
 
 func renderSecretCreateResult(w io.Writer, info app.SecretInfoV2) {
-	fmt.Fprintf(w, "created secret\n")
-	fmt.Fprintf(w, "  title:    %s\n", info.Title)
-	fmt.Fprintf(w, "  id:       %s\n", info.ID)
-	fmt.Fprintf(w, "  template: %s\n", info.Template)
-	if env := primaryEnvFromInfo(info); env != "" {
-		fmt.Fprintf(w, "  env:      %s\n", env)
-	}
+	cliui.Summary(w, "created secret", []cliui.SummaryField{
+		{Key: "title", Value: info.Title},
+		{Key: "id", Value: info.ID},
+		{Key: "template", Value: info.Template},
+		{Key: "env", Value: primaryEnvFromInfo(info)},
+	})
 }
 
 func renderSecretList(w io.Writer, items []app.SecretItemSummaryV2, long bool) {
 	if len(items) == 0 {
-		fmt.Fprintln(w, "No secrets found.")
+		cliui.Empty(w, "No secrets found.")
 		return
 	}
 	if !long {
-		fmt.Fprintf(w, "Secrets (%d):\n", len(items))
+		cliui.Title(w, fmt.Sprintf("Secrets (%d):", len(items)))
 		for _, item := range items {
 			fmt.Fprintf(w, "  %s\n", item.Title)
 		}
 		return
 	}
-	fmt.Fprintf(w, "Secrets (%d):\n", len(items))
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tTITLE\tTEMPLATE\tENV\tVALUE")
+	rows := make([][]string, 0, len(items))
 	for _, item := range items {
 		state := "unset"
 		if item.ValueSet {
 			state = "set"
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.ID, item.Title, item.Template, item.Env, state)
+		rows = append(rows, []string{item.ID, item.Title, item.Template, item.Env, state})
 	}
-	_ = tw.Flush()
+	cliui.RenderTable(w, cliui.Table{Title: "Secrets", Headers: []string{"ID", "TITLE", "TEMPLATE", "ENV", "VALUE"}, Rows: rows})
 }
 
 func primaryEnvFromInfo(info app.SecretInfoV2) string {

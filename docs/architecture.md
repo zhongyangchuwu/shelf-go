@@ -8,6 +8,7 @@ Shelf Go is now a local item-vault CLI. Built-in age encryption, the v1 encrypte
 cmd/shelf/                    process entry point
 
 internal/cli/                 Cobra command tree, flags, completions, and output routing
+internal/cliui/               Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
 internal/app/                 application workflows for secret, project, setup, doctor, and run
 
 internal/vaultmodel/          item/field/template model, validation, profiles, and indexes
@@ -21,7 +22,8 @@ Dependency direction is enforced by `.go-arch-lint.yml`:
 
 ```text
 cmd/shelf -> cli
-cli -> app
+cli -> app, cliui
+cliui -> lipgloss
 app -> config, project, util, vaultmodel, vaultjson
 project -> util, vaultmodel
 vaultjson -> vaultmodel, util
@@ -36,7 +38,7 @@ config -> yaml
 
 ## CLI workflows
 
-`internal/cli` parses command arguments and renders output. It should stay thin. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
+`internal/cli` parses command arguments and routes output through `internal/cliui` for human-facing titles, summaries, empty states, and tables. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
 
 Active command groups:
 
