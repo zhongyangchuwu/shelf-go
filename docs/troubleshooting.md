@@ -1,167 +1,80 @@
 # Troubleshooting
 
-## `vault recipients` is missing
-
-`vault status` or `doctor` can fail when no age recipients are configured.
-
-Fix by updating config through vault init:
+## Check local health
 
 ```bash
-shelf vault init --force --recipient AGE_RECIPIENT --identity ~/.config/shelf/identity.txt
-```
-
-If no recipient is supplied during setup/init, Shelf can generate or reuse an X25519 identity and derive its recipient.
-
-## Identity path is missing or unreadable
-
-Symptoms mention `identity_paths`, `read age identity`, or file permissions.
-
-Check config:
-
-```bash
-cat ~/.config/shelf/config.yaml
-```
-
-Then fix the path or regenerate setup:
-
-```bash
-shelf vault init --force --identity ~/.config/shelf/identity.txt
-shelf vault status
-```
-
-Do not commit the identity file.
-
-## Vault cannot decrypt
-
-Common causes:
-
-- configured identity does not match the vault recipient;
-- identity file was moved or replaced;
-- vault file is corrupt;
-- config points at the wrong vault.
-
-Inspect without revealing values:
-
-```bash
-shelf vault status
 shelf doctor
 ```
 
-Restore the matching identity or recover manually from the last-write encrypted backup:
+`doctor` checks config resolution, item-vault path, file permissions, JSON loadability, and shell completion state without printing secret values.
+
+## Vault is missing
+
+Run:
 
 ```bash
-cp ~/.local/share/shelf/vault.age ~/.local/share/shelf/vault.age.bad
-cp ~/.local/share/shelf/vault.age.bak ~/.local/share/shelf/vault.age
-shelf vault status
+shelf setup
 ```
 
-The `.bak` file is a single last-write backup and is overwritten on each later vault replacement. If the identity that can decrypt both the active vault and backup is lost, Shelf cannot recover the encrypted contents. Keep private age identities backed up outside Shelf.
-
-## Plaintext JSON store detected
-
-Shelf treats plaintext stores as unsafe for the active vault path.
-
-Migrate to an encrypted vault:
+Or pass an explicit path:
 
 ```bash
-shelf vault migrate --from ~/.local/share/shelf/secrets.json --to ~/.local/share/shelf/vault.age
-shelf vault status
+shelf --vault ~/.local/share/shelf/vault.json secret list
 ```
 
-After verification, move, delete, or securely archive the plaintext source.
+## Vault file is plaintext
 
-## `.shelf.json not found`
+This is expected. Shelf currently relies on external encryption/sync tools such as chezmoi. Do not commit or sync the raw JSON vault unless the external tool encrypts it.
 
-Project commands need a Git worktree and a manifest at the Git root.
+## Secret command says item not found
 
-```bash
-shelf project init
-shelf project add app:token
-shelf project status
-```
-
-## Required secret or tag binding is missing
-
-`project status`, `project export`, and `project run` fail when a required manifest entry is absent from the vault. For v1 tag entries, this means no secret has all listed tags. For v2 bindings, this means the bound item or field is missing, or the field has no value.
-
-Add the secret, adjust the project binding, or mark the entry optional:
-
-```bash
-printf %s "$APP_TOKEN" | shelf secret create app-token --env APP_TOKEN --stdin
-shelf project configure
-shelf project add app-token --optional
-```
-
-## Env name conflict
-
-Two project entries resolved to the same env name. V1 exact path entries can override env names in the manifest; v1 prefix/tag entries cannot use `--env` because they may expand to multiple secrets. V2 manifests bind concrete item/field/env records.
-
-Fix exact path entries by using explicit env overrides:
-
-```bash
-shelf project rm app:token
-shelf project add app:token --env APP_TOKEN
-```
-
-Fix v2 bindings by removing the binding and re-adding it with a different `--env`.
-
-## `project run` did not change my shell
-
-This is expected. A child CLI process cannot mutate the parent shell environment.
-
-Use `project run` to execute a command with injected values:
-
-```bash
-shelf project run -- npm run dev
-```
-
-Use `project export` when you explicitly want plaintext env output:
-
-```bash
-shelf project export --format shell
-```
-
-## Vault manager address rejected
-
-`shelf manager` only accepts loopback addresses.
-
-Use the default random local port:
-
-```bash
-shelf manager
-```
-
-Or provide an explicit loopback address:
-
-```bash
-shelf manager --addr 127.0.0.1:8080
-```
-
-The printed URL contains a local access token and can remain in browser history. Treat it as sensitive local plaintext and stop the manager with Ctrl-C when finished.
-
-## Local manager is not available for v2 vaults yet
-
-During the v2 cutover, `shelf manager` refuses to open when the resolved v2 vault file exists. This prevents the v1 path-shaped Web editor from mutating the wrong vault model.
-
-Use CLI v2 workflows for now:
+Use metadata-only commands to find the item:
 
 ```bash
 shelf secret list --long
-shelf secret info openai
+shelf secret info <selector>
+```
+
+Selectors can be item ID, title, or alias.
+
+## `secret export --label` exports fewer values than expected
+
+Items without an explicit env-name field are skipped. Check metadata:
+
+```bash
+shelf secret info <selector>
+```
+
+Set an env-name field when needed:
+
+```bash
+printf %s OPENAI_API_KEY | shelf secret set openai --field credential_env --stdin
+```
+
+## Project manifest missing
+
+Inside a Git worktree:
+
+```bash
+shelf project init
+```
+
+## Project run/export fails
+
+Check value-free diagnostics:
+
+```bash
 shelf project status
 ```
 
-If you intentionally need the legacy v1 manager, point `--vault` or `SHELF_VAULT` at a v1 encrypted vault path that has no matching v2 JSON vault file.
+Common causes:
 
-## Shell completion is not installed
+- missing item;
+- missing field;
+- missing secret value;
+- duplicate env name;
+- binding points at a public field instead of a secret field.
 
-Generate completion for your shell:
+## Completion not installed
 
-```bash
-shelf completion bash
-shelf completion zsh
-shelf completion fish
-shelf completion powershell
-```
-
-The `just install` task installs zsh completion to `~/.zfunc/_shelf`.
+Install completions for your shell and make sure `FPATH`/`fpath` contains the directory that holds `_shelf`.

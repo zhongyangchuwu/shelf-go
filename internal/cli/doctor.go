@@ -12,7 +12,7 @@ import (
 func newDoctorCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: "Check local Shelf configuration and data health",
+		Short: "Check local Shelf configuration and item vault health",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			report := newDiagnosticReport(cmd.OutOrStdout())
@@ -24,10 +24,8 @@ func newDoctorCmd(appSvc *app.App) *cobra.Command {
 			}
 			report.ok("config resolves", runtime.ConfigPath)
 			report.ok("version", app.String())
-
 			report.write(reportChecks)
 			checkCompletion(report)
-
 			return report.err("doctor")
 		},
 	}

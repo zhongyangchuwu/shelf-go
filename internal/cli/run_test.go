@@ -13,11 +13,11 @@ func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
-	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
-		t.Fatalf("set secret: %v", err)
+	data := filepath.Join(dir, "vault.json")
+	if _, err := runShelfWithInput(t, "secret\n", "--vault", data, "secret", "create", "app-token", "--id", "item_app", "--env", "APP_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create secret: %v", err)
 	}
-	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	manifest := `{"version":1,"bindings":[{"item":"item_app","field":"value","env":"APP_TOKEN"}]}`
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
@@ -29,35 +29,19 @@ func TestRunInjectsProjectSecretsIntoChild(t *testing.T) {
 		t.Fatalf("unexpected child output: %q", out)
 	}
 }
-func TestRunInjectsPrefixSecretsWithDerivedEnvNames(t *testing.T) {
+
+func TestRunDryRunReportsParentEnvOverride(t *testing.T) {
+	t.Setenv("APP_TOKEN", "parent")
 	dir := t.TempDir()
 	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
-	data := filepath.Join(dir, "secrets.json")
-	if _, err := runShelf(t, "--vault", data, "secret", "set", "app/api:token", "secret"); err != nil {
-		t.Fatalf("set token: %v", err)
+	data := filepath.Join(dir, "vault.json")
+	if _, err := runShelfWithInput(t, "secret\n", "--vault", data, "secret", "create", "app-token", "--id", "item_app", "--env", "APP_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create secret: %v", err)
 	}
-	manifest := `{"version":1,"secrets":[{"prefix":"app/api"}]}`
-	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "printf %s \"$APP_API_TOKEN\"")
-	if err != nil {
-		t.Fatalf("run command: %v\n%s", err, out)
-	}
-	if out != "secret" {
-		t.Fatalf("unexpected child output: %q", out)
-	}
-}
-func TestRunDryRunReportsParentEnvOverride(t *testing.T) {
-	t.Setenv("APP_TOKEN", "parent")
-	dir, data := setupProjectTest(t)
-	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "secret", "--env", "APP_TOKEN"); err != nil {
-		t.Fatalf("set secret: %v", err)
-	}
-	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
+	manifest := `{"version":1,"bindings":[{"item":"item_app","field":"value","env":"APP_TOKEN"}]}`
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
@@ -76,42 +60,6 @@ func TestRunDryRunReportsParentEnvOverride(t *testing.T) {
 	}
 }
 
-func TestRunDryRunUsesEncryptedVaultWithoutPlaintextSideData(t *testing.T) {
-	dir := t.TempDir()
-	chdirTest(t, dir)
-	if _, err := runGit(t, "init"); err != nil {
-		t.Fatalf("git init: %v", err)
-	}
-	t.Setenv("APP_TOKEN", "parent-secret")
-	data := filepath.Join(dir, "vault.age")
-	if _, err := runShelf(t, "--vault", data, "secret", "set", "app:token", "run-secret-value", "--env", "APP_TOKEN"); err != nil {
-		t.Fatalf("set secret: %v", err)
-	}
-	manifest := `{"version":1,"secrets":[{"path":"app:token"}]}`
-	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-	out, err := runShelf(t, "--vault", data, "project", "run", "--dry-run", "--", "sh", "-c", "printf %s \"$APP_TOKEN\"")
-	if err != nil {
-		t.Fatalf("dry-run: %v\n%s", err, out)
-	}
-	for _, want := range []string{"warn APP_TOKEN overrides existing environment variable", "inject APP_TOKEN"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("dry-run output missing %q:\n%s", want, out)
-		}
-	}
-	if strings.Contains(out, "run-secret-value") || strings.Contains(out, "parent-secret") {
-		t.Fatalf("dry-run leaked env value:\n%s", out)
-	}
-	content, err := os.ReadFile(data)
-	if err != nil {
-		t.Fatalf("read vault: %v", err)
-	}
-	if strings.Contains(string(content), "run-secret-value") || strings.Contains(string(content), "app:token") || strings.Contains(string(content), "APP_TOKEN") {
-		t.Fatalf("encrypted vault contains plaintext run data")
-	}
-}
-
 func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
 	dir := t.TempDir()
 	chdirTest(t, dir)
@@ -119,31 +67,36 @@ func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
 		t.Fatalf("git init: %v", err)
 	}
 	marker := filepath.Join(dir, "marker")
-	manifest := `{"version":1,"secrets":[{"path":"app:missing"}]}`
+	manifest := `{"version":1,"bindings":[{"item":"item_missing","field":"value","env":"APP_TOKEN"}]}`
 	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(manifest), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	out, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "project", "run", "--", "sh", "-c", "touch "+marker)
+	data := filepath.Join(dir, "vault.json")
+	if err := os.WriteFile(data, []byte(`{"version":2,"items":[]}`), 0o600); err != nil {
+		t.Fatalf("write vault: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "touch "+marker)
 	if err == nil {
 		t.Fatalf("expected run to fail")
 	}
-	if !strings.Contains(out, "fail app:missing missing required") {
+	if !strings.Contains(out, "fail item_missing.value missing item required") {
 		t.Fatalf("missing resolution failure:\n%s", out)
 	}
 	if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
 		t.Fatalf("command executed despite resolution failure")
 	}
 }
+
 func TestRunReturnsChildExitCode(t *testing.T) {
 	dir := t.TempDir()
 	chdirTest(t, dir)
 	if _, err := runGit(t, "init"); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(`{"version":1,"secrets":[]}`), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".shelf.json"), []byte(`{"version":1,"bindings":[]}`), 0o600); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
-	_, err := runShelf(t, "--vault", filepath.Join(dir, "secrets.json"), "project", "run", "--", "sh", "-c", "exit 7")
+	_, err := runShelf(t, "--vault", filepath.Join(dir, "vault.json"), "project", "run", "--", "sh", "-c", "exit 7")
 	if err == nil {
 		t.Fatalf("expected child failure")
 	}

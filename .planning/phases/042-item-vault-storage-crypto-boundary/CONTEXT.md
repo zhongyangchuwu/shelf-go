@@ -1,36 +1,28 @@
-# Context: Item Vault Storage and Crypto Boundary
+# Context: Item Vault Plain JSON Cutover
 
 ## Goal
 
-Prepare v0.2.0 for a formal release by replacing the temporary plaintext item-vault sidecar with a canonical encrypted Shelf vault file and by separating encryption from the item vault model and JSON codec.
+Cut Shelf Go to the personal-use item-vault CLI: remove built-in age encryption, v1 encrypted vault compatibility, v1 manager/import/migration paths, and temporary `v2` storage naming. Keep local `shelf secret`, `shelf project`, `shelf setup`, and `shelf doctor` working over a configured JSON item vault.
 
 ## User Direction
 
-- `setup` should offer an interactive encryption experience similar to gopass: choose an existing key or generate a new one.
-- Age remains the preferred encryption mechanism.
-- Encryption should be decoupled from the vault implementation.
-- User-facing names should stop using temporary `v2` language.
-- Before v0.2.0 release, prioritize CLI, secret model, and file/storage correctness.
-- Web, TUI, and broader project workflow improvements come after this CLI/storage cutover.
+- Do not preserve v1 compatibility; this is a personal project.
+- Remove age-encryption-related code for now.
+- Chezmoi owns encryption/sync outside Shelf.
+- Ensure the local Shelf experience stays normal on this workstation.
+- Prioritize CLI, secret model, and file/storage correctness before Web/TUI/project expansion.
 
-## Current State
+## Current Target
 
-- `internal/vaultmodel` owns the item/field/template model.
-- `internal/vaultjson` owns strict plaintext JSON codec/repository behavior.
-- App-layer v2 secret/project/manager-gate workflows currently construct concrete `vaultjson.Repository` instances and use `<resolved-vault-path>.v2.json` by default.
-- `internal/age` already owns age encryption/decryption helpers for the v1 vault path.
-- `internal/vaultmigrate` was removed; automatic v1-to-item-vault migration is deferred.
-- Security docs now warn that `*.v2.json` files are plaintext cutover artifacts and must not be synced.
+- Canonical vault path: `~/.local/share/shelf/vault.json` unless config/flag/env override.
+- Config contains `vault_path` only; no recipients or identity paths.
+- Item vault JSON is plaintext and must be protected externally.
+- Active CLI commands: setup, doctor, secret, project, completion.
+- Removed active surfaces: age package, jsonvault/v1 vault packages, manager, import, migrate, v1 export, project configure TUI, v1 project selectors.
 
 ## Constraints
 
-- Do not overwrite or silently migrate existing v1 encrypted vaults.
-- Do not commit or sync plaintext item-vault JSON.
+- Do not print secret values in diagnostics, list/info/status, completions, or planning artifacts.
 - Keep `.shelf.json` value-free.
-- Keep secret values entering through stdin only.
-- Keep manager gated until an item-vault manager exists.
-- Do not add Web/TUI/project feature expansion in this phase.
-
-## Release Decision Frame
-
-v0.2.0 should not be treated as the official portable item-vault release until the item vault is encrypted at rest through a canonical file path with non-temporary naming.
+- Secret values enter through stdin only.
+- Local migration/cutover must back up existing local config and vault JSON first.

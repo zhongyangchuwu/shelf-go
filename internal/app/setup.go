@@ -8,13 +8,12 @@ import (
 
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
-	"github.com/zhongyangchuwu/shelf-go/internal/vault"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultjson"
+	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
 type InitConfig struct {
-	VaultPath     string
-	Recipients    []string
-	IdentityPaths []string
+	VaultPath string
 }
 
 func ResolveInitConfigPath(flag string) (string, error) {
@@ -27,26 +26,18 @@ func ResolveInitConfigPath(flag string) (string, error) {
 	return ExpandInitPath(config.DefaultConfigPath)
 }
 
-func (a *App) EnsureInitIdentity(path string) (vault.Identity, error) {
-	return a.vaults.ReadOrCreateIdentity(path)
-}
-
 func (a *App) EnsureVaultForRuntime(runtime Runtime) (bool, error) {
-	return a.EnsureVaultFile(a.vaultOptions(runtime))
+	return a.EnsureVaultFile(runtime.VaultPath)
 }
 
-func (a *App) EnsureVaultFile(options vault.Options) (bool, error) {
-	vaultPath := options.Path
+func (a *App) EnsureVaultFile(vaultPath string) (bool, error) {
 	if _, err := os.Stat(vaultPath); err == nil {
 		return false, nil
 	} else if err != nil && !os.IsNotExist(err) {
 		return false, err
 	}
-	repo, err := a.vaults.Open(options)
-	if err != nil {
-		return false, err
-	}
-	if err := repo.Save(&vault.Store{Data: vault.NewData()}); err != nil {
+	repo := vaultjson.NewRepository(vaultPath)
+	if err := repo.Save(vaultmodel.Vault{Version: vaultmodel.CurrentVersion}); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -60,23 +51,8 @@ func EnsureConfigFile(configPath string, cfg InitConfig, force bool) (bool, erro
 	if err != nil {
 		vaultPath = cfg.VaultPath
 	}
-	identityPaths := make([]string, 0, len(cfg.IdentityPaths))
-	for _, path := range cfg.IdentityPaths {
-		rel, err := RelativeIfDescendant(path, filepath.Dir(configPath))
-		if err != nil {
-			rel = path
-		}
-		identityPaths = append(identityPaths, rel)
-	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "version: 1\nvault_path: %s\nrecipients:\n", vaultPath)
-	for _, recipient := range cfg.Recipients {
-		fmt.Fprintf(&b, "  - %s\n", recipient)
-	}
-	b.WriteString("identity_paths:\n")
-	for _, path := range identityPaths {
-		fmt.Fprintf(&b, "  - %s\n", path)
-	}
+	fmt.Fprintf(&b, "version: 1\nvault_path: %s\n", vaultPath)
 	return true, util.AtomicWrite(configPath, []byte(b.String()), util.AtomicWriteOptions{FileMode: 0o600, DirMode: 0o700})
 }
 

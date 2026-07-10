@@ -6,23 +6,18 @@ All notable user-facing changes will be recorded here.
 
 ### Breaking changes
 
-- Replaced `shelf project explain` with `shelf project status`; status now reports project binding resolution and value-free local env-file summaries.
-- Replaced the old `group:key` secret CLI with v2 template-based `secret create`, `set --stdin`, `get`, `list --long`, `info`, and `rm --yes` item/field workflows.
-- Removed `secret add`, `secret edit`, and old path/prefix direct secret export from the v2 secret CLI; full interactive editing is deferred to later v2 surfaces.
-- Gated `shelf manager` when the resolved v2 vault exists; the v1 Web manager no longer opens over v2 item/field vault workflows.
-- Removed the internal v1-to-v2 migration adapter from the v0.2.0 release scope; automatic migration is deferred until backup, dry-run, user review, and rollback requirements are designed.
+- Removed built-in age encryption and the v1 encrypted vault stack. Shelf now uses a local plaintext JSON item vault; use chezmoi or another external tool for encrypted sync.
+- Removed v1 vault lifecycle commands and surfaces: `shelf vault`, top-level v1 `export`, v1 import/migrate, and the Web manager.
+- Removed v1 path/prefix/tag project manifest support. `.shelf.json` now stores concrete item/field/env bindings.
+- Removed project configure TUI; project bindings are managed through CLI commands.
+- Replaced the old `group:key` secret CLI with item/field workflows.
 
 ### Added
 
-- Added `shelf project configure` as a TUI for value-free project binding setup, including env-file binding, existing-secret add, remove, review, and apply flows.
-- Added v2 vault profiles with an `openai` profile over the `api_credential` template.
-- Added env-name public fields such as `value_env` and `credential_env` so env names are ordinary item fields instead of special field bindings.
-- Added v2 `.shelf.json` project bindings with concrete item/field/env records for `project status`, `project export`, `project run`, `project add`, `project list`, and `project rm`.
-- Added label-scoped v2 `shelf secret export --label LABEL` in shell, env, and JSON formats for intentional shell initialization without storing values in shell config.
-- Changed v2 label export to skip items without an explicit env-name field, and v1-to-v2 migration now leaves derived env names out of item env fields.
-
-- Added `scripts/test.sh` / `just test` as the single local verification entrypoint, running Go tests, `go vet`, and go-arch-lint architecture checks.
-- Simplified `justfile` to keep one test entrypoint and thin install/tag wrappers.
+- Added `shelf setup` for config and item-vault JSON initialization.
+- Added item-vault `shelf doctor` checks for config, permissions, loadability, and completion state.
+- Added template-based secret item commands: `secret create`, `set --stdin`, `get`, `list --long`, `info`, `rm --yes`, and label-scoped `secret export --label`.
+- Added concrete project item/field bindings for `project status`, `project add`, `project list`, `project rm`, `project export`, and `project run`.
 
 ## 0.1.1 - 2026-06-27
 
@@ -37,13 +32,6 @@ All notable user-facing changes will be recorded here.
 
 ## 0.1.0 - 2026-06-25
 
-- Added age-encrypted vault storage with `shelf-vault/v1` envelope.
-- Added vault setup, status/check, migration, and localhost manager commands under `shelf vault`.
-- Added project-aware secret binding commands under `shelf project`.
-- Added sourceable `shelf project export` shell output as the default project export format.
-- Added direct secret export for exact paths and prefixes under `shelf secret export`.
-- Added minimal last-write encrypted `.bak` recovery documentation.
-- Hardened `shelf secret edit` temporary file permissions and local manager safety tests.
-- Added shell completion fixes for project manifest and secret prefix arguments.
-- Added public README, security policy, portable vault guide, reference, troubleshooting, contributing, and architecture docs.
-- Added repeatable GitHub release automation with GoReleaser archives and checksums.
+- Added encrypted local vault core with age recipients and identities.
+- Added local secret CRUD commands, project manifests, direct export, and `shelf run`.
+- Added doctor/status checks, shell completions, and release automation.

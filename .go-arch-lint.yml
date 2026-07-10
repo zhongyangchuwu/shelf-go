@@ -10,42 +10,20 @@ excludeFiles:
 vendors:
   cobra:
     in: github.com/spf13/cobra
-  term:
-    in: golang.org/x/term
   yaml:
     in: gopkg.in/yaml.v3
-  bubbletea:
-    in: github.com/charmbracelet/bubbletea
-  age:
-    in:
-      - filippo.io/age
-      - filippo.io/age/**
-  flock:
-    in: github.com/gofrs/flock
 
 components:
   cli:
     in: cli
   app:
     in: app
-  manager:
-    in: manager
   project:
     in: project
-  secret:
-    in: secret
-  vault:
-    in: vault
   vaultmodel:
     in: vaultmodel
   vaultjson:
     in: vaultjson
-  jsonvault:
-    in: jsonvault
-  shelfage:
-    in: age
-  importer_gopass:
-    in: importer/gopass
   config:
     in: config
   util:
@@ -57,54 +35,24 @@ deps:
       - app
     canUse:
       - cobra
-      - term
-      - bubbletea
-
 
   app:
     mayDependOn:
       - config
-      - manager
       - project
-      - secret
-      - vault
-      - jsonvault
-      - importer_gopass
       - util
       - vaultmodel
       - vaultjson
 
-  manager:
-    mayDependOn:
-      - util
-
   project:
     mayDependOn:
-      - vault
       - util
       - vaultmodel
-
-  secret:
-    mayDependOn:
-      - vault
 
   vaultjson:
     mayDependOn:
       - vaultmodel
       - util
-
-
-  jsonvault:
-    mayDependOn:
-      - vault
-      - shelfage
-      - util
-    canUse:
-      - flock
-
-  shelfage:
-    canUse:
-      - age
 
   config:
     mayDependOn: []

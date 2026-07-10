@@ -220,6 +220,15 @@ func TestResolveV2BindingsAllDiagnosticsAreValueFree(t *testing.T) {
 
 // --- helpers ---
 
+func hasDiagnostic(diagnostics []Diagnostic, want Diagnostic) bool {
+	for _, diagnostic := range diagnostics {
+		if diagnostic == want {
+			return true
+		}
+	}
+	return false
+}
+
 func validV2Vault(t *testing.T) vaultmodel.Vault {
 	t.Helper()
 	return vaultmodel.Vault{

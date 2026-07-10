@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,21 +11,11 @@ import (
 )
 
 func newSetupCmd(appSvc *app.App) *cobra.Command {
-	return newInitFilesCmd(appSvc, "setup", "Set up Shelf config and encrypted vault")
-}
-
-func newVaultInitCmd(appSvc *app.App) *cobra.Command {
-	return newInitFilesCmd(appSvc, "init", "Initialize config and encrypted vault")
-}
-
-func newInitFilesCmd(appSvc *app.App, use, short string) *cobra.Command {
 	var force bool
 	var vaultPath string
-	var recipients []string
-	var identityPaths []string
 	cmd := &cobra.Command{
-		Use:   use,
-		Short: short,
+		Use:   "setup",
+		Short: "Set up Shelf config and item vault",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPathFlag, _ := cmd.Flags().GetString("config")
@@ -38,14 +27,17 @@ func newInitFilesCmd(appSvc *app.App, use, short string) *cobra.Command {
 			if vaultPath == "" {
 				vaultPath = vaultFlag
 			}
-			if !force && initConfigExists(configPath) && initFlagsWereProvided(cmd) {
-				return fmt.Errorf("config already exists; rerun with --force to update vault config")
+			if vaultPath == "" {
+				vaultPath = promptDefault(cmd, "Vault path", app.DefaultVaultPath())
 			}
-			cfg := initConfig{VaultPath: vaultPath, Recipients: recipients, IdentityPaths: identityPaths}
-			if err := cfg.fill(cmd, appSvc, configPath); err != nil {
+			if vaultPath == "" {
+				return fmt.Errorf("vault path is required")
+			}
+			vaultPath, err = app.ExpandInitPath(vaultPath)
+			if err != nil {
 				return err
 			}
-			configCreated, err := app.EnsureConfigFile(configPath, app.InitConfig{VaultPath: cfg.VaultPath, Recipients: cfg.Recipients, IdentityPaths: cfg.IdentityPaths}, force)
+			configCreated, err := app.EnsureConfigFile(configPath, app.InitConfig{VaultPath: vaultPath}, force)
 			if err != nil {
 				return err
 			}
@@ -64,9 +56,7 @@ func newInitFilesCmd(appSvc *app.App, use, short string) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "Overwrite config file")
-	cmd.Flags().StringVar(&vaultPath, "vault-path", "", "Path to encrypted vault")
-	cmd.Flags().StringArrayVar(&recipients, "recipient", nil, "Age recipient")
-	cmd.Flags().StringArrayVar(&identityPaths, "identity", nil, "Age identity path")
+	cmd.Flags().StringVar(&vaultPath, "vault-path", "", "Path to Shelf item vault JSON")
 	return cmd
 }
 
@@ -75,58 +65,6 @@ func initConfigExists(configPath string) bool {
 	return err == nil
 }
 
-func initFlagsWereProvided(cmd *cobra.Command) bool {
-	flags := cmd.Flags()
-	return flags.Changed("vault-path") || flags.Changed("recipient") || flags.Changed("identity")
-}
-
-type initConfig struct {
-	VaultPath     string
-	Recipients    []string
-	IdentityPaths []string
-}
-
-func (c *initConfig) fill(cmd *cobra.Command, appSvc *app.App, configPath string) error {
-	if runtime, err := app.ResolveRuntime(configPath, ""); err == nil {
-		if c.VaultPath == "" {
-			c.VaultPath = runtime.VaultPath
-		}
-		if len(c.IdentityPaths) == 0 {
-			c.IdentityPaths = runtime.IdentityPaths
-		}
-		if len(c.Recipients) == 0 {
-			c.Recipients = runtime.Recipients
-		}
-	}
-	if c.VaultPath == "" {
-		c.VaultPath = promptDefault(cmd, "Vault path", app.DefaultVaultPath())
-	}
-	if len(c.IdentityPaths) == 0 {
-		identityPath := promptDefault(cmd, "Age identity path", filepath.Join(filepath.Dir(configPath), "identity.txt"))
-		c.IdentityPaths = []string{identityPath}
-	}
-	if len(c.Recipients) == 0 {
-		line := promptDefault(cmd, "Age recipient (blank to generate from identity)", "")
-		c.Recipients = splitCSV(line)
-	}
-	if len(c.Recipients) == 0 {
-		identity, err := appSvc.EnsureInitIdentity(c.IdentityPaths[0])
-		if err != nil {
-			return err
-		}
-		c.Recipients = []string{identity.Recipient}
-	}
-	if c.VaultPath == "" {
-		return fmt.Errorf("vault path is required")
-	}
-	if len(c.Recipients) == 0 {
-		return fmt.Errorf("at least one age recipient is required")
-	}
-	if len(c.IdentityPaths) == 0 || c.IdentityPaths[0] == "" {
-		return fmt.Errorf("at least one age identity path is required")
-	}
-	return nil
-}
 func promptDefault(cmd *cobra.Command, label, fallback string) string {
 	in := bufio.NewReader(cmd.InOrStdin())
 	if fallback == "" {
@@ -140,16 +78,4 @@ func promptDefault(cmd *cobra.Command, label, fallback string) string {
 		return fallback
 	}
 	return line
-}
-
-func splitCSV(value string) []string {
-	parts := strings.Split(value, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
-			out = append(out, part)
-		}
-	}
-	return out
 }

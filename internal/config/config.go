@@ -11,23 +11,19 @@ import (
 
 const (
 	DefaultConfigPath = "~/.config/shelf/config.yaml"
-	DefaultVaultPath  = "~/.local/share/shelf/vault.age"
+	DefaultVaultPath  = "~/.local/share/shelf/vault.json"
 )
 
 type Config struct {
-	Version       int      `yaml:"version"`
-	VaultPath     string   `yaml:"vault_path"`
-	Recipients    []string `yaml:"recipients"`
-	IdentityPaths []string `yaml:"identity_paths"`
-	Editor        string   `yaml:"editor"`
+	Version   int    `yaml:"version"`
+	VaultPath string `yaml:"vault_path"`
+	Editor    string `yaml:"editor"`
 }
 
 type Runtime struct {
-	ConfigPath    string
-	VaultPath     string
-	Recipients    []string
-	IdentityPaths []string
-	Editor        string
+	ConfigPath string
+	VaultPath  string
+	Editor     string
 }
 
 func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
@@ -45,10 +41,6 @@ func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
 	if err != nil {
 		return Runtime{}, err
 	}
-	identityPaths, err := resolvePathList(cfg.IdentityPaths, configPath)
-	if err != nil {
-		return Runtime{}, err
-	}
 
 	editor := os.ExpandEnv(cfg.Editor)
 	if editor == "" {
@@ -58,7 +50,7 @@ func Resolve(configPathFlag, vaultPathFlag string) (Runtime, error) {
 		editor = "vi"
 	}
 
-	return Runtime{ConfigPath: configPath, VaultPath: vaultPath, Recipients: cfg.Recipients, IdentityPaths: identityPaths, Editor: editor}, nil
+	return Runtime{ConfigPath: configPath, VaultPath: vaultPath, Editor: editor}, nil
 }
 
 func resolveConfigPath(flag string) (string, error) {
@@ -82,21 +74,6 @@ func resolveVaultPath(flag, configVaultPath, configPath string) (string, error) 
 		return expandPath(configVaultPath, filepath.Dir(configPath))
 	}
 	return expandPath(DefaultVaultPath, "")
-}
-
-func resolvePathList(paths []string, configPath string) ([]string, error) {
-	if len(paths) == 0 {
-		return nil, nil
-	}
-	resolved := make([]string, 0, len(paths))
-	for _, path := range paths {
-		path, err := expandPath(path, filepath.Dir(configPath))
-		if err != nil {
-			return nil, err
-		}
-		resolved = append(resolved, path)
-	}
-	return resolved, nil
 }
 
 func loadConfig(path string) (Config, error) {

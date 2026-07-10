@@ -15,12 +15,10 @@ func NewRootCmd(appSvc *app.App) *cobra.Command {
 	}
 
 	root.PersistentFlags().String("config", "", "Path to config.yaml")
-	root.PersistentFlags().String("vault", "", "Path to encrypted vault")
+	root.PersistentFlags().String("vault", "", "Path to Shelf item vault JSON")
 
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newSetupCmd(appSvc))
-	root.AddCommand(newVaultCmd(appSvc))
-	root.AddCommand(newManagerCmd(appSvc))
 	root.AddCommand(newSecretCmd(appSvc))
 	root.AddCommand(newDoctorCmd(appSvc))
 	root.AddCommand(newProjectCmd(appSvc))

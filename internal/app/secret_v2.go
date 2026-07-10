@@ -297,10 +297,7 @@ func v2VaultPath(configPathFlag, vaultPathFlag string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if vaultPathFlag != "" {
-		return runtime.VaultPath, nil
-	}
-	return runtime.VaultPath + ".v2.json", nil
+	return runtime.VaultPath, nil
 }
 
 func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vaultmodel.Item, error) {

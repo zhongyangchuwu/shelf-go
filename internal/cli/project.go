@@ -14,7 +14,6 @@ func newProjectCmd(appSvc *app.App) *cobra.Command {
 	cmd.AddCommand(newProjectIDCmd())
 	cmd.AddCommand(newProjectInitCmd())
 	cmd.AddCommand(newProjectStatusCmd(appSvc))
-	cmd.AddCommand(newProjectConfigureCmd(appSvc))
 	cmd.AddCommand(newProjectAddCmd(appSvc))
 	cmd.AddCommand(newProjectRmCmd())
 	cmd.AddCommand(newProjectListCmd())
@@ -61,11 +60,10 @@ func newProjectInitCmd() *cobra.Command {
 func newProjectStatusCmd(appSvc *app.App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "Show project manifest and env-file status",
+		Short: "Show item-vault project manifest status",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath, _ := cmd.Flags().GetString("config")
-			vaultPath, _ := cmd.Flags().GetString("vault")
+			configPath, vaultPath := runtimePaths(cmd)
 			out, err := appSvc.ProjectStatus(configPath, vaultPath, os.Environ())
 			if out != "" {
 				fmt.Fprint(cmd.OutOrStdout(), out)
@@ -79,23 +77,16 @@ func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 	var envName string
 	var field string
 	var optional bool
-	var tags []string
 	cmd := &cobra.Command{
-		Use:   "add [path-or-prefix]",
-		Short: "Add a secret path, prefix, or tag selector to project manifest",
-		Args:  cobra.MaximumNArgs(1),
+		Use:   "add <item-id-or-title>",
+		Short: "Add an item field binding to project manifest",
+		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 			return completeProjectAddArg(appSvc, cmd, args, toComplete)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			selector := ""
-			if len(args) > 0 {
-				selector = args[0]
-			}
-
-			configPath, _ := cmd.Flags().GetString("config")
-			vaultPath, _ := cmd.Flags().GetString("vault")
-			out, err := appSvc.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: selector, Field: field, Env: envName, Optional: optional, Tags: tags})
+			configPath, vaultPath := runtimePaths(cmd)
+			out, err := appSvc.ProjectAdd(configPath, vaultPath, app.ProjectAddRequest{Selector: args[0], Field: field, Env: envName, Optional: optional})
 			if err != nil {
 				return err
 			}
@@ -104,18 +95,16 @@ func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&envName, "env", "", "Environment variable name override")
-	cmd.Flags().StringVar(&field, "field", "", "Field ID to bind for v2 project manifests")
+	cmd.Flags().StringVar(&field, "field", "", "Field ID to bind")
 	cmd.Flags().BoolVar(&optional, "optional", false, "Mark entry as optional")
-	cmd.Flags().StringArrayVar(&tags, "tag", nil, "Tag selector for this project; repeat for AND matching")
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 	return cmd
 }
 
 func newProjectRmCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:               "rm <path-or-prefix>",
+	return &cobra.Command{
+		Use:               "rm <item.field>",
 		Short:             "Remove an entry from project manifest",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProjectEntries,
@@ -128,7 +117,6 @@ func newProjectRmCmd() *cobra.Command {
 			return nil
 		},
 	}
-	return cmd
 }
 
 func completeProjectAddArg(appSvc *app.App, cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
@@ -187,8 +175,7 @@ func newProjectExportCmd(appSvc *app.App) *cobra.Command {
 		Short: "Export environment variables from project manifest",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath, _ := cmd.Flags().GetString("config")
-			vaultPath, _ := cmd.Flags().GetString("vault")
+			configPath, vaultPath := runtimePaths(cmd)
 			result, err := appSvc.ProjectExport(configPath, vaultPath, format)
 			if result.Diagnostics != "" {
 				fmt.Fprint(cmd.OutOrStderr(), result.Diagnostics)

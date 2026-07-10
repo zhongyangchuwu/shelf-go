@@ -37,18 +37,15 @@ func writeV2EmptyVault(t *testing.T, jsonPath string) {
 	}
 }
 
-func TestSecretV2UsesDistinctDefaultPath(t *testing.T) {
-	legacyVaultPath := filepath.Join(t.TempDir(), "vault.age")
-	configPath := writeV2Config(t, legacyVaultPath)
+func TestSecretUsesConfiguredVaultPath(t *testing.T) {
+	vaultPath := filepath.Join(t.TempDir(), "vault.json")
+	configPath := writeV2Config(t, vaultPath)
 
 	if _, err := testApp().CreateSecretV2(configPath, "", CreateSecretRequest{Title: "default-path", Stdin: true, In: strings.NewReader("fake-default-secret")}); err != nil {
 		t.Fatalf("CreateSecretV2: %v", err)
 	}
-	if _, err := os.Stat(legacyVaultPath); !os.IsNotExist(err) {
-		t.Fatalf("legacy vault path was touched: %v", err)
-	}
-	if _, err := os.Stat(legacyVaultPath + ".v2.json"); err != nil {
-		t.Fatalf("v2 vault path missing: %v", err)
+	if _, err := os.Stat(vaultPath); err != nil {
+		t.Fatalf("vault path missing: %v", err)
 	}
 	value, err := testApp().GetSecretFieldV2(configPath, "", GetSecretFieldRequest{Selector: "default-path"})
 	if err != nil {
