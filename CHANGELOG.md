@@ -26,6 +26,7 @@ All notable user-facing changes will be recorded here.
 ### Fixed
 
 - Secret creation now rejects metadata flags unsupported by the selected template instead of silently dropping them.
+- `secret copy` now falls back to `wl-copy` on WSL when the Windows clipboard bridge fails.
 
 ## 0.1.1 - 2026-06-27
 

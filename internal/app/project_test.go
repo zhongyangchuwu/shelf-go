@@ -231,6 +231,26 @@ func TestProjectRunReturnsChildExitCode(t *testing.T) {
 	}
 }
 
+func TestProjectAddAndSecretGetAcceptTheSameTitleSelector(t *testing.T) {
+	_, configPath := setupProjectTest(t)
+
+	value, err := testApp().GetSecretField(configPath, "", GetSecretFieldRequest{Selector: "OpenAI API Key"})
+	if err != nil {
+		t.Fatalf("get by title: %v", err)
+	}
+	if value == "" {
+		t.Fatal("get by title returned an empty value")
+	}
+
+	out, err := testApp().ProjectAdd(configPath, "", ProjectAddRequest{Selector: "OpenAI API Key"})
+	if err != nil {
+		t.Fatalf("project add by title: %v", err)
+	}
+	if out != "added openai.credential\n" {
+		t.Fatalf("project add output = %q", out)
+	}
+}
+
 // --- helpers ---
 
 // setupProjectTest creates a temp dir with a item .shelf.json manifest

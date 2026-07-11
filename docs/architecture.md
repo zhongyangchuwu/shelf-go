@@ -9,12 +9,12 @@ cmd/shelf/                    process entry point
 
 internal/cli/                 Cobra command tree, flags, completions, and output routing
 internal/cliui/               Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
-internal/clipboard/           System clipboard adapter; uses `clip.exe` under WSL and github.com/atotto/clipboard elsewhere
+internal/clipboard/           System clipboard adapter; uses `clip.exe`, then `wl-copy`, under WSL and github.com/atotto/clipboard elsewhere
 internal/app/                 application workflows for secret, project, setup, doctor, and run
 
-internal/vaultmodel/          item/field/template model, validation, profiles, and indexes
+internal/vaultmodel/          item/field/template model, validation, and shared item/field/env resolver
 internal/vaultjson/           strict JSON codec/repository for the local item vault
-internal/project/             Git project identity, .shelf.json schema/IO/validation, and item binding resolution
+internal/project/             Git project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/config/              config and vault path resolution
 internal/util/                atomic write and env/shell/JSON binding formatting
 ```
@@ -34,7 +34,7 @@ config -> yaml
 
 ## Item vault
 
-`internal/vaultmodel` owns domain semantics: vault version, items, fields, templates, profiles, public env-name fields, secret sensitivity, validation, and lookup indexes.
+`internal/vaultmodel` owns domain semantics: vault schema version, items, fields, templates, profiles, public env-name fields, secret sensitivity, validation, indexes, and shared resolution of item selectors, fields, and env names.
 
 `internal/vaultjson` owns persistence mechanics for the configured JSON file: strict decode, validated encode/save, atomic writes, and backup behavior. The JSON file is plaintext and must be protected externally.
 

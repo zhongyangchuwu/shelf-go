@@ -39,7 +39,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - `internal/cliui`: Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables.
 - `internal/clipboard`: system clipboard boundary for the explicit `secret copy` workflow.
 - `internal/app`: application workflows.
-- `internal/vaultmodel`: item/field/template/profile model and validation.
+- `internal/vaultmodel`: item/field/template/profile model, validation, and shared item/field/env resolver.
 - `internal/vaultjson`: JSON item-vault codec/repository.
 - `internal/project`: Git project identity, manifest schema, binding resolution, child env helpers.
 - `internal/config`: config and vault path resolution.
@@ -55,6 +55,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Keep CLI before Web/TUI | CLI is the daily workflow and easiest to verify. | Active commands are setup, doctor, secret, project, completion. |
 | Defer public release work | Repository stays private/local until a future v1.0.0 milestone. | Removed v0.2.0 tag/release preparation from active scope. |
 | Copy through an explicit command | Interactive secret retrieval should not break stdout-based scripting. | `secret copy` writes only to the clipboard and returns value-free confirmation. |
+| Use a shared model resolver | Secret and project workflows must agree on item, field, and env-name semantics. | `vaultmodel.Resolver` is the only active owner of those rules. |
 
 ---
-*Last updated: 2026-07-10 during secret copy and export simplification*
+*Last updated: 2026-07-10 after current-model naming and resolver consolidation*

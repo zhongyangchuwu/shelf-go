@@ -100,7 +100,8 @@ func (a *App) ProjectAdd(configPathFlag, vaultPathFlag string, req ProjectAddReq
 	if err != nil {
 		return "", err
 	}
-	binding, err := buildProjectBinding(vault, req)
+	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
+	binding, err := buildProjectBinding(resolver, req)
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +119,8 @@ func (a *App) ProjectAddCompletions(configPathFlag, vaultPathFlag string) ([]str
 	if err != nil {
 		return nil, err
 	}
-	return projectSecretSelectors(vault), nil
+	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
+	return resolver.SecretSelectors(), nil
 }
 
 func ProjectRm(key string) (string, error) {
@@ -232,11 +234,12 @@ func (a *App) resolveProjectBindings(configPathFlag, vaultPathFlag string, manif
 	if err != nil {
 		return nil, nil, err
 	}
-	entries, diagnostics := project.ResolveBindings(manifest, vault)
+	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
+	entries, diagnostics := project.ResolveBindings(manifest, resolver)
 	return entries, diagnostics, nil
 }
 
-func buildProjectBinding(vault vaultmodel.Vault, req ProjectAddRequest) (project.Binding, error) {
+func buildProjectBinding(resolver vaultmodel.Resolver, req ProjectAddRequest) (project.Binding, error) {
 	selector := req.Selector
 	if selector == "" {
 		return project.Binding{}, fmt.Errorf("selector is required")
@@ -249,18 +252,19 @@ func buildProjectBinding(vault vaultmodel.Vault, req ProjectAddRequest) (project
 			fieldID = after
 		}
 	}
-	item, err := resolveProjectItem(vault, itemSelector)
+	_, item, err := resolver.ResolveItem(itemSelector)
 	if err != nil {
 		return project.Binding{}, err
 	}
 	if fieldID == "" {
-		fieldID, err = primaryProjectField(vault, item)
+		primary, err := resolver.PrimarySecretField(item)
 		if err != nil {
 			return project.Binding{}, err
 		}
+		fieldID = primary.ID
 	}
-	field, ok := fieldByID(item, fieldID)
-	if !ok {
+	_, field, err := resolver.Field(item, fieldID)
+	if err != nil {
 		return project.Binding{}, fmt.Errorf("field not found: %s.%s", item.ID, fieldID)
 	}
 	if field.Sensitivity != vaultmodel.SensitivitySecret {
@@ -268,7 +272,14 @@ func buildProjectBinding(vault vaultmodel.Vault, req ProjectAddRequest) (project
 	}
 	envName := req.Env
 	if envName == "" {
-		envName = envNameForField(vault, item, fieldID)
+		var ok bool
+		envName, ok, err = resolver.EnvName(item, fieldID)
+		if err != nil {
+			return project.Binding{}, err
+		}
+		if !ok {
+			envName = ""
+		}
 	}
 	if envName == "" {
 		return project.Binding{}, fmt.Errorf("env name is required for %s.%s", item.ID, fieldID)
@@ -278,83 +289,4 @@ func buildProjectBinding(vault vaultmodel.Vault, req ProjectAddRequest) (project
 		binding.Required = new(bool)
 	}
 	return binding, nil
-}
-
-func projectSecretSelectors(vault vaultmodel.Vault) []string {
-	var selectors []string
-	for _, item := range vault.Items {
-		for _, field := range item.Fields {
-			if field.Sensitivity == vaultmodel.SensitivitySecret {
-				selectors = append(selectors, item.ID+"."+field.ID)
-			}
-		}
-	}
-	return selectors
-}
-
-func resolveProjectItem(vault vaultmodel.Vault, selector string) (vaultmodel.Item, error) {
-	var matches []vaultmodel.Item
-	for _, item := range vault.Items {
-		if item.ID == selector || item.Title == selector || hasString(item.Aliases, selector) {
-			matches = append(matches, item)
-		}
-	}
-	if len(matches) == 0 {
-		return vaultmodel.Item{}, fmt.Errorf("item not found: %s", selector)
-	}
-	if len(matches) > 1 {
-		var b strings.Builder
-		fmt.Fprintf(&b, "selector matched multiple items: %s", selector)
-		for _, item := range matches {
-			fmt.Fprintf(&b, "\n- %s %s", item.ID, item.Title)
-		}
-		return vaultmodel.Item{}, fmt.Errorf("%s", b.String())
-	}
-	return matches[0], nil
-}
-
-func primaryProjectField(vault vaultmodel.Vault, item vaultmodel.Item) (string, error) {
-	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
-	tmpl, ok := registry.Template(item.Template)
-	if !ok {
-		return "", fmt.Errorf("template not found: %s", item.Template)
-	}
-	for _, field := range tmpl.Fields {
-		if field.Purpose == vaultmodel.PurposePrimarySecret {
-			return field.ID, nil
-		}
-	}
-	return "", fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
-}
-
-func fieldByID(item vaultmodel.Item, fieldID string) (vaultmodel.Field, bool) {
-	for _, field := range item.Fields {
-		if field.ID == fieldID {
-			return field, true
-		}
-	}
-	return vaultmodel.Field{}, false
-}
-
-func envNameForField(vault vaultmodel.Vault, item vaultmodel.Item, fieldID string) string {
-	registry := vaultmodel.NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
-	tmpl, ok := registry.Template(item.Template)
-	if !ok {
-		return ""
-	}
-	for _, templateField := range tmpl.Fields {
-		if templateField.Purpose != vaultmodel.PurposeEnvName || templateField.EnvFor != fieldID {
-			continue
-		}
-		field, ok := fieldByID(item, templateField.ID)
-		if !ok || len(field.Value) == 0 {
-			return ""
-		}
-		value, err := stringValue(field.Value)
-		if err != nil {
-			return ""
-		}
-		return value
-	}
-	return ""
 }

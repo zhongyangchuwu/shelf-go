@@ -19,16 +19,20 @@ type FieldRef struct {
 }
 
 func NewIndex(v Vault) (Index, error) {
-	if err := Validate(v); err != nil {
+	registry := NewRegistryWithDefinitions(v.Templates, v.Profiles)
+	if err := ValidateWithRegistry(v, registry); err != nil {
 		return Index{}, err
 	}
+	return newIndexWithRegistry(v, registry), nil
+}
+
+func newIndexWithRegistry(v Vault, registry Registry) Index {
 	idx := Index{
 		itemsByID:    make(map[string]Item, len(v.Items)),
 		itemsByTitle: make(map[string][]Item, len(v.Items)),
 		itemsByAlias: make(map[string][]Item),
 		fieldsByEnv:  make(map[string][]FieldRef),
 	}
-	registry := NewRegistryWithDefinitions(v.Templates, v.Profiles)
 	for _, item := range v.Items {
 		idx.itemsByID[item.ID] = item
 		idx.itemsByTitle[item.Title] = append(idx.itemsByTitle[item.Title], item)
@@ -38,9 +42,9 @@ func NewIndex(v Vault) (Index, error) {
 			}
 			idx.itemsByAlias[alias] = append(idx.itemsByAlias[alias], item)
 		}
-		tmpl, _ := registry.Template(item.Template)
-		templateFields := make(map[string]FieldTemplate, len(tmpl.Fields))
-		for _, field := range tmpl.Fields {
+		template, _ := registry.Template(item.Template)
+		templateFields := make(map[string]FieldTemplate, len(template.Fields))
+		for _, field := range template.Fields {
 			templateFields[field.ID] = field
 		}
 		fields := make(map[string]Field, len(item.Fields))
@@ -60,7 +64,7 @@ func NewIndex(v Vault) (Index, error) {
 			idx.fieldsByEnv[envName] = append(idx.fieldsByEnv[envName], FieldRef{Item: item, Field: target, EnvField: field})
 		}
 	}
-	return idx, nil
+	return idx
 }
 
 func (idx Index) ItemByID(id string) (Item, bool) {

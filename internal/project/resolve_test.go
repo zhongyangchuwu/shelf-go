@@ -13,7 +13,7 @@ func TestResolveBindingsResolvesItemField(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(diagnostics) > 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
 	}
@@ -37,7 +37,7 @@ func TestResolveBindingsMultiple(t *testing.T) {
 	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
 	m.AddBinding(Binding{Item: "openai", Field: "credential", Env: "OPENAI_API_KEY"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(diagnostics) > 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
 	}
@@ -51,7 +51,7 @@ func TestResolveBindingsMissingItemIsFail(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "nonexistent", Field: "credential", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on missing item, got %d", len(entries))
 	}
@@ -66,7 +66,7 @@ func TestResolveBindingsMissingItemOptionalIsWarn(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "nonexistent", Field: "credential", Env: "GITHUB_TOKEN", Required: &f})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on optional missing item, got %d", len(entries))
 	}
@@ -80,7 +80,7 @@ func TestResolveBindingsMissingFieldIsFail(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on missing field, got %d", len(entries))
 	}
@@ -95,7 +95,7 @@ func TestResolveBindingsMissingFieldOptionalIsWarn(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "GITHUB_TOKEN", Required: &f})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on optional missing field, got %d", len(entries))
 	}
@@ -119,7 +119,7 @@ func TestResolveBindingsMissingValueIsFail(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on missing value, got %d", len(entries))
 	}
@@ -143,7 +143,7 @@ func TestResolveBindingsMissingValueOptionalIsWarn(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN", Required: &f})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on optional missing value, got %d", len(entries))
 	}
@@ -158,7 +158,7 @@ func TestResolveBindingsDuplicateEnvIsFail(t *testing.T) {
 	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "DUPLICATE_ENV"})
 	m.AddBinding(Binding{Item: "openai", Field: "credential", Env: "DUPLICATE_ENV"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	// First binding resolves, second fails with conflict
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 binding on duplicate env, got %d", len(entries))
@@ -180,7 +180,7 @@ func TestResolveBindingsNonSecretFieldIsFail(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "provider", Env: "GITHUB_PROVIDER"})
 
-	entries, diagnostics := ResolveBindings(m, v)
+	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings for non-secret field, got %d", len(entries))
 	}
@@ -195,7 +195,7 @@ func TestResolveBindingsDuplicateEnvDiagnosticsAreValueFree(t *testing.T) {
 	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "DUPE"})
 	m.AddBinding(Binding{Item: "openai", Field: "credential", Env: "DUPE"})
 
-	_, diagnostics := ResolveBindings(m, v)
+	_, diagnostics := ResolveBindings(m, testResolver(t, v))
 	for _, d := range diagnostics {
 		if strings.Contains(d.Message, "ghp_") || strings.Contains(d.Message, "sk-") {
 			t.Fatalf("diagnostic leaks secret value: %+v", d)
@@ -210,7 +210,7 @@ func TestResolveBindingsAllDiagnosticsAreValueFree(t *testing.T) {
 	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "NOPE2"})
 	m.AddBinding(Binding{Item: "github", Field: "provider", Env: "PUB"})
 
-	_, diagnostics := ResolveBindings(m, v)
+	_, diagnostics := ResolveBindings(m, testResolver(t, v))
 	for _, d := range diagnostics {
 		if strings.Contains(d.Message, "ghp_") || strings.Contains(d.Message, "sk-") {
 			t.Fatalf("diagnostic leaks secret value: %+v", d)
@@ -229,6 +229,15 @@ func hasDiagnostic(diagnostics []Diagnostic, want Diagnostic) bool {
 	return false
 }
 
+func testResolver(t *testing.T, vault vaultmodel.Vault) vaultmodel.Resolver {
+	t.Helper()
+	resolver, err := vaultmodel.NewResolver(vault)
+	if err != nil {
+		t.Fatalf("new resolver: %v", err)
+	}
+	return resolver
+}
+
 func validVault(t *testing.T) vaultmodel.Vault {
 	t.Helper()
 	return vaultmodel.Vault{
@@ -241,9 +250,9 @@ func validVault(t *testing.T) vaultmodel.Vault {
 				Title:    "GitHub Token",
 				Template: vaultmodel.TemplateAPICredential,
 				Fields: []vaultmodel.Field{
-					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Value: json.RawMessage(`"ghp_fake_token"`)},
-					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: json.RawMessage(`"GITHUB_TOKEN"`)},
-					{ID: "provider", Label: "Provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: json.RawMessage(`"GitHub"`)},
+					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: json.RawMessage(`"ghp_fake_token"`)},
+					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: json.RawMessage(`"GITHUB_TOKEN"`)},
+					{ID: "provider", Label: "Provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeProvider, Value: json.RawMessage(`"GitHub"`)},
 				},
 			},
 			{
@@ -251,8 +260,8 @@ func validVault(t *testing.T) vaultmodel.Vault {
 				Title:    "OpenAI API Key",
 				Template: vaultmodel.TemplateAPICredential,
 				Fields: []vaultmodel.Field{
-					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Value: json.RawMessage(`"sk-openai-test"`)},
-					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: json.RawMessage(`"OPENAI_API_KEY"`)},
+					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: json.RawMessage(`"sk-openai-test"`)},
+					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: json.RawMessage(`"OPENAI_API_KEY"`)},
 				},
 			},
 		},

@@ -20,14 +20,20 @@ func New() Writer {
 }
 
 func (systemWriter) CopyText(text string) error {
-	return copyText(text, isWSL(), copyWithWindowsClipboard, copyWithNativeClipboard)
+	return copyText(text, isWSL(), copyWithWindowsClipboard, copyWithWaylandClipboard, copyWithNativeClipboard)
 }
 
-func copyText(text string, wsl bool, windowsCopy, nativeCopy func(string) error) error {
-	if wsl {
-		return windowsCopy(text)
+func copyText(text string, wsl bool, windowsCopy, waylandCopy, nativeCopy func(string) error) error {
+	if !wsl {
+		return nativeCopy(text)
 	}
-	return nativeCopy(text)
+	if err := windowsCopy(text); err == nil {
+		return nil
+	} else if fallbackErr := waylandCopy(text); fallbackErr == nil {
+		return nil
+	} else {
+		return fmt.Errorf("copy to WSL clipboard: Windows bridge failed: %w; Wayland fallback failed: %v", err, fallbackErr)
+	}
 }
 
 func isWSL() bool {
@@ -57,6 +63,15 @@ func windowsClipboardCommand(lookPath func(string) (string, error), stat func(st
 		return "", err
 	}
 	return wslClipboardPath, nil
+}
+
+func copyWithWaylandClipboard(text string) error {
+	cmd := exec.Command("wl-copy")
+	cmd.Stdin = bytes.NewBufferString(text)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("copy to Wayland clipboard: %w", err)
+	}
+	return nil
 }
 
 func copyWithNativeClipboard(text string) error {

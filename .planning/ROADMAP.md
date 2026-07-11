@@ -19,12 +19,14 @@ This milestone is for local development and personal use. Public repository/rele
 - [x] Phase 42: Item Vault Plain JSON Cutover
 - [x] CLI output polish and `internal/cliui` extraction
 - [x] Phase 43: Secret Copy and Export Simplification
+- [x] Phase 44: Current-Model Naming Cutover
+- [x] Phase 45: Vault Resolver Consolidation
 
 ## Next Local Work
 
 **Status:** Ready for the next local CLI UX or staged refactor phase.
 
-**Most recent artifacts:** `.planning/phases/043-secret-copy-and-export-simplification/VERIFICATION.md`, `.planning/phases/043-secret-copy-and-export-simplification/CAPTURE.md`
+**Most recent artifacts:** `.planning/phases/045-vault-resolver-consolidation/VERIFICATION.md`, `.planning/phases/045-vault-resolver-consolidation/CAPTURE.md`
 
 **No release work:** no public repository preparation, GoReleaser packaging, GitHub Release, or tag workflow for v0.2.0.
 
@@ -44,6 +46,12 @@ This milestone is for local development and personal use. Public repository/rele
 - Removed `env` export; `shell` and `json` remain.
 - Verified full checks and an installed-binary temporary-vault clipboard smoke test.
 
+## Completed Phases 44–45
+
+- Removed transitional `V2` implementation names while preserving persisted schema version fields.
+- Centralized item selector, field, and env-name rules in `vaultmodel.Resolver`.
+- Reused resolver registry/index construction for repository-loaded vaults.
+
 ## Deferred After v0.2.0
 
 1. More complete `shelf secret` UX polish.
@@ -55,4 +63,4 @@ This milestone is for local development and personal use. Public repository/rele
 7. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-10 after secret copy and export simplification*
+*Last updated: 2026-07-10 after current-model naming and resolver consolidation*

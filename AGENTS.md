@@ -23,7 +23,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 - JSON item vault managed by `internal/vaultjson` and modeled by `internal/vaultmodel`.
 - YAML config parsed by `internal/config/config.go`.
 - Cobra command surface in `internal/cli`.
-- Cross-platform clipboard adapter in `internal/clipboard`, using the native backend or `clip.exe` on WSL.
+- Cross-platform clipboard adapter in `internal/clipboard`, using `clip.exe` then `wl-copy` on WSL and a native backend elsewhere.
 - Lip Gloss-backed human CLI output helpers in `internal/cliui`.
 - Standard Go `testing` package for tests.
 
@@ -69,7 +69,7 @@ shelf completion <shell>
 | CLI UI | Human output helpers for titles, summaries, empty states, and tables | `internal/cliui` |
 | App | Workflow orchestration for setup, doctor, secret, project, run | `internal/app` |
 | Clipboard | Copy secret values to the system clipboard without printing them | `internal/clipboard` |
-| Item model | Vault/item/field/template/profile model and validation | `internal/vaultmodel` |
+| Item model | Vault/item/field/template/profile model, validation, and shared item/field/env resolver | `internal/vaultmodel` |
 | Item repository | Strict JSON codec/repository with atomic writes | `internal/vaultjson` |
 | Project | Git identity, `.shelf.json`, item-field binding resolution, child env helpers | `internal/project` |
 | Config | Config and vault path resolution | `internal/config` |

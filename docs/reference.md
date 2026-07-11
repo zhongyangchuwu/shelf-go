@@ -67,7 +67,7 @@ shelf secret copy <selector> [--field FIELD]
 shelf secret copy --env ENV [--field FIELD]
 ```
 
-Clipboard initialization or write failures return an error and do not fall back to printing the value. On WSL, Shelf uses the Windows clipboard bridge (`clip.exe`); on Linux outside WSL, the clipboard backend requires `xclip` or `xsel`.
+Clipboard initialization or write failures return an error and do not fall back to printing the value. On WSL, Shelf first uses the Windows clipboard bridge (`clip.exe`) and falls back to `wl-copy` when the bridge fails. On Linux outside WSL, the clipboard backend requires `xclip` or `xsel`.
 
 ## `shelf secret list`
 

@@ -3,17 +3,22 @@ package clipboard
 import (
 	"errors"
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestCopyTextUsesWindowsBridgeOnWSL(t *testing.T) {
-	var windowsCalls, nativeCalls int
+	var windowsCalls, waylandCalls, nativeCalls int
 	err := copyText("secret", true,
 		func(text string) error {
 			windowsCalls++
 			if text != "secret" {
 				t.Fatalf("windows text = %q", text)
 			}
+			return nil
+		},
+		func(string) error {
+			waylandCalls++
 			return nil
 		},
 		func(string) error {
@@ -24,16 +29,45 @@ func TestCopyTextUsesWindowsBridgeOnWSL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copy text: %v", err)
 	}
-	if windowsCalls != 1 || nativeCalls != 0 {
-		t.Fatalf("calls: windows=%d native=%d", windowsCalls, nativeCalls)
+	if windowsCalls != 1 || waylandCalls != 0 || nativeCalls != 0 {
+		t.Fatalf("calls: windows=%d wayland=%d native=%d", windowsCalls, waylandCalls, nativeCalls)
+	}
+}
+
+func TestCopyTextFallsBackToWaylandOnWSL(t *testing.T) {
+	windowsErr := errors.New("Windows clipboard unavailable")
+	var waylandCalls int
+	err := copyText("secret", true,
+		func(string) error { return windowsErr },
+		func(text string) error {
+			waylandCalls++
+			if text != "secret" {
+				t.Fatalf("wayland text = %q", text)
+			}
+			return nil
+		},
+		func(string) error {
+			t.Fatal("native backend should not run on WSL")
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("copy text: %v", err)
+	}
+	if waylandCalls != 1 {
+		t.Fatalf("wayland calls = %d", waylandCalls)
 	}
 }
 
 func TestCopyTextUsesNativeClipboardOffWSL(t *testing.T) {
-	var windowsCalls, nativeCalls int
+	var windowsCalls, waylandCalls, nativeCalls int
 	err := copyText("secret", false,
 		func(string) error {
 			windowsCalls++
+			return nil
+		},
+		func(string) error {
+			waylandCalls++
 			return nil
 		},
 		func(text string) error {
@@ -47,16 +81,36 @@ func TestCopyTextUsesNativeClipboardOffWSL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copy text: %v", err)
 	}
-	if windowsCalls != 0 || nativeCalls != 1 {
-		t.Fatalf("calls: windows=%d native=%d", windowsCalls, nativeCalls)
+	if windowsCalls != 0 || waylandCalls != 0 || nativeCalls != 1 {
+		t.Fatalf("calls: windows=%d wayland=%d native=%d", windowsCalls, waylandCalls, nativeCalls)
 	}
 }
 
 func TestCopyTextPropagatesBackendError(t *testing.T) {
 	want := errors.New("clipboard unavailable")
-	err := copyText("secret", false, func(string) error { return nil }, func(string) error { return want })
+	err := copyText("secret", false,
+		func(string) error { return nil },
+		func(string) error { return nil },
+		func(string) error { return want },
+	)
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want %v", err, want)
+	}
+}
+
+func TestCopyTextReportsBothWSLBackendsFailing(t *testing.T) {
+	windowsErr := errors.New("Windows clipboard unavailable")
+	waylandErr := errors.New("Wayland clipboard unavailable")
+	err := copyText("secret", true,
+		func(string) error { return windowsErr },
+		func(string) error { return waylandErr },
+		func(string) error { return nil },
+	)
+	if !errors.Is(err, windowsErr) || !strings.Contains(err.Error(), "Wayland fallback failed") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(err.Error(), "secret") {
+		t.Fatalf("error leaked copied text: %v", err)
 	}
 }
 

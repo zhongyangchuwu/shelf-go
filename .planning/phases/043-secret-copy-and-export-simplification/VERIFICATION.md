@@ -15,7 +15,7 @@ Coverage includes:
 
 - `secret copy` copies the resolved value through an injected clipboard writer and prints only `Copied secret to clipboard.`
 - Clipboard failures do not print the secret.
-- WSL clipboard routing chooses `clip.exe` from `PATH` or the standard Windows-system fallback path.
+- WSL clipboard routing tries `clip.exe` and then `wl-copy` when the Windows bridge fails.
 - `secret export` and `project export` reject removed `env` format.
 - Shell and JSON export remain covered.
 
@@ -35,4 +35,4 @@ Observed output:
 Copied secret to clipboard.
 ```
 
-The WSL fallback bridge `/mnt/c/Windows/System32/clip.exe` was exercised successfully. No real vault value was copied or printed during the smoke test.
+The installed-binary smoke test exercised the `wl-copy` fallback after the Windows bridge returned a nonzero exit status. No real vault value was copied or printed.

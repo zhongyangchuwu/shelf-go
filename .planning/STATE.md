@@ -2,9 +2,9 @@
 
 ## Current Position
 
-- Phase: Secret Copy and Export Simplification
+- Phase: Vault Resolver Consolidation
 - Status: complete
-- Active Artifact: `.planning/phases/043-secret-copy-and-export-simplification/CAPTURE.md`
+- Active Artifact: `.planning/phases/045-vault-resolver-consolidation/CAPTURE.md`
 - Next Action: Select the next local CLI UX or staged refactor phase; public release work remains deferred.
 
 ## Blockers
@@ -15,8 +15,10 @@
 
 - Item-vault-only cutover is implemented and committed.
 - Active packages are now CLI/app/cliui/clipboard/config/project/util/vaultjson/vaultmodel.
-- `secret copy` now writes a resolved secret to the system clipboard without printing it; WSL uses the verified `clip.exe` bridge fallback.
+- `secret copy` now writes a resolved secret to the system clipboard without printing it; WSL tries `clip.exe` then verified `wl-copy` fallback.
 - `secret export` and `project export` now support only `shell` and `json` output.
+- Transitional implementation `V2` names were removed; persisted schema version fields remain.
+- `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
 - Default vault path is `~/.local/share/shelf/vault.json`.
 - Local config points at `/home/han/.local/share/shelf/vault.json`.
 - Local backup before cutover: `/home/han/.local/share/shelf/backups/pre-plain-json-cutover-20260710-162158`.

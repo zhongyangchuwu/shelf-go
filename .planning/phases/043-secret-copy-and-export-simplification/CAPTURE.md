@@ -4,7 +4,7 @@
 
 - `secret copy` owns interactive clipboard retrieval; `secret get` remains the stdout/script command.
 - Clipboard failure is terminal and value-free. Never fall back to terminal output.
-- WSL uses `clip.exe`; a standard absolute-path fallback handles installations where Windows executables are absent from `PATH`.
+- WSL tries `clip.exe` first, then `wl-copy` if the Windows bridge is unavailable or fails; neither failure can cause terminal output of the secret.
 - `env` export was removed because `shell` already covers sourceable environment assignment and `json` covers structured automation.
 
 ## Code Shape

@@ -7,21 +7,20 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
-func ResolveBindings(manifest Manifest, vault vaultmodel.Vault) ([]ResolvedBinding, []Diagnostic) {
+func ResolveBindings(manifest Manifest, resolver vaultmodel.Resolver) ([]ResolvedBinding, []Diagnostic) {
 	entries := make([]ResolvedBinding, 0, len(manifest.Bindings))
 	diagnostics := make([]Diagnostic, 0)
 	envOwners := map[string]string{}
-	items := itemsByID(vault.Items)
 
 	for _, binding := range manifest.Bindings {
 		path := binding.Key()
-		item, ok := items[binding.Item]
+		item, ok := resolver.ItemByID(binding.Item)
 		if !ok {
 			appendMissingDiagnostic(&diagnostics, binding, path, "missing item")
 			continue
 		}
-		field, ok := fieldByID(item, binding.Field)
-		if !ok {
+		_, field, err := resolver.Field(item, binding.Field)
+		if err != nil {
 			appendMissingDiagnostic(&diagnostics, binding, path, "missing field")
 			continue
 		}
@@ -46,23 +45,6 @@ func ResolveBindings(manifest Manifest, vault vaultmodel.Vault) ([]ResolvedBindi
 		entries = append(entries, ResolvedBinding{Path: path, EnvName: binding.Env, Value: value})
 	}
 	return entries, diagnostics
-}
-
-func itemsByID(items []vaultmodel.Item) map[string]vaultmodel.Item {
-	out := make(map[string]vaultmodel.Item, len(items))
-	for _, item := range items {
-		out[item.ID] = item
-	}
-	return out
-}
-
-func fieldByID(item vaultmodel.Item, fieldID string) (vaultmodel.Field, bool) {
-	for _, field := range item.Fields {
-		if field.ID == fieldID {
-			return field, true
-		}
-	}
-	return vaultmodel.Field{}, false
 }
 
 func appendMissingDiagnostic(diagnostics *[]Diagnostic, binding Binding, path, message string) {
