@@ -20,7 +20,7 @@
 
 ## Planned Personal Workflow Requirements
 
-- [ ] **UX-01**: Developers can update item identity, labels, aliases, and supported public metadata through scriptable workflows without editing vault JSON.
+- [x] **UX-01**: Developers can update item identity, labels, aliases, and supported public metadata through scriptable workflows without editing vault JSON.
 - [ ] **TUI-01**: `shelf tui` provides a keyboard-first, value-free item catalog with search, filters, detail, and safe terminal lifecycle handling.
 - [ ] **TUI-02**: TUI mutations reuse app workflows, mask secret writes, and never render a secret value.
 - [ ] **TUI-03**: `shelf project tui` manages current-project value-free bindings without editing `.shelf.json` directly.
@@ -43,11 +43,11 @@
 | CLI-01..CLI-07 | Phases 42, 43, and local CLI polish | Complete |
 | PROJECT-01..PROJECT-03 | Phases 39, 42 | Complete |
 | LOCAL-01 | Phase 42 | Complete |
-| UX-01 | Phase 47 | Planned |
+| UX-01 | Phase 47 | Complete |
 | TUI-01 | Phase 48 | Planned |
 | TUI-02 | Phase 49 | Planned |
 | TUI-03 | Phase 50 | Planned |
 | OPS-01 | Phase 51 | Planned |
 
 ---
-*Last updated: 2026-07-11 after personal workflow UX planning*
+*Last updated: 2026-07-12 after scriptable item lifecycle*

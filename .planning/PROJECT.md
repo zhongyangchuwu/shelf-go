@@ -13,11 +13,13 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] Local workstation config now points at `/home/han/.local/share/shelf/vault.json`, copied from the previous item sidecar after backup.
 - [x] Human-facing secret list/create output is routed through `internal/cliui`.
 - [x] `secret copy` provides clipboard-only interactive retrieval while `secret get` remains scriptable stdout output.
+- [x] `secret update` maintains item title, labels, aliases, and public fields atomically while keeping secret writes stdin-only.
 
 ### Planned
 
-- [ ] Personal workflow UX plan: scriptable item lifecycle, safe catalog TUI, TUI item editing, project binding TUI, and credential health audit.
-- [ ] The first executable phase is `.planning/phases/047-scriptable-item-lifecycle/PLAN.md`.
+- [x] Scriptable item lifecycle is complete.
+- [ ] Remaining personal workflow UX: safe catalog TUI, TUI item editing, project binding TUI, and credential health audit.
+- [ ] The next executable phase is `.planning/phases/048-safe-catalog-tui/PLAN.md`.
 
 ### Out of Scope
 
@@ -61,4 +63,4 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phase 47 precedes a read-only Phase 48; all later TUI mutations reuse app workflows. |
 
 ---
-*Last updated: 2026-07-11 after personal workflow UX planning*
+*Last updated: 2026-07-12 after scriptable item lifecycle*

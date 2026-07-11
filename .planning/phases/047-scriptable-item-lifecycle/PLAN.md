@@ -6,10 +6,10 @@ Make the local item catalog fully maintainable through explicit, scriptable CLI 
 
 ## Scope
 
-- Add application and Cobra workflows for editing item title, labels, aliases, and supported public template fields.
-- Keep secret field writes on the existing stdin-only path; public metadata may use explicit typed inputs.
-- Reuse vaultmodel validation and vaultjson atomic save; no workflow may mutate JSON directly.
-- Preserve value-free output for list, info, diagnostics, completions, and edit confirmation.
+- Add `shelf secret update <selector>` backed by an app workflow; update title, add/remove labels, add/remove aliases, or one public field in one atomic operation.
+- Use `--field FIELD --value VALUE` for typed public-field changes, with repeatable values for string lists, and `--clear-field` for explicit clearing.
+- Keep secret field writes on the existing `secret set --stdin` path; update rejects attempts to write secret fields or to pass values without an explicit public field.
+- Reuse vaultmodel validation and vaultjson atomic save; no workflow may mutate JSON directly. Preserve value-free output for list, info, diagnostics, completions, and edit confirmation.
 
 ## Non-Goals
 

@@ -176,6 +176,49 @@ func TestSecretSetRequiresStdinAndCanSetPublicField(t *testing.T) {
 	}
 }
 
+func TestSecretUpdateMaintainsValueFreeOutput(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "vault.json")
+	if _, err := runShelfWithInput(t, "fake-openai-token", "--vault", data, "secret", "create", "openai", "--profile", "openai", "--stdin"); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	out, err := runShelf(t, "--vault", data, "secret", "update", "openai",
+		"--title", "OpenAI Personal",
+		"--add-label", "ai",
+		"--add-label", "personal",
+		"--add-alias", "openai-personal",
+		"--field", "provider",
+		"--value", "OpenAI personal account",
+	)
+	if err != nil {
+		t.Fatalf("update: %v\n%s", err, out)
+	}
+	if out != "Updated secret item.\n" {
+		t.Fatalf("update output = %q", out)
+	}
+	if strings.Contains(out, "fake-openai-token") {
+		t.Fatalf("update leaked secret value: %q", out)
+	}
+	out, err = runShelf(t, "--vault", data, "secret", "info", "openai-personal")
+	if err != nil {
+		t.Fatalf("info: %v", err)
+	}
+	for _, want := range []string{"OpenAI Personal", "ai", "personal", "OpenAI personal account"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("info missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "fake-openai-token") {
+		t.Fatalf("info leaked updated secret value: %q", out)
+	}
+	_, err = runShelf(t, "--vault", data, "secret", "update", "openai-personal", "--value", "attempted-secret")
+	if err == nil || !strings.Contains(err.Error(), "requires --field") {
+		t.Fatalf("missing field error = %v", err)
+	}
+	if strings.Contains(err.Error(), "attempted-secret") {
+		t.Fatalf("update error leaked value: %v", err)
+	}
+}
+
 func TestSecretEnvSelectorAmbiguityIsValueFree(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "vault.json")
 	if _, err := runShelfWithInput(t, "first-secret", "--vault", data, "secret", "create", "one", "--env", "DUPLICATE_ENV", "--stdin"); err != nil {

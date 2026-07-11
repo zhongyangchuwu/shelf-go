@@ -67,6 +67,17 @@ printf %s "$NEW_TOKEN" | shelf secret set openai --stdin
 printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
 ```
 
+Update item identity, organization, and public metadata without editing vault JSON:
+
+```bash
+shelf secret update openai --title openai-personal --add-label ai --add-alias openai-personal
+shelf secret update openai-personal --field provider --value OpenAI
+shelf secret update openai-personal --field scopes --value responses --value embeddings
+shelf secret update openai-personal --field website --clear-field
+```
+
+`secret update` accepts only public fields. Secret values continue to use `secret set --stdin`.
+
 Load a label group into the current shell without storing values in shell config:
 
 ```bash
@@ -123,5 +134,5 @@ shelf doctor
 
 - Built-in age encryption. Use chezmoi or another external tool for encrypted sync.
 - v1 vault compatibility or automated migration.
-- Web manager and TUI editing.
+- Web manager. Keyboard-first TUI editing is planned but not yet available.
 - Team sharing, hosted sync, browser autofill, or daemon-based unlock flows.

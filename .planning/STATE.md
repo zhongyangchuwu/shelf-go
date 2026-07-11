@@ -2,10 +2,10 @@
 
 ## Current Position
 
-- Phase: Personal Workflow UX Plan
-- Status: planned
-- Active Artifact: `.planning/phases/047-scriptable-item-lifecycle/PLAN.md`
-- Next Action: Execute Phase 47 before adding an interactive TUI.
+- Phase: Scriptable Item Lifecycle
+- Status: complete
+- Active Artifact: `.planning/phases/047-scriptable-item-lifecycle/CAPTURE.md`
+- Next Action: Execute Phase 48 Safe Catalog TUI.
 
 ## Blockers
 
@@ -20,6 +20,7 @@
 - Transitional implementation `V2` names were removed; persisted schema version fields remain.
 - `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
 - `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
+- `secret update` atomically changes title, labels, aliases, or one typed public field; secret fields remain stdin-only.
 - The proposed personal workflow sequence is scriptable item lifecycle → safe catalog TUI → TUI editing → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.
@@ -32,8 +33,8 @@
   - `go vet ./...`
   - `go-arch-lint check`
   - `go build ./cmd/shelf`
-  - installed-binary `secret copy` smoke test with a temporary vault and fake value
+  - installed-binary `secret update` smoke test with a temporary vault and fake value
 
 ## Updated
 
-- 2026-07-11
+- 2026-07-12

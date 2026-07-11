@@ -50,6 +50,16 @@ Sets a field from stdin. Without `--field`, Shelf sets the template primary secr
 shelf secret set <selector> [--field FIELD] --stdin
 ```
 
+## `shelf secret update`
+
+Updates an item's title, labels, aliases, or one public field without editing vault JSON. Secret fields remain writeable only through `secret set --stdin`.
+
+```bash
+shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD --value VALUE ... | --clear-field]
+```
+
+`--field` names a public field. Use repeatable `--value` for a string-list field, or `--clear-field` to clear its value. Update output and errors do not print secret values.
+
 ## `shelf secret get`
 
 Prints a plaintext field value.
@@ -166,7 +176,7 @@ shelf project status
 
 ## `shelf project export`
 
-Prints resolved project values in `shell`, `env`, or `json` format.
+Prints resolved project values in `shell` or `json` format.
 
 ```bash
 shelf project export [--format shell|json]

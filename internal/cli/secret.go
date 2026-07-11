@@ -23,6 +23,7 @@ func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Comm
 		},
 	}
 	cmd.AddCommand(newSecretCreateCmd(appSvc))
+	cmd.AddCommand(newSecretUpdateCmd(appSvc))
 	cmd.AddCommand(newSecretSetCmd(appSvc))
 	cmd.AddCommand(newSecretGetCmd(appSvc))
 	cmd.AddCommand(newSecretCopyCmd(appSvc, clipboardWriter))
@@ -72,6 +73,41 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	_ = cmd.RegisterFlagCompletionFunc("website", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("expires", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("scope", cobra.NoFileCompletions)
+	return cmd
+}
+
+func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
+	var req app.UpdateSecretRequest
+	cmd := &cobra.Command{
+		Use:   "update <selector>",
+		Short: "Update secret item metadata",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			req.Selector = args[0]
+			req.TitleSet = cmd.Flags().Changed("title")
+			req.FieldValueSet = cmd.Flags().Changed("value")
+			configPath, vaultPath := runtimePaths(cmd)
+			if err := appSvc.UpdateSecret(configPath, vaultPath, req); err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "Updated secret item.")
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&req.Title, "title", "", "New item title")
+	cmd.Flags().StringArrayVar(&req.AddLabels, "add-label", nil, "Label to add; repeat for multiple labels")
+	cmd.Flags().StringArrayVar(&req.RemoveLabels, "remove-label", nil, "Label to remove; repeat for multiple labels")
+	cmd.Flags().StringArrayVar(&req.AddAliases, "add-alias", nil, "Alias to add; repeat for multiple aliases")
+	cmd.Flags().StringArrayVar(&req.RemoveAliases, "remove-alias", nil, "Alias to remove; repeat for multiple aliases")
+	cmd.Flags().StringVar(&req.Field, "field", "", "Public field id to update or clear")
+	cmd.Flags().StringArrayVar(&req.Values, "value", nil, "Public field value; repeat for a string-list field")
+	cmd.Flags().BoolVar(&req.ClearField, "clear-field", false, "Clear the selected public field")
+	_ = cmd.RegisterFlagCompletionFunc("add-label", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("remove-label", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("add-alias", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("remove-alias", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("value", cobra.NoFileCompletions)
 	return cmd
 }
 

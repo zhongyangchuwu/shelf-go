@@ -22,6 +22,7 @@ All notable user-facing changes will be recorded here.
 - Added concrete project item/field bindings for `project status`, `project add`, `project list`, `project rm`, `project export`, and `project run`.
 - Added shared Lip Gloss-backed human output rendering for secret create/list output.
 - Added `shelf secret copy` for clipboard-only interactive secret retrieval with value-free confirmation.
+- Added `shelf secret update` for atomic title, label, alias, and typed public-field changes without editing vault JSON.
 
 ### Fixed
 

@@ -25,9 +25,9 @@ This milestone is for local development and personal use. Public repository/rele
 
 ## Planned Personal Workflow UX
 
-**Status:** Planned. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
+**Status:** Phase 47 complete; Phase 48 is next. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
 
-- [ ] Phase 47: Scriptable Item Lifecycle — complete safe, scriptable item mutations before introducing interactive editing.
+- [x] Phase 47: Scriptable Item Lifecycle — added safe, scriptable item mutations before interactive editing.
 - [ ] Phase 48: Safe Catalog TUI — keyboard-first, value-free catalog browsing, search, filtering, and detail views.
 - [ ] Phase 49: TUI Item Editing — create, edit, set, copy, and delete flows using the same app workflows as CLI.
 - [ ] Phase 50: Project Binding TUI — value-free current-project manifest management and binding picker.
@@ -64,6 +64,11 @@ This milestone is for local development and personal use. Public repository/rele
 - Centralized primary-secret and env-name template-role lookup in `vaultmodel.Registry`.
 - Reused the registry API in secret item construction and instance resolution.
 
+## Completed Phase 47
+
+- Added atomic `secret update` changes for item title, labels, aliases, and typed public fields.
+- Kept secret field writes stdin-only and all update output and errors value-free.
+
 ## Deferred Beyond the Personal Workflow UX Plan
 
 1. Web manager for item vaults.
@@ -73,4 +78,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-11 after personal workflow UX planning*
+*Last updated: 2026-07-12 after scriptable item lifecycle*

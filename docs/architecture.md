@@ -54,11 +54,13 @@ Active command groups:
 
 `.shelf.json` stores concrete item/field/env bindings. `project status`, `project export`, and `project run` resolve those bindings against the item vault. Project manifests remain value-free.
 
+## Planned, not yet implemented
+
+- Keyboard-first catalog, item-editing, and project-binding TUI flows backed by the existing app workflows.
+
 ## Explicitly deferred
 
 - Built-in encryption.
 - Automatic v1 migration.
 - Web manager.
-- TUI full-object editing.
-- Project configure TUI.
 - Team sharing or hosted sync.

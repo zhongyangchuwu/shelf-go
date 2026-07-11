@@ -41,6 +41,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 shelf setup
 shelf doctor
 shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
+shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD --value VALUE ... | --clear-field]
 shelf secret set <selector> [--field FIELD] --stdin
 shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]

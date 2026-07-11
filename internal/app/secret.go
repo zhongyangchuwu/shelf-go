@@ -39,6 +39,20 @@ type SetSecretFieldRequest struct {
 	In       io.Reader
 }
 
+type UpdateSecretRequest struct {
+	Selector      string
+	Title         string
+	TitleSet      bool
+	AddLabels     []string
+	RemoveLabels  []string
+	AddAliases    []string
+	RemoveAliases []string
+	Field         string
+	Values        []string
+	FieldValueSet bool
+	ClearField    bool
+}
+
 type GetSecretFieldRequest struct {
 	Selector string
 	Env      string
@@ -135,6 +149,81 @@ func (a *App) SetSecretField(configPathFlag, vaultPathFlag string, req SetSecret
 		return err
 	}
 	return nil
+}
+
+func (a *App) UpdateSecret(configPathFlag, vaultPathFlag string, req UpdateSecretRequest) error {
+	if err := validateSecretFieldUpdate(req); err != nil {
+		return err
+	}
+	if !hasSecretUpdate(req) {
+		return fmt.Errorf("secret update requires at least one change")
+	}
+	addLabels, err := normalizedTokens(req.AddLabels, "label")
+	if err != nil {
+		return err
+	}
+	removeLabels, err := normalizedTokens(req.RemoveLabels, "label")
+	if err != nil {
+		return err
+	}
+	addAliases, err := normalizedTokens(req.AddAliases, "alias")
+	if err != nil {
+		return err
+	}
+	removeAliases, err := normalizedTokens(req.RemoveAliases, "alias")
+	if err != nil {
+		return err
+	}
+
+	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return err
+	}
+	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
+	itemIndex, item, err := resolver.ResolveItem(req.Selector)
+	if err != nil {
+		return err
+	}
+	if req.TitleSet {
+		title := strings.TrimSpace(req.Title)
+		if title == "" {
+			return fmt.Errorf("title is required")
+		}
+		if err := ensureSelectorAvailable(vault.Items, itemIndex, title); err != nil {
+			return err
+		}
+		item.Title = title
+	}
+	item.Labels = removeTokens(addTokens(item.Labels, addLabels), removeLabels)
+	item.Aliases = removeTokens(addTokens(item.Aliases, addAliases), removeAliases)
+	for _, alias := range item.Aliases {
+		if alias == item.ID || alias == item.Title {
+			return fmt.Errorf("alias conflicts with item identity: %s", alias)
+		}
+		if err := ensureSelectorAvailable(vault.Items, itemIndex, alias); err != nil {
+			return err
+		}
+	}
+	if req.FieldValueSet || req.ClearField {
+		fieldIndex, field, err := resolver.Field(item, req.Field)
+		if err != nil {
+			return err
+		}
+		if field.Sensitivity != vaultmodel.SensitivityPublic {
+			return fmt.Errorf("secret field must be set with secret set --stdin: %s", field.ID)
+		}
+		if req.ClearField {
+			item.Fields[fieldIndex].Value = nil
+		} else {
+			value, err := publicFieldValue(field.Type, req.Values)
+			if err != nil {
+				return err
+			}
+			item.Fields[fieldIndex].Value = value
+		}
+	}
+	vault.Items[itemIndex] = item
+	return repo.Save(vault)
 }
 
 func (a *App) GetSecretField(configPathFlag, vaultPathFlag string, req GetSecretFieldRequest) (string, error) {
@@ -387,6 +476,117 @@ func rawString(value string) json.RawMessage {
 		panic(err)
 	}
 	return content
+}
+
+func hasSecretUpdate(req UpdateSecretRequest) bool {
+	return req.TitleSet || len(req.AddLabels) > 0 || len(req.RemoveLabels) > 0 || len(req.AddAliases) > 0 || len(req.RemoveAliases) > 0 || req.FieldValueSet || req.ClearField
+}
+
+func validateSecretFieldUpdate(req UpdateSecretRequest) error {
+	if !req.FieldValueSet && !req.ClearField {
+		if req.Field != "" || len(req.Values) > 0 {
+			return fmt.Errorf("secret update field requires --value or --clear-field")
+		}
+		return nil
+	}
+	if req.Field == "" {
+		return fmt.Errorf("secret update requires --field")
+	}
+	if req.FieldValueSet && req.ClearField {
+		return fmt.Errorf("secret update cannot use --value with --clear-field")
+	}
+	return nil
+}
+
+func normalizedTokens(values []string, kind string) ([]string, error) {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return nil, fmt.Errorf("%s is required", kind)
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out, nil
+}
+
+func addTokens(existing, additions []string) []string {
+	if len(additions) == 0 {
+		return existing
+	}
+	seen := make(map[string]struct{}, len(existing)+len(additions))
+	out := make([]string, 0, len(existing)+len(additions))
+	for _, value := range existing {
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	for _, value := range additions {
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
+}
+
+func removeTokens(existing, removals []string) []string {
+	if len(removals) == 0 {
+		return existing
+	}
+	remove := make(map[string]struct{}, len(removals))
+	for _, value := range removals {
+		remove[value] = struct{}{}
+	}
+	out := make([]string, 0, len(existing))
+	for _, value := range existing {
+		if _, exists := remove[value]; !exists {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
+func ensureSelectorAvailable(items []vaultmodel.Item, itemIndex int, selector string) error {
+	for i, item := range items {
+		if i == itemIndex {
+			continue
+		}
+		if item.ID == selector || item.Title == selector || hasString(item.Aliases, selector) {
+			return fmt.Errorf("item selector already exists: %s", selector)
+		}
+	}
+	return nil
+}
+
+func publicFieldValue(fieldType vaultmodel.FieldType, values []string) (json.RawMessage, error) {
+	switch fieldType {
+	case vaultmodel.FieldTypeString, vaultmodel.FieldTypeURL, vaultmodel.FieldTypeDate:
+		if len(values) != 1 {
+			return nil, fmt.Errorf("public field requires exactly one --value")
+		}
+		return json.Marshal(values[0])
+	case vaultmodel.FieldTypeStringList:
+		return json.Marshal(values)
+	case vaultmodel.FieldTypeJSON:
+		if len(values) != 1 {
+			return nil, fmt.Errorf("json public field requires exactly one --value")
+		}
+		if !json.Valid([]byte(values[0])) {
+			return nil, fmt.Errorf("public field value must be valid json")
+		}
+		return json.RawMessage(values[0]), nil
+	default:
+		return nil, fmt.Errorf("unsupported public field type: %s", fieldType)
+	}
 }
 
 func itemIDFromTitle(title string) string {
