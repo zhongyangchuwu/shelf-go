@@ -1,15 +1,15 @@
-// Package vaultmodel defines the v2 in-memory vault model, built-in templates,
+// Package vaultmodel defines the in-memory item-vault model, built-in templates,
 // validation, and runtime index construction.
 //
-// It has no dependencies on CLI, app, project, or v1 vault packages.
+// It has no dependencies on CLI, app, or project packages.
 package vaultmodel
 
 import "encoding/json"
 
-// Version is the v2 vault format version.
+// Version is the current item-vault schema version.
 const Version = 2
 
-// CurrentVersion is an alias for Version, retained for compatibility.
+// CurrentVersion names the schema version written by Shelf.
 const CurrentVersion = Version
 
 // Template identifiers for built-in templates.
@@ -51,7 +51,7 @@ const (
 	PurposeScopes        = "scopes"
 )
 
-// Vault is the top-level v2 vault document.
+// Vault is the top-level item-vault document.
 type Vault struct {
 	Version   int        `json:"version"`
 	Items     []Item     `json:"items"`

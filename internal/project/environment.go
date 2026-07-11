@@ -2,7 +2,7 @@ package project
 
 import "fmt"
 
-func ChildEnv(parent []string, entries []Binding) []string {
+func ChildEnv(parent []string, entries []ResolvedBinding) []string {
 	values := make(map[string]string, len(entries))
 	for _, entry := range entries {
 		values[entry.EnvName] = entry.Value
@@ -36,7 +36,7 @@ func ChildEnv(parent []string, entries []Binding) []string {
 	return out
 }
 
-func EnvOverrideWarnings(entries []Binding, parent []string) []string {
+func EnvOverrideWarnings(entries []ResolvedBinding, parent []string) []string {
 	parentNames := make(map[string]struct{}, len(parent))
 	for _, item := range parent {
 		key, _, ok := splitEnv(item)

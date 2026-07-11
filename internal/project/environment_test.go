@@ -6,7 +6,7 @@ import (
 )
 
 func TestChildEnvReplacesParentAndAppendsMissing(t *testing.T) {
-	entries := []Binding{{EnvName: "APP_TOKEN", Value: "secret"}, {EnvName: "NEW_TOKEN", Value: "new-secret"}}
+	entries := []ResolvedBinding{{EnvName: "APP_TOKEN", Value: "secret"}, {EnvName: "NEW_TOKEN", Value: "new-secret"}}
 	env := ChildEnv([]string{"APP_TOKEN=parent", "OTHER=value"}, entries)
 	want := []string{"APP_TOKEN=secret", "OTHER=value", "NEW_TOKEN=new-secret"}
 	if strings.Join(env, "\n") != strings.Join(want, "\n") {
@@ -15,7 +15,7 @@ func TestChildEnvReplacesParentAndAppendsMissing(t *testing.T) {
 }
 
 func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
-	entries := []Binding{{EnvName: "APP_TOKEN", Value: "secret"}}
+	entries := []ResolvedBinding{{EnvName: "APP_TOKEN", Value: "secret"}}
 	env := ChildEnv([]string{"APP_TOKEN", "OTHER=value"}, entries)
 	want := []string{"OTHER=value", "APP_TOKEN=secret"}
 	if strings.Join(env, "\n") != strings.Join(want, "\n") {
@@ -24,7 +24,7 @@ func TestChildEnvDropsMalformedParentEntryWhenShelfOverridesIt(t *testing.T) {
 }
 
 func TestEnvOverrideWarningsReportsParentConflicts(t *testing.T) {
-	entries := []Binding{{EnvName: "APP_TOKEN", Value: "secret"}, {EnvName: "NEW_TOKEN", Value: "new-secret"}}
+	entries := []ResolvedBinding{{EnvName: "APP_TOKEN", Value: "secret"}, {EnvName: "NEW_TOKEN", Value: "new-secret"}}
 	warnings := EnvOverrideWarnings(entries, []string{"APP_TOKEN=parent", "OTHER=value"})
 	if len(warnings) != 1 || warnings[0] != "warn APP_TOKEN overrides existing environment variable" {
 		t.Fatalf("unexpected warnings: %#v", warnings)

@@ -8,12 +8,12 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
-func TestResolveV2BindingsResolvesItemField(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
+func TestResolveBindingsResolvesItemField(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(diagnostics) > 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
 	}
@@ -31,13 +31,13 @@ func TestResolveV2BindingsResolvesItemField(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMultiple(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
-	m.AddV2Binding(V2Binding{Item: "openai", Field: "credential", Env: "OPENAI_API_KEY"})
+func TestResolveBindingsMultiple(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
+	m.AddBinding(Binding{Item: "openai", Field: "credential", Env: "OPENAI_API_KEY"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(diagnostics) > 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
 	}
@@ -46,12 +46,12 @@ func TestResolveV2BindingsMultiple(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMissingItemIsFail(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "nonexistent", Field: "credential", Env: "GITHUB_TOKEN"})
+func TestResolveBindingsMissingItemIsFail(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "nonexistent", Field: "credential", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on missing item, got %d", len(entries))
 	}
@@ -60,13 +60,13 @@ func TestResolveV2BindingsMissingItemIsFail(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMissingItemOptionalIsWarn(t *testing.T) {
-	v := validV2Vault(t)
+func TestResolveBindingsMissingItemOptionalIsWarn(t *testing.T) {
+	v := validVault(t)
 	f := false
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "nonexistent", Field: "credential", Env: "GITHUB_TOKEN", Required: &f})
+	m := New()
+	m.AddBinding(Binding{Item: "nonexistent", Field: "credential", Env: "GITHUB_TOKEN", Required: &f})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on optional missing item, got %d", len(entries))
 	}
@@ -75,12 +75,12 @@ func TestResolveV2BindingsMissingItemOptionalIsWarn(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMissingFieldIsFail(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "nonexistent", Env: "GITHUB_TOKEN"})
+func TestResolveBindingsMissingFieldIsFail(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on missing field, got %d", len(entries))
 	}
@@ -89,13 +89,13 @@ func TestResolveV2BindingsMissingFieldIsFail(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMissingFieldOptionalIsWarn(t *testing.T) {
-	v := validV2Vault(t)
+func TestResolveBindingsMissingFieldOptionalIsWarn(t *testing.T) {
+	v := validVault(t)
 	f := false
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "nonexistent", Env: "GITHUB_TOKEN", Required: &f})
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "GITHUB_TOKEN", Required: &f})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on optional missing field, got %d", len(entries))
 	}
@@ -104,8 +104,8 @@ func TestResolveV2BindingsMissingFieldOptionalIsWarn(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMissingValueIsFail(t *testing.T) {
-	v := validV2Vault(t)
+func TestResolveBindingsMissingValueIsFail(t *testing.T) {
+	v := validVault(t)
 	// Empty the credential value on the github item
 	for i, item := range v.Items {
 		if item.ID == "github" {
@@ -116,10 +116,10 @@ func TestResolveV2BindingsMissingValueIsFail(t *testing.T) {
 			}
 		}
 	}
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on missing value, got %d", len(entries))
 	}
@@ -128,8 +128,8 @@ func TestResolveV2BindingsMissingValueIsFail(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsMissingValueOptionalIsWarn(t *testing.T) {
-	v := validV2Vault(t)
+func TestResolveBindingsMissingValueOptionalIsWarn(t *testing.T) {
+	v := validVault(t)
 	for i, item := range v.Items {
 		if item.ID == "github" {
 			for j, f := range item.Fields {
@@ -140,10 +140,10 @@ func TestResolveV2BindingsMissingValueOptionalIsWarn(t *testing.T) {
 		}
 	}
 	f := false
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN", Required: &f})
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN", Required: &f})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings on optional missing value, got %d", len(entries))
 	}
@@ -152,13 +152,13 @@ func TestResolveV2BindingsMissingValueOptionalIsWarn(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsDuplicateEnvIsFail(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "credential", Env: "DUPLICATE_ENV"})
-	m.AddV2Binding(V2Binding{Item: "openai", Field: "credential", Env: "DUPLICATE_ENV"})
+func TestResolveBindingsDuplicateEnvIsFail(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "DUPLICATE_ENV"})
+	m.AddBinding(Binding{Item: "openai", Field: "credential", Env: "DUPLICATE_ENV"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	// First binding resolves, second fails with conflict
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 binding on duplicate env, got %d", len(entries))
@@ -175,12 +175,12 @@ func TestResolveV2BindingsDuplicateEnvIsFail(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsNonSecretFieldIsFail(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "provider", Env: "GITHUB_PROVIDER"})
+func TestResolveBindingsNonSecretFieldIsFail(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "provider", Env: "GITHUB_PROVIDER"})
 
-	entries, diagnostics := ResolveV2Bindings(m, v)
+	entries, diagnostics := ResolveBindings(m, v)
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 bindings for non-secret field, got %d", len(entries))
 	}
@@ -189,13 +189,13 @@ func TestResolveV2BindingsNonSecretFieldIsFail(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsDuplicateEnvDiagnosticsAreValueFree(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "github", Field: "credential", Env: "DUPE"})
-	m.AddV2Binding(V2Binding{Item: "openai", Field: "credential", Env: "DUPE"})
+func TestResolveBindingsDuplicateEnvDiagnosticsAreValueFree(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "github", Field: "credential", Env: "DUPE"})
+	m.AddBinding(Binding{Item: "openai", Field: "credential", Env: "DUPE"})
 
-	_, diagnostics := ResolveV2Bindings(m, v)
+	_, diagnostics := ResolveBindings(m, v)
 	for _, d := range diagnostics {
 		if strings.Contains(d.Message, "ghp_") || strings.Contains(d.Message, "sk-") {
 			t.Fatalf("diagnostic leaks secret value: %+v", d)
@@ -203,14 +203,14 @@ func TestResolveV2BindingsDuplicateEnvDiagnosticsAreValueFree(t *testing.T) {
 	}
 }
 
-func TestResolveV2BindingsAllDiagnosticsAreValueFree(t *testing.T) {
-	v := validV2Vault(t)
-	m := NewV2()
-	m.AddV2Binding(V2Binding{Item: "nonexistent", Field: "credential", Env: "NOPE"})
-	m.AddV2Binding(V2Binding{Item: "github", Field: "nonexistent", Env: "NOPE2"})
-	m.AddV2Binding(V2Binding{Item: "github", Field: "provider", Env: "PUB"})
+func TestResolveBindingsAllDiagnosticsAreValueFree(t *testing.T) {
+	v := validVault(t)
+	m := New()
+	m.AddBinding(Binding{Item: "nonexistent", Field: "credential", Env: "NOPE"})
+	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "NOPE2"})
+	m.AddBinding(Binding{Item: "github", Field: "provider", Env: "PUB"})
 
-	_, diagnostics := ResolveV2Bindings(m, v)
+	_, diagnostics := ResolveBindings(m, v)
 	for _, d := range diagnostics {
 		if strings.Contains(d.Message, "ghp_") || strings.Contains(d.Message, "sk-") {
 			t.Fatalf("diagnostic leaks secret value: %+v", d)
@@ -229,7 +229,7 @@ func hasDiagnostic(diagnostics []Diagnostic, want Diagnostic) bool {
 	return false
 }
 
-func validV2Vault(t *testing.T) vaultmodel.Vault {
+func validVault(t *testing.T) vaultmodel.Vault {
 	t.Helper()
 	return vaultmodel.Vault{
 		Version:   vaultmodel.Version,

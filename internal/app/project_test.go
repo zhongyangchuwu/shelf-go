@@ -13,23 +13,23 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
-func TestProjectExportV2WithTempV2Vault(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportWithTempVault(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	_, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err != nil {
-		t.Fatalf("v2 project export: %v", err)
+		t.Fatalf("item project export: %v", err)
 	}
 }
 
-func TestProjectExportV2MaterializesBoundFields(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportMaterializesBoundFields(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err != nil {
-		t.Fatalf("v2 project export: %v", err)
+		t.Fatalf("item project export: %v", err)
 	}
 	if !strings.Contains(result.Output, "GITHUB_TOKEN=") {
 		t.Fatalf("expected GITHUB_TOKEN in export, got:\n%s", result.Output)
@@ -39,13 +39,13 @@ func TestProjectExportV2MaterializesBoundFields(t *testing.T) {
 	}
 }
 
-func TestProjectExportV2ShellFormat(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportShellFormat(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err != nil {
-		t.Fatalf("v2 project export shell: %v", err)
+		t.Fatalf("item project export shell: %v", err)
 	}
 	if !strings.Contains(result.Output, "export GITHUB_TOKEN=") {
 		t.Fatalf("expected shell export, got:\n%s", result.Output)
@@ -53,8 +53,8 @@ func TestProjectExportV2ShellFormat(t *testing.T) {
 }
 
 func TestProjectExportRejectsRemovedEnvFormat(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	_, err := testApp().ProjectExport(configPath, vaultPath, "env")
 	if err == nil || !strings.Contains(err.Error(), "unsupported format: env") {
@@ -62,25 +62,25 @@ func TestProjectExportRejectsRemovedEnvFormat(t *testing.T) {
 	}
 }
 
-func TestProjectExportV2JSONFormat(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportJSONFormat(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	result, err := testApp().ProjectExport(configPath, vaultPath, "json")
 	if err != nil {
-		t.Fatalf("v2 project export json: %v", err)
+		t.Fatalf("item project export json: %v", err)
 	}
 	if !strings.Contains(result.Output, `"GITHUB_TOKEN"`) {
 		t.Fatalf("expected JSON export, got:\n%s", result.Output)
 	}
 }
 
-func TestProjectExportV2FailsOnMissingItem(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportFailsOnMissingItem(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
-	m := project.NewV2()
-	m.AddV2Binding(project.V2Binding{Item: "nonexistent", Field: "credential", Env: "NOPE"})
+	m := project.New()
+	m.AddBinding(project.Binding{Item: "nonexistent", Field: "credential", Env: "NOPE"})
 	manifestPath := filepath.Join(dir, ".shelf.json")
 	if err := project.Save(manifestPath, m); err != nil {
 		t.Fatalf("save manifest: %v", err)
@@ -95,12 +95,12 @@ func TestProjectExportV2FailsOnMissingItem(t *testing.T) {
 	}
 }
 
-func TestProjectExportV2FailsOnMissingField(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportFailsOnMissingField(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
-	m := project.NewV2()
-	m.AddV2Binding(project.V2Binding{Item: "github", Field: "nonexistent", Env: "NOPE"})
+	m := project.New()
+	m.AddBinding(project.Binding{Item: "github", Field: "nonexistent", Env: "NOPE"})
 	manifestPath := filepath.Join(dir, ".shelf.json")
 	if err := project.Save(manifestPath, m); err != nil {
 		t.Fatalf("save manifest: %v", err)
@@ -115,13 +115,13 @@ func TestProjectExportV2FailsOnMissingField(t *testing.T) {
 	}
 }
 
-func TestProjectExportV2OptionalMissingDoesNotFail(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportOptionalMissingDoesNotFail(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	optional := false
-	m := project.NewV2()
-	m.AddV2Binding(project.V2Binding{Item: "nonexistent", Field: "credential", Env: "NOPE", Required: &optional})
+	m := project.New()
+	m.AddBinding(project.Binding{Item: "nonexistent", Field: "credential", Env: "NOPE", Required: &optional})
 	manifestPath := filepath.Join(dir, ".shelf.json")
 	if err := project.Save(manifestPath, m); err != nil {
 		t.Fatalf("save manifest: %v", err)
@@ -138,13 +138,13 @@ func TestProjectExportV2OptionalMissingDoesNotFail(t *testing.T) {
 	}
 }
 
-func TestProjectExportV2DuplicateEnvIsValueFreeDiagnostic(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectExportDuplicateEnvIsValueFreeDiagnostic(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
-	m := project.NewV2()
-	m.AddV2Binding(project.V2Binding{Item: "github", Field: "credential", Env: "DUPE"})
-	m.AddV2Binding(project.V2Binding{Item: "openai", Field: "credential", Env: "DUPE"})
+	m := project.New()
+	m.AddBinding(project.Binding{Item: "github", Field: "credential", Env: "DUPE"})
+	m.AddBinding(project.Binding{Item: "openai", Field: "credential", Env: "DUPE"})
 	manifestPath := filepath.Join(dir, ".shelf.json")
 	if err := project.Save(manifestPath, m); err != nil {
 		t.Fatalf("save manifest: %v", err)
@@ -159,13 +159,13 @@ func TestProjectExportV2DuplicateEnvIsValueFreeDiagnostic(t *testing.T) {
 	}
 }
 
-func TestProjectStatusV2ReportsDiagnostics(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectStatusReportsDiagnostics(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	out, err := testApp().ProjectStatus(configPath, vaultPath, nil)
 	if err != nil {
-		t.Fatalf("v2 project status: %v", err)
+		t.Fatalf("item project status: %v", err)
 	}
 	if !strings.Contains(out, "github.credential") {
 		t.Fatalf("expected binding in status output, got:\n%s", out)
@@ -175,22 +175,22 @@ func TestProjectStatusV2ReportsDiagnostics(t *testing.T) {
 	}
 }
 
-func TestProjectStatusV2ValueFree(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectStatusValueFree(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	out, err := testApp().ProjectStatus(configPath, vaultPath, nil)
 	if err != nil {
-		t.Fatalf("v2 project status: %v", err)
+		t.Fatalf("item project status: %v", err)
 	}
 	if strings.Contains(out, "ghp_fake_token") || strings.Contains(out, "sk-") {
 		t.Fatalf("status output leaked secret values:\n%s", out)
 	}
 }
 
-func TestProjectRunV2InjectsSecret(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectRunInjectsSecret(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	var stdout strings.Builder
 	var stderr strings.Builder
@@ -203,16 +203,16 @@ func TestProjectRunV2InjectsSecret(t *testing.T) {
 		Stderr:     &stderr,
 	})
 	if err != nil {
-		t.Fatalf("v2 project run: %v (stderr: %s)", err, stderr.String())
+		t.Fatalf("item project run: %v (stderr: %s)", err, stderr.String())
 	}
 	if stdout.String() != "ghp_fake_token" {
 		t.Fatalf("expected 'ghp_fake_token', got %q", stdout.String())
 	}
 }
 
-func TestProjectRunV2ReturnsChildExitCode(t *testing.T) {
-	dir, configPath := setupV2ProjectTest(t)
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+func TestProjectRunReturnsChildExitCode(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
 
 	var stdout, stderr strings.Builder
 	err := testApp().ProjectRun(ProjectRunRequest{
@@ -233,9 +233,9 @@ func TestProjectRunV2ReturnsChildExitCode(t *testing.T) {
 
 // --- helpers ---
 
-// setupV2ProjectTest creates a temp dir with a v2 .shelf.json manifest
-// and a v2 vault JSON. Returns (dir, configPath).
-func setupV2ProjectTest(t *testing.T) (dir, configPath string) {
+// setupProjectTest creates a temp dir with a item .shelf.json manifest
+// and a item vault JSON. Returns (dir, configPath).
+func setupProjectTest(t *testing.T) (dir, configPath string) {
 	t.Helper()
 	dir = t.TempDir()
 
@@ -255,7 +255,7 @@ func setupV2ProjectTest(t *testing.T) (dir, configPath string) {
 			t.Fatalf("git init: %v\n%s", err, out)
 		}
 	}
-	vaultPath := filepath.Join(dir, "vault.v2.json")
+	vaultPath := filepath.Join(dir, "vault.json")
 	// Write a minimal YAML config pointing at the vault path
 	configPath = filepath.Join(dir, "shelf-test-config.yaml")
 	configContent := "vault_path: " + vaultPath + "\n"
@@ -263,7 +263,7 @@ func setupV2ProjectTest(t *testing.T) (dir, configPath string) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	// Create v2 vault
+	// Create item vault
 	vault := vaultmodel.Vault{
 		Version:   vaultmodel.Version,
 		Templates: vaultmodel.BuiltInTemplates(),
@@ -294,9 +294,9 @@ func setupV2ProjectTest(t *testing.T) (dir, configPath string) {
 		t.Fatalf("save vault: %v", err)
 	}
 
-	// Create v2 manifest
-	m := project.NewV2()
-	if err := m.AddV2Binding(project.V2Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"}); err != nil {
+	// Create item manifest
+	m := project.New()
+	if err := m.AddBinding(project.Binding{Item: "github", Field: "credential", Env: "GITHUB_TOKEN"}); err != nil {
 		t.Fatalf("add binding: %v", err)
 	}
 	manifestPath := filepath.Join(dir, ".shelf.json")

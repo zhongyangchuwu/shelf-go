@@ -8,7 +8,7 @@ import (
 )
 
 func TestBindingIsRequiredDefaultsToTrue(t *testing.T) {
-	binding := V2Binding{}
+	binding := Binding{}
 	if !binding.IsRequired() {
 		t.Fatalf("expected default required=true")
 	}
@@ -20,7 +20,7 @@ func TestBindingIsRequiredDefaultsToTrue(t *testing.T) {
 }
 
 func TestBindingKey(t *testing.T) {
-	binding := V2Binding{Item: "github", Field: "credential"}
+	binding := Binding{Item: "github", Field: "credential"}
 	if binding.Key() != "github.credential" {
 		t.Fatalf("unexpected key: %s", binding.Key())
 	}
@@ -31,7 +31,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	required := false
 	original := Manifest{
 		Version: CurrentVersion,
-		Bindings: []V2Binding{{
+		Bindings: []Binding{{
 			Item:     "item_openai",
 			Field:    "value",
 			Env:      "OPENAI_API_KEY",
@@ -68,7 +68,7 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 	}{
 		{
 			name:    "unsupported version",
-			in:      Manifest{Version: 2, Bindings: []V2Binding{}},
+			in:      Manifest{Version: 2, Bindings: []Binding{}},
 			wantErr: "unsupported project manifest version",
 		},
 		{
@@ -78,22 +78,22 @@ func TestValidateRejectsInvalidManifestRules(t *testing.T) {
 		},
 		{
 			name:    "missing item",
-			in:      Manifest{Version: CurrentVersion, Bindings: []V2Binding{{Field: "value", Env: "APP_TOKEN"}}},
+			in:      Manifest{Version: CurrentVersion, Bindings: []Binding{{Field: "value", Env: "APP_TOKEN"}}},
 			wantErr: "item is required",
 		},
 		{
 			name:    "missing field",
-			in:      Manifest{Version: CurrentVersion, Bindings: []V2Binding{{Item: "item_app", Env: "APP_TOKEN"}}},
+			in:      Manifest{Version: CurrentVersion, Bindings: []Binding{{Item: "item_app", Env: "APP_TOKEN"}}},
 			wantErr: "field is required",
 		},
 		{
 			name:    "invalid env",
-			in:      Manifest{Version: CurrentVersion, Bindings: []V2Binding{{Item: "item_app", Field: "value", Env: "1INVALID"}}},
+			in:      Manifest{Version: CurrentVersion, Bindings: []Binding{{Item: "item_app", Field: "value", Env: "1INVALID"}}},
 			wantErr: "invalid bindings[0].env",
 		},
 		{
 			name: "duplicate item field",
-			in: Manifest{Version: CurrentVersion, Bindings: []V2Binding{
+			in: Manifest{Version: CurrentVersion, Bindings: []Binding{
 				{Item: "item_app", Field: "value", Env: "APP_TOKEN"},
 				{Item: "item_app", Field: "value", Env: "APP_TOKEN_2"},
 			}},
@@ -130,9 +130,6 @@ func TestLoadRejectsUnknownFields(t *testing.T) {
 
 func TestNewCreatesItemManifest(t *testing.T) {
 	m := New()
-	if !m.IsV2() {
-		t.Fatalf("expected IsV2 to be true")
-	}
 	if m.Version != CurrentVersion {
 		t.Fatalf("expected version %d, got %d", CurrentVersion, m.Version)
 	}

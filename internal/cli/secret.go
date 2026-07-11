@@ -43,11 +43,11 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 			req.Title = args[0]
 			req.In = cmd.InOrStdin()
 			configPath, vaultPath := runtimePaths(cmd)
-			id, err := appSvc.CreateSecretV2(configPath, vaultPath, req)
+			id, err := appSvc.CreateSecret(configPath, vaultPath, req)
 			if err != nil {
 				return err
 			}
-			info, err := appSvc.SecretInfoV2(configPath, vaultPath, id)
+			info, err := appSvc.SecretInfo(configPath, vaultPath, id)
 			if err != nil {
 				return err
 			}
@@ -84,7 +84,7 @@ func newSecretSetCmd(appSvc *app.App) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			return appSvc.SetSecretFieldV2(configPath, vaultPath, app.SetSecretFieldRequest{Selector: args[0], Field: field, Stdin: stdin, In: cmd.InOrStdin()})
+			return appSvc.SetSecretField(configPath, vaultPath, app.SetSecretFieldRequest{Selector: args[0], Field: field, Stdin: stdin, In: cmd.InOrStdin()})
 		},
 	}
 	cmd.Flags().StringVar(&field, "field", "", "Field id; defaults to the template primary secret field")
@@ -110,7 +110,7 @@ func newSecretGetCmd(appSvc *app.App) *cobra.Command {
 				selector = args[0]
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			value, err := appSvc.GetSecretFieldV2(configPath, vaultPath, app.GetSecretFieldRequest{Selector: selector, Env: envName, Field: field})
+			value, err := appSvc.GetSecretField(configPath, vaultPath, app.GetSecretFieldRequest{Selector: selector, Env: envName, Field: field})
 			if err != nil {
 				return err
 			}
@@ -142,7 +142,7 @@ func newSecretCopyCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.
 				selector = args[0]
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			value, err := appSvc.GetSecretFieldV2(configPath, vaultPath, app.GetSecretFieldRequest{Selector: selector, Env: envName, Field: field})
+			value, err := appSvc.GetSecretField(configPath, vaultPath, app.GetSecretFieldRequest{Selector: selector, Env: envName, Field: field})
 			if err != nil {
 				return err
 			}
@@ -169,7 +169,7 @@ func newSecretExportCmd(appSvc *app.App) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			out, err := appSvc.ExportSecretItemsV2(configPath, vaultPath, app.ExportSecretItemsRequest{Labels: labels, Format: format})
+			out, err := appSvc.ExportSecretItems(configPath, vaultPath, app.ExportSecretItemsRequest{Labels: labels, Format: format})
 			if err != nil {
 				return err
 			}
@@ -196,7 +196,7 @@ func newSecretListCmd(appSvc *app.App) *cobra.Command {
 				query = args[0]
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			items, err := appSvc.ListSecretItemsV2(configPath, vaultPath, app.ListSecretItemsRequest{Query: query, Long: long})
+			items, err := appSvc.ListSecretItems(configPath, vaultPath, app.ListSecretItemsRequest{Query: query, Long: long})
 			if err != nil {
 				return err
 			}
@@ -215,7 +215,7 @@ func newSecretInfoCmd(appSvc *app.App) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
-			info, err := appSvc.SecretInfoV2(configPath, vaultPath, args[0])
+			info, err := appSvc.SecretInfo(configPath, vaultPath, args[0])
 			if err != nil {
 				return err
 			}
@@ -241,14 +241,14 @@ func newSecretRmCmd(appSvc *app.App) *cobra.Command {
 				return fmt.Errorf("secret rm requires --yes")
 			}
 			configPath, vaultPath := runtimePaths(cmd)
-			return appSvc.RemoveSecretV2(configPath, vaultPath, args[0])
+			return appSvc.RemoveSecret(configPath, vaultPath, args[0])
 		},
 	}
 	cmd.Flags().BoolVar(&yes, "yes", false, "Confirm removal")
 	return cmd
 }
 
-func renderSecretCreateResult(w io.Writer, info app.SecretInfoV2) {
+func renderSecretCreateResult(w io.Writer, info app.SecretInfo) {
 	cliui.Summary(w, "created secret", []cliui.SummaryField{
 		{Key: "title", Value: info.Title},
 		{Key: "id", Value: info.ID},
@@ -257,7 +257,7 @@ func renderSecretCreateResult(w io.Writer, info app.SecretInfoV2) {
 	})
 }
 
-func renderSecretList(w io.Writer, items []app.SecretItemSummaryV2, long bool) {
+func renderSecretList(w io.Writer, items []app.SecretItemSummary, long bool) {
 	if len(items) == 0 {
 		cliui.Empty(w, "No secrets found.")
 		return
@@ -280,7 +280,7 @@ func renderSecretList(w io.Writer, items []app.SecretItemSummaryV2, long bool) {
 	cliui.RenderTable(w, cliui.Table{Title: "Secrets", Headers: []string{"ID", "TITLE", "TEMPLATE", "ENV", "VALUE"}, Rows: rows})
 }
 
-func primaryEnvFromInfo(info app.SecretInfoV2) string {
+func primaryEnvFromInfo(info app.SecretInfo) string {
 	for _, field := range info.Fields {
 		if (field.ID == "value_env" || field.ID == "credential_env") && field.Value != "" {
 			return field.Value

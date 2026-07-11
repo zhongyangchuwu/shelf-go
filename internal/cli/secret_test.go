@@ -34,8 +34,8 @@ func runShelfWithClipboard(t *testing.T, copier *recordingClipboard, args ...str
 	return out.String(), err
 }
 
-func TestSecretCreateSetGetListInfoRmV2(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "vault.v2.json")
+func TestSecretCreateSetGetListInfoRm(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "vault.json")
 	out, err := runShelfWithInput(t, "fake-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin")
 	if err != nil {
 		t.Fatalf("create: %v\n%s", err, out)
@@ -124,8 +124,8 @@ func TestSecretCopyClipboardFailureDoesNotPrintValue(t *testing.T) {
 	}
 }
 
-func TestSecretCreateProfileOpenAIV2(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "vault.v2.json")
+func TestSecretCreateProfileOpenAI(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "vault.json")
 	out, err := runShelfWithInput(t, "fake-openai-key", "--vault", data, "secret", "create", "openai", "--profile", "openai", "--stdin")
 	if err != nil {
 		t.Fatalf("create profile: %v\n%s", err, out)
@@ -154,7 +154,7 @@ func TestSecretCreateProfileOpenAIV2(t *testing.T) {
 }
 
 func TestSecretSetRequiresStdinAndCanSetPublicField(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "vault.v2.json")
+	data := filepath.Join(t.TempDir(), "vault.json")
 	if _, err := runShelf(t, "--vault", data, "secret", "create", "app", "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestSecretSetRequiresStdinAndCanSetPublicField(t *testing.T) {
 }
 
 func TestSecretEnvSelectorAmbiguityIsValueFree(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "vault.v2.json")
+	data := filepath.Join(t.TempDir(), "vault.json")
 	if _, err := runShelfWithInput(t, "first-secret", "--vault", data, "secret", "create", "one", "--env", "DUPLICATE_ENV", "--stdin"); err != nil {
 		t.Fatalf("create one: %v", err)
 	}
@@ -196,17 +196,17 @@ func TestSecretEnvSelectorAmbiguityIsValueFree(t *testing.T) {
 	}
 }
 
-func TestSecretLegacyMutatingCommandsRemovedV2(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "vault.v2.json")
+func TestSecretLegacyMutatingCommandsRemoved(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "vault.json")
 	for _, subcommand := range []string{"add", "edit"} {
 		_, err := runShelf(t, "--vault", data, "secret", subcommand)
 		if err == nil {
-			t.Fatalf("secret %s should be removed in v2", subcommand)
+			t.Fatalf("secret %s should be removed", subcommand)
 		}
 	}
 }
 
-func TestSecretExportV2_ByLabelShell(t *testing.T) {
+func TestSecretExport_ByLabelShell(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"db":    {env: "DATABASE_URL", value: "postgres://db", labels: []string{"db", "prod"}},
 		"local": {env: "LOCAL_VAR", value: "local-val", labels: []string{"local"}},
@@ -236,7 +236,7 @@ func TestSecretExportRejectsRemovedEnvFormat(t *testing.T) {
 	}
 }
 
-func TestSecretExportV2_ByLabelJSON(t *testing.T) {
+func TestSecretExport_ByLabelJSON(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"a": {env: "ALPHA", value: "one", labels: []string{"all"}},
 		"b": {env: "BETA", value: "two", labels: []string{"all"}},
@@ -253,7 +253,7 @@ func TestSecretExportV2_ByLabelJSON(t *testing.T) {
 	}
 }
 
-func TestSecretExportV2_MultipleLabelsAND(t *testing.T) {
+func TestSecretExport_MultipleLabelsAND(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"shared":     {env: "SHARED_VAR", value: "shared-val", labels: []string{"prod", "us-east"}},
 		"onlyprod":   {env: "ONLY_PROD", value: "prod-val", labels: []string{"prod"}},
@@ -274,7 +274,7 @@ func TestSecretExportV2_MultipleLabelsAND(t *testing.T) {
 	}
 }
 
-func TestSecretExportV2_NoMatchingLabels(t *testing.T) {
+func TestSecretExport_NoMatchingLabels(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"x": {env: "X_VAR", value: "x-val", labels: []string{"alpha"}},
 	})
@@ -287,7 +287,7 @@ func TestSecretExportV2_NoMatchingLabels(t *testing.T) {
 	}
 }
 
-func TestSecretExportV2_NoLabelsFlag(t *testing.T) {
+func TestSecretExport_NoLabelsFlag(t *testing.T) {
 	data := writeLabeledVault(t, nil)
 	_, err := runShelf(t, "--vault", data, "secret", "export")
 	if err == nil {
@@ -295,7 +295,7 @@ func TestSecretExportV2_NoLabelsFlag(t *testing.T) {
 	}
 }
 
-func TestSecretExportV2_DuplicateEnvNameIsValueFree(t *testing.T) {
+func TestSecretExport_DuplicateEnvNameIsValueFree(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"first":  {env: "DUPE", value: "secret-one", labels: []string{"group"}},
 		"second": {env: "DUPE", value: "secret-two", labels: []string{"group"}},
@@ -312,17 +312,17 @@ func TestSecretExportV2_DuplicateEnvNameIsValueFree(t *testing.T) {
 	}
 }
 
-// labeledItem describes a v2 secret item for test vault creation.
+// labeledItem describes a secret item for test vault creation.
 type labeledItem struct {
 	env    string
 	value  string
 	labels []string
 }
 
-// writeLabeledVault creates a v2 vault JSON file with labeled generic_secret items.
+// writeLabeledVault creates a item vault JSON file with labeled generic_secret items.
 func writeLabeledVault(t *testing.T, items map[string]labeledItem) string {
 	t.Helper()
-	data := filepath.Join(t.TempDir(), "vault.v2.json")
+	data := filepath.Join(t.TempDir(), "vault.json")
 	repo := vaultjson.NewRepository(data)
 	vault := vaultmodel.Vault{Version: vaultmodel.CurrentVersion}
 	// Sort titles for deterministic output in vault.

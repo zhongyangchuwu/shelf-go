@@ -21,7 +21,7 @@ func (JSONCodec) Decode(content []byte) (vaultmodel.Vault, error) {
 	dec.DisallowUnknownFields()
 	var vault vaultmodel.Vault
 	if err := dec.Decode(&vault); err != nil {
-		return vaultmodel.Vault{}, fmt.Errorf("invalid v2 vault JSON: %w", err)
+		return vaultmodel.Vault{}, fmt.Errorf("invalid item vault JSON: %w", err)
 	}
 	if err := rejectTrailingJSON(dec); err != nil {
 		return vaultmodel.Vault{}, err
@@ -48,7 +48,7 @@ func rejectTrailingJSON(dec *json.Decoder) error {
 	if err := dec.Decode(&extra); err == io.EOF {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("invalid v2 vault JSON trailing data: %w", err)
+		return fmt.Errorf("invalid item vault JSON trailing data: %w", err)
 	}
-	return fmt.Errorf("invalid v2 vault JSON: trailing data")
+	return fmt.Errorf("invalid item vault JSON: trailing data")
 }

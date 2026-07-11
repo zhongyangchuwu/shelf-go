@@ -7,8 +7,8 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
-func ResolveV2Bindings(manifest Manifest, vault vaultmodel.Vault) ([]Binding, []Diagnostic) {
-	entries := make([]Binding, 0, len(manifest.Bindings))
+func ResolveBindings(manifest Manifest, vault vaultmodel.Vault) ([]ResolvedBinding, []Diagnostic) {
+	entries := make([]ResolvedBinding, 0, len(manifest.Bindings))
 	diagnostics := make([]Diagnostic, 0)
 	envOwners := map[string]string{}
 	items := itemsByID(vault.Items)
@@ -17,12 +17,12 @@ func ResolveV2Bindings(manifest Manifest, vault vaultmodel.Vault) ([]Binding, []
 		path := binding.Key()
 		item, ok := items[binding.Item]
 		if !ok {
-			appendMissingV2Diagnostic(&diagnostics, binding, path, "missing item")
+			appendMissingDiagnostic(&diagnostics, binding, path, "missing item")
 			continue
 		}
 		field, ok := fieldByID(item, binding.Field)
 		if !ok {
-			appendMissingV2Diagnostic(&diagnostics, binding, path, "missing field")
+			appendMissingDiagnostic(&diagnostics, binding, path, "missing field")
 			continue
 		}
 		if field.Sensitivity != vaultmodel.SensitivitySecret {
@@ -30,7 +30,7 @@ func ResolveV2Bindings(manifest Manifest, vault vaultmodel.Vault) ([]Binding, []
 			continue
 		}
 		if len(field.Value) == 0 {
-			appendMissingV2Diagnostic(&diagnostics, binding, path, "missing value")
+			appendMissingDiagnostic(&diagnostics, binding, path, "missing value")
 			continue
 		}
 		value, err := util.ValueString(field.Value)
@@ -43,7 +43,7 @@ func ResolveV2Bindings(manifest Manifest, vault vaultmodel.Vault) ([]Binding, []
 			continue
 		}
 		envOwners[binding.Env] = path
-		entries = append(entries, Binding{Path: path, EnvName: binding.Env, Value: value})
+		entries = append(entries, ResolvedBinding{Path: path, EnvName: binding.Env, Value: value})
 	}
 	return entries, diagnostics
 }
@@ -65,7 +65,7 @@ func fieldByID(item vaultmodel.Item, fieldID string) (vaultmodel.Field, bool) {
 	return vaultmodel.Field{}, false
 }
 
-func appendMissingV2Diagnostic(diagnostics *[]Diagnostic, binding V2Binding, path, message string) {
+func appendMissingDiagnostic(diagnostics *[]Diagnostic, binding Binding, path, message string) {
 	if binding.IsRequired() {
 		*diagnostics = append(*diagnostics, Diagnostic{Status: "fail", Path: path, Message: message + " required"})
 		return

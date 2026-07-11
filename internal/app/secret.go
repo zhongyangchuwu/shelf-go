@@ -55,7 +55,7 @@ type ExportSecretItemsRequest struct {
 	Format string
 }
 
-type SecretItemSummaryV2 struct {
+type SecretItemSummary struct {
 	ID       string `json:"id"`
 	Title    string `json:"title"`
 	Template string `json:"template"`
@@ -63,7 +63,7 @@ type SecretItemSummaryV2 struct {
 	ValueSet bool   `json:"value_set"`
 }
 
-type SecretFieldInfoV2 struct {
+type SecretFieldInfo struct {
 	ID          string                 `json:"id"`
 	Type        vaultmodel.FieldType   `json:"type"`
 	Sensitivity vaultmodel.Sensitivity `json:"sensitivity"`
@@ -71,20 +71,20 @@ type SecretFieldInfoV2 struct {
 	ValueSet    bool                   `json:"value_set"`
 }
 
-type SecretInfoV2 struct {
-	ID       string              `json:"id"`
-	Title    string              `json:"title"`
-	Template string              `json:"template"`
-	Labels   []string            `json:"labels,omitempty"`
-	Aliases  []string            `json:"aliases,omitempty"`
-	Fields   []SecretFieldInfoV2 `json:"fields"`
+type SecretInfo struct {
+	ID       string            `json:"id"`
+	Title    string            `json:"title"`
+	Template string            `json:"template"`
+	Labels   []string          `json:"labels,omitempty"`
+	Aliases  []string          `json:"aliases,omitempty"`
+	Fields   []SecretFieldInfo `json:"fields"`
 }
 
-func (a *App) CreateSecretV2(configPathFlag, vaultPathFlag string, req CreateSecretRequest) (string, error) {
+func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecretRequest) (string, error) {
 	if strings.TrimSpace(req.Title) == "" {
 		return "", fmt.Errorf("title is required")
 	}
-	vault, repo, err := a.loadV2VaultForWrite(configPathFlag, vaultPathFlag)
+	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -108,11 +108,11 @@ func (a *App) CreateSecretV2(configPathFlag, vaultPathFlag string, req CreateSec
 	return item.ID, nil
 }
 
-func (a *App) SetSecretFieldV2(configPathFlag, vaultPathFlag string, req SetSecretFieldRequest) error {
+func (a *App) SetSecretField(configPathFlag, vaultPathFlag string, req SetSecretFieldRequest) error {
 	if !req.Stdin {
 		return fmt.Errorf("secret set requires --stdin")
 	}
-	vault, repo, err := a.loadV2VaultForWrite(configPathFlag, vaultPathFlag)
+	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err
 	}
@@ -140,8 +140,8 @@ func (a *App) SetSecretFieldV2(configPathFlag, vaultPathFlag string, req SetSecr
 	return nil
 }
 
-func (a *App) GetSecretFieldV2(configPathFlag, vaultPathFlag string, req GetSecretFieldRequest) (string, error) {
-	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+func (a *App) GetSecretField(configPathFlag, vaultPathFlag string, req GetSecretFieldRequest) (string, error) {
+	vault, err := a.loadVaultForRead(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -186,12 +186,12 @@ func (a *App) GetSecretFieldV2(configPathFlag, vaultPathFlag string, req GetSecr
 	return valueForOutput(field)
 }
 
-func (a *App) ListSecretItemsV2(configPathFlag, vaultPathFlag string, req ListSecretItemsRequest) ([]SecretItemSummaryV2, error) {
-	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+func (a *App) ListSecretItems(configPathFlag, vaultPathFlag string, req ListSecretItemsRequest) ([]SecretItemSummary, error) {
+	vault, err := a.loadVaultForRead(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]SecretItemSummaryV2, 0, len(vault.Items))
+	out := make([]SecretItemSummary, 0, len(vault.Items))
 	for _, item := range vault.Items {
 		if req.Query != "" && !matchesItemQuery(item, req.Query) {
 			continue
@@ -211,18 +211,18 @@ func (a *App) ListSecretItemsV2(configPathFlag, vaultPathFlag string, req ListSe
 		if err != nil {
 			return nil, fmt.Errorf("list %s: %w", item.Title, err)
 		}
-		out = append(out, SecretItemSummaryV2{ID: item.ID, Title: item.Title, Template: item.Template, Env: env, ValueSet: len(field.Value) > 0})
+		out = append(out, SecretItemSummary{ID: item.ID, Title: item.Title, Template: item.Template, Env: env, ValueSet: len(field.Value) > 0})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
 	return out, nil
 }
 
-func (a *App) ExportSecretItemsV2(configPathFlag, vaultPathFlag string, req ExportSecretItemsRequest) (string, error) {
+func (a *App) ExportSecretItems(configPathFlag, vaultPathFlag string, req ExportSecretItemsRequest) (string, error) {
 	labels := normalizeLabels(req.Labels)
 	if len(labels) == 0 {
 		return "", fmt.Errorf("secret export requires --label")
 	}
-	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+	vault, err := a.loadVaultForRead(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -240,18 +240,18 @@ func (a *App) ExportSecretItemsV2(configPathFlag, vaultPathFlag string, req Expo
 	}
 }
 
-func (a *App) SecretInfoV2(configPathFlag, vaultPathFlag, selector string) (SecretInfoV2, error) {
-	vault, err := a.loadV2VaultForRead(configPathFlag, vaultPathFlag)
+func (a *App) SecretInfo(configPathFlag, vaultPathFlag, selector string) (SecretInfo, error) {
+	vault, err := a.loadVaultForRead(configPathFlag, vaultPathFlag)
 	if err != nil {
-		return SecretInfoV2{}, err
+		return SecretInfo{}, err
 	}
 	_, item, err := resolveItem(vault, selector)
 	if err != nil {
-		return SecretInfoV2{}, err
+		return SecretInfo{}, err
 	}
-	info := SecretInfoV2{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...)}
+	info := SecretInfo{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...)}
 	for _, field := range item.Fields {
-		fieldInfo := SecretFieldInfoV2{ID: field.ID, Type: field.Type, Sensitivity: field.Sensitivity, ValueSet: len(field.Value) > 0}
+		fieldInfo := SecretFieldInfo{ID: field.ID, Type: field.Type, Sensitivity: field.Sensitivity, ValueSet: len(field.Value) > 0}
 		if field.Sensitivity == vaultmodel.SensitivityPublic && len(field.Value) > 0 {
 			fieldInfo.Value, _ = valueForOutput(field)
 		}
@@ -260,8 +260,8 @@ func (a *App) SecretInfoV2(configPathFlag, vaultPathFlag, selector string) (Secr
 	return info, nil
 }
 
-func (a *App) RemoveSecretV2(configPathFlag, vaultPathFlag, selector string) error {
-	vault, repo, err := a.loadV2VaultForWrite(configPathFlag, vaultPathFlag)
+func (a *App) RemoveSecret(configPathFlag, vaultPathFlag, selector string) error {
+	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return err
 	}
@@ -273,21 +273,21 @@ func (a *App) RemoveSecretV2(configPathFlag, vaultPathFlag, selector string) err
 	return repo.Save(vault)
 }
 
-func (a *App) loadV2VaultForRead(configPathFlag, vaultPathFlag string) (vaultmodel.Vault, error) {
-	path, err := v2VaultPath(configPathFlag, vaultPathFlag)
+func (a *App) loadVaultForRead(configPathFlag, vaultPathFlag string) (vaultmodel.Vault, error) {
+	path, err := vaultPath(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return vaultmodel.Vault{}, err
 	}
 	repo := vaultjson.NewRepository(path)
 	vault, err := repo.Load()
 	if errors.Is(err, os.ErrNotExist) {
-		return vaultmodel.Vault{}, fmt.Errorf("v2 vault not found: %s", path)
+		return vaultmodel.Vault{}, fmt.Errorf("item vault not found: %s", path)
 	}
 	return vault, err
 }
 
-func (a *App) loadV2VaultForWrite(configPathFlag, vaultPathFlag string) (vaultmodel.Vault, vaultjson.Repository, error) {
-	path, err := v2VaultPath(configPathFlag, vaultPathFlag)
+func (a *App) loadVaultForWrite(configPathFlag, vaultPathFlag string) (vaultmodel.Vault, vaultjson.Repository, error) {
+	path, err := vaultPath(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return vaultmodel.Vault{}, vaultjson.Repository{}, err
 	}
@@ -299,7 +299,7 @@ func (a *App) loadV2VaultForWrite(configPathFlag, vaultPathFlag string) (vaultmo
 	return vault, repo, err
 }
 
-func v2VaultPath(configPathFlag, vaultPathFlag string) (string, error) {
+func vaultPath(configPathFlag, vaultPathFlag string) (string, error) {
 	runtime, err := config.Resolve(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err

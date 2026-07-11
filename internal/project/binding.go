@@ -7,7 +7,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/util"
 )
 
-type Binding struct {
+type ResolvedBinding struct {
 	Path    string
 	EnvName string
 	Value   string
@@ -34,7 +34,7 @@ func HasFailures(diagnostics []Diagnostic) bool {
 	return false
 }
 
-func BindingsForRender(entries []Binding) []util.Binding {
+func BindingsForRender(entries []ResolvedBinding) []util.Binding {
 	bindings := make([]util.Binding, 0, len(entries))
 	for _, entry := range entries {
 		bindings = append(bindings, util.Binding{EnvName: entry.EnvName, Value: entry.Value})

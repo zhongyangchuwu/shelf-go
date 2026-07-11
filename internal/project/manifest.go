@@ -11,11 +11,11 @@ const (
 )
 
 type Manifest struct {
-	Version  int         `json:"version"`
-	Bindings []V2Binding `json:"bindings,omitempty"`
+	Version  int       `json:"version"`
+	Bindings []Binding `json:"bindings,omitempty"`
 }
 
-type V2Binding struct {
+type Binding struct {
 	Item     string `json:"item"`
 	Field    string `json:"field"`
 	Env      string `json:"env"`
@@ -25,37 +25,29 @@ type V2Binding struct {
 
 func (m Manifest) MarshalJSON() ([]byte, error) {
 	type itemManifest struct {
-		Version  int         `json:"version"`
-		Bindings []V2Binding `json:"bindings"`
+		Version  int       `json:"version"`
+		Bindings []Binding `json:"bindings"`
 	}
 	bindings := m.Bindings
 	if bindings == nil {
-		bindings = []V2Binding{}
+		bindings = []Binding{}
 	}
 	return json.Marshal(itemManifest{Version: m.Version, Bindings: bindings})
 }
 
 func New() Manifest {
-	return Manifest{Version: CurrentVersion, Bindings: []V2Binding{}}
+	return Manifest{Version: CurrentVersion, Bindings: []Binding{}}
 }
 
-func NewV2() Manifest {
-	return New()
-}
-
-func (m Manifest) IsV2() bool {
-	return true
-}
-
-func (b V2Binding) IsRequired() bool {
+func (b Binding) IsRequired() bool {
 	return b.Required == nil || *b.Required
 }
 
-func (b V2Binding) Key() string {
+func (b Binding) Key() string {
 	return b.Item + "." + b.Field
 }
 
-func (m *Manifest) AddV2Binding(binding V2Binding) error {
+func (m *Manifest) AddBinding(binding Binding) error {
 	for _, existing := range m.Bindings {
 		if existing.Item == binding.Item && existing.Field == binding.Field {
 			return fmt.Errorf("binding with item %q and field %q already exists", binding.Item, binding.Field)
@@ -65,7 +57,7 @@ func (m *Manifest) AddV2Binding(binding V2Binding) error {
 	return nil
 }
 
-func (m *Manifest) RemoveV2Binding(key string) bool {
+func (m *Manifest) RemoveBinding(key string) bool {
 	for i, binding := range m.Bindings {
 		if binding.Key() == key {
 			m.Bindings = append(m.Bindings[:i], m.Bindings[i+1:]...)
@@ -75,11 +67,11 @@ func (m *Manifest) RemoveV2Binding(key string) bool {
 	return false
 }
 
-func (m Manifest) FindV2Binding(key string) (V2Binding, bool) {
+func (m Manifest) FindBinding(key string) (Binding, bool) {
 	for _, binding := range m.Bindings {
 		if binding.Key() == key {
 			return binding, true
 		}
 	}
-	return V2Binding{}, false
+	return Binding{}, false
 }

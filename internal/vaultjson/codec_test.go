@@ -159,7 +159,7 @@ func TestRepositoryLoadMissingFileReturnsNotExist(t *testing.T) {
 	}
 }
 func TestRepositorySaveThenLoad(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "vault.v2.json")
+	path := filepath.Join(t.TempDir(), "vault.json")
 	repo := NewRepository(path)
 	vault := validVault()
 
@@ -187,7 +187,7 @@ func TestRepositorySaveThenLoad(t *testing.T) {
 }
 
 func TestRepositorySaveLoadAndBackup(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "vault.v2.json")
+	path := filepath.Join(t.TempDir(), "vault.json")
 	repo := NewRepository(path)
 	if err := repo.Save(validVault()); err != nil {
 		t.Fatalf("first save: %v", err)
@@ -218,7 +218,7 @@ func TestRepositorySaveLoadAndBackup(t *testing.T) {
 }
 
 func TestRepositorySaveRejectsInvalidVaultWithoutReplacingTarget(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "vault.v2.json")
+	path := filepath.Join(t.TempDir(), "vault.json")
 	repo := NewRepository(path)
 	if err := repo.Save(validVault()); err != nil {
 		t.Fatalf("first save: %v", err)
