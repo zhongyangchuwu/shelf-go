@@ -187,9 +187,9 @@ func newProjectExportCmd(appSvc *app.App) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&format, "format", "shell", "Output format")
+	cmd.Flags().StringVar(&format, "format", "shell", "Output format: shell or json")
 	_ = cmd.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
-		return []cobra.Completion{"env", "shell", "json"}, cobra.ShellCompDirectiveNoFileComp
+		return []cobra.Completion{"shell", "json"}, cobra.ShellCompDirectiveNoFileComp
 	})
 	return cmd
 }

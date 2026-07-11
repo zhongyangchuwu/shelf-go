@@ -18,12 +18,13 @@ This milestone is for local development and personal use. Public repository/rele
 - [x] Phase 41: Milestone Audit and Migration Scope Reset
 - [x] Phase 42: Item Vault Plain JSON Cutover
 - [x] CLI output polish and `internal/cliui` extraction
+- [x] Phase 43: Secret Copy and Export Simplification
 
-## Current Wrap-up Scope
+## Next Local Work
 
-**Goal:** Review code structure, docs, planning artifacts, and local file hygiene so v0.2.0 is coherent for continued local use.
+**Status:** Ready for the next local CLI UX or staged refactor phase.
 
-**Status:** In progress
+**Most recent artifacts:** `.planning/phases/043-secret-copy-and-export-simplification/VERIFICATION.md`, `.planning/phases/043-secret-copy-and-export-simplification/CAPTURE.md`
 
 **No release work:** no public repository preparation, GoReleaser packaging, GitHub Release, or tag workflow for v0.2.0.
 
@@ -37,11 +38,11 @@ This milestone is for local development and personal use. Public repository/rele
 - Added Lip Gloss-backed `internal/cliui` for human command output.
 - Verified tests, vet, and architecture lint.
 
-## Remaining Local Wrap-up
+## Completed Phase 43
 
-- [ ] Finish code/framework review and apply must-fix cleanup.
-- [ ] Finish `.planning/` and `docs/` cleanup.
-- [ ] Run installed-binary smoke tests.
+- Added clipboard-only `secret copy`, including WSL bridge fallback.
+- Removed `env` export; `shell` and `json` remain.
+- Verified full checks and an installed-binary temporary-vault clipboard smoke test.
 
 ## Deferred After v0.2.0
 
@@ -54,4 +55,4 @@ This milestone is for local development and personal use. Public repository/rele
 7. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-10 during local v0.2.0 wrap-up*
+*Last updated: 2026-07-10 after secret copy and export simplification*

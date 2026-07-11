@@ -460,10 +460,7 @@ func TestExportSecretItemsV2_BySingleLabel(t *testing.T) {
 		genericSecretItem("item_cache", "Cache Key", "REDIS_URL", "redis://localhost", []string{"cache", "prod"}),
 		genericSecretItem("item_local", "Local Config", "LOCAL_VAR", "local-value", []string{"local"}),
 	})
-	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"prod"},
-		Format: "env",
-	})
+	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export by label: %v", err)
 	}
@@ -484,10 +481,7 @@ func TestExportSecretItemsV2_RepeatedLabelsUseAND(t *testing.T) {
 		genericSecretItem("item_b", "Item B", "B_VAR", "value-b", []string{"db", "staging"}),
 		genericSecretItem("item_c", "Item C", "C_VAR", "value-c", []string{"prod"}),
 	})
-	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"db", "prod"},
-		Format: "env",
-	})
+	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"db", "prod"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export by AND labels: %v", err)
 	}
@@ -506,10 +500,7 @@ func TestExportSecretItemsV2_NoMatchingLabels(t *testing.T) {
 	vaultPath, configPath := writeV2VaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "value-a", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"nonexistent"},
-		Format: "env",
-	})
+	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"nonexistent"}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "no items matched") {
 		t.Fatalf("expected no-match error, got: %v", err)
 	}
@@ -520,10 +511,7 @@ func TestExportSecretItemsV2_SkipsMissingEnvName(t *testing.T) {
 		genericSecretItem("item_a", "Item A", "", "value-a", []string{"prod"}),
 		genericSecretItem("item_b", "Item B", "B_VAR", "value-b", []string{"prod"}),
 	})
-	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"prod"},
-		Format: "env",
-	})
+	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export with missing env item: %v", err)
 	}
@@ -539,10 +527,7 @@ func TestExportSecretItemsV2_MissingValue(t *testing.T) {
 	vaultPath, configPath := writeV2VaultWithItems(t, []vaultmodel.Item{
 		emptyValueSecretItem("item_a", "Item A", "A_VAR", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"prod"},
-		Format: "env",
-	})
+	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "missing value") {
 		t.Fatalf("expected missing value error, got: %v", err)
 	}
@@ -553,10 +538,7 @@ func TestExportSecretItemsV2_DuplicateEnvName(t *testing.T) {
 		genericSecretItem("item_a", "Item A", "DUPE_VAR", "value-a", []string{"prod"}),
 		genericSecretItem("item_b", "Item B", "DUPE_VAR", "value-b", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"prod"},
-		Format: "env",
-	})
+	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "duplicate env name") {
 		t.Fatalf("expected duplicate env error, got: %v", err)
 	}
@@ -571,10 +553,7 @@ func TestExportSecretItemsV2_SortsByEnvName(t *testing.T) {
 		genericSecretItem("item_a", "A Item", "AAA_VAR", "aaa-value", []string{"all"}),
 		genericSecretItem("item_m", "M Item", "MMM_VAR", "mmm-value", []string{"all"}),
 	})
-	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"all"},
-		Format: "env",
-	})
+	out, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"all"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export: %v", err)
 	}
@@ -582,13 +561,13 @@ func TestExportSecretItemsV2_SortsByEnvName(t *testing.T) {
 	if len(lines) != 3 {
 		t.Fatalf("expected 3 lines, got %d:\n%s", len(lines), out)
 	}
-	if !strings.HasPrefix(lines[0], "AAA_VAR=") {
+	if !strings.HasPrefix(lines[0], "export AAA_VAR=") {
 		t.Fatalf("first line should be AAA_VAR, got: %s", lines[0])
 	}
-	if !strings.HasPrefix(lines[1], "MMM_VAR=") {
+	if !strings.HasPrefix(lines[1], "export MMM_VAR=") {
 		t.Fatalf("second line should be MMM_VAR, got: %s", lines[1])
 	}
-	if !strings.HasPrefix(lines[2], "ZZZ_VAR=") {
+	if !strings.HasPrefix(lines[2], "export ZZZ_VAR=") {
 		t.Fatalf("third line should be ZZZ_VAR, got: %s", lines[2])
 	}
 }
@@ -650,10 +629,7 @@ func TestExportSecretItemsV2_ValueFreeDiagnostics(t *testing.T) {
 	vaultPath, configPath := writeV2VaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "actual-secret-value", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"nonexistent"},
-		Format: "env",
-	})
+	_, err := testApp().ExportSecretItemsV2(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"nonexistent"}, Format: "shell"})
 	if err != nil && (strings.Contains(err.Error(), "actual-secret-value") || strings.Contains(err.Error(), "sk-")) {
 		t.Fatalf("error leaked secret value: %v", err)
 	}

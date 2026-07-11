@@ -12,6 +12,7 @@ All notable user-facing changes will be recorded here.
 - Removed project configure TUI; project bindings are managed through CLI commands.
 - Replaced the old `group:key` secret CLI with item/field workflows.
 - Removed v0.2.0 release packaging/tag automation from active local-development scope; public release work is deferred to a future v1.0.0 milestone.
+- Removed the redundant `env` export format; `secret export` and `project export` now support `shell` and `json` only.
 
 ### Added
 
@@ -20,10 +21,10 @@ All notable user-facing changes will be recorded here.
 - Added template-based secret item commands: `secret create`, `set --stdin`, `get`, `list --long`, `info`, `rm --yes`, and label-scoped `secret export --label`.
 - Added concrete project item/field bindings for `project status`, `project add`, `project list`, `project rm`, `project export`, and `project run`.
 - Added shared Lip Gloss-backed human output rendering for secret create/list output.
+- Added `shelf secret copy` for clipboard-only interactive secret retrieval with value-free confirmation.
 
 ### Fixed
 
-- `env` export now rejects values containing newline, carriage return, or NUL instead of emitting ambiguous dotenv-style lines.
 - Secret creation now rejects metadata flags unsupported by the selected template instead of silently dropping them.
 
 ## 0.1.1 - 2026-06-27

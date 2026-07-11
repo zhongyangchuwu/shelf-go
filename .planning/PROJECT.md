@@ -12,10 +12,11 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] Built-in age/v1 compatibility, v1 manager, v1 migration/import/export, and project configure TUI were removed for the personal-use CLI direction.
 - [x] Local workstation config now points at `/home/han/.local/share/shelf/vault.json`, copied from the previous item sidecar after backup.
 - [x] Human-facing secret list/create output is routed through `internal/cliui`.
+- [x] `secret copy` provides clipboard-only interactive retrieval while `secret get` remains scriptable stdout output.
 
 ### Active
 
-- [ ] Finish local v0.2.0 wrap-up: code/framework review, docs/planning cleanup, file hygiene, and installed-binary smoke tests.
+- [ ] Complete the next local CLI UX or staged refactor phase; no public release work is planned for v0.2.0.
 
 ### Out of Scope
 
@@ -36,6 +37,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 
 - `internal/cli`: Cobra command surface.
 - `internal/cliui`: Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables.
+- `internal/clipboard`: system clipboard boundary for the explicit `secret copy` workflow.
 - `internal/app`: application workflows.
 - `internal/vaultmodel`: item/field/template/profile model and validation.
 - `internal/vaultjson`: JSON item-vault codec/repository.
@@ -52,6 +54,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Drop v1 compatibility | Personal-use project; compatibility burden slows local iteration. | Removed v1 vault, manager, import/migrate/export, project selectors. |
 | Keep CLI before Web/TUI | CLI is the daily workflow and easiest to verify. | Active commands are setup, doctor, secret, project, completion. |
 | Defer public release work | Repository stays private/local until a future v1.0.0 milestone. | Removed v0.2.0 tag/release preparation from active scope. |
+| Copy through an explicit command | Interactive secret retrieval should not break stdout-based scripting. | `secret copy` writes only to the clipboard and returns value-free confirmation. |
 
 ---
-*Last updated: 2026-07-10 during local v0.2.0 wrap-up*
+*Last updated: 2026-07-10 during secret copy and export simplification*

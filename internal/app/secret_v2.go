@@ -233,8 +233,6 @@ func (a *App) ExportSecretItemsV2(configPathFlag, vaultPathFlag string, req Expo
 	switch req.Format {
 	case "", "shell":
 		return util.ShellBindings(bindings)
-	case "env":
-		return util.EnvBindings(bindings)
 	case "json":
 		return util.JSONBindings(bindings)
 	default:

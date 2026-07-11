@@ -181,8 +181,6 @@ func (a *App) ProjectExport(configPathFlag, vaultPathFlag, format string) (Proje
 
 	bindings := project.BindingsForRender(resolvedEntries)
 	switch format {
-	case "env":
-		result.Output, err = util.EnvBindings(bindings)
 	case "shell":
 		result.Output, err = util.ShellBindings(bindings)
 	case "json":

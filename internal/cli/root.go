@@ -3,9 +3,14 @@ package cli
 import (
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
+	"github.com/zhongyangchuwu/shelf-go/internal/clipboard"
 )
 
 func NewRootCmd(appSvc *app.App) *cobra.Command {
+	return newRootCmd(appSvc, clipboard.New())
+}
+
+func newRootCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "shelf",
 		Short:         "Shelf Go rewrite",
@@ -19,7 +24,7 @@ func NewRootCmd(appSvc *app.App) *cobra.Command {
 
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newSetupCmd(appSvc))
-	root.AddCommand(newSecretCmd(appSvc))
+	root.AddCommand(newSecretCmd(appSvc, clipboardWriter))
 	root.AddCommand(newDoctorCmd(appSvc))
 	root.AddCommand(newProjectCmd(appSvc))
 	return root

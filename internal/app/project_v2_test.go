@@ -17,7 +17,7 @@ func TestProjectExportV2WithTempV2Vault(t *testing.T) {
 	dir, configPath := setupV2ProjectTest(t)
 	vaultPath := filepath.Join(dir, "vault.v2.json")
 
-	_, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	_, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err != nil {
 		t.Fatalf("v2 project export: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestProjectExportV2MaterializesBoundFields(t *testing.T) {
 	dir, configPath := setupV2ProjectTest(t)
 	vaultPath := filepath.Join(dir, "vault.v2.json")
 
-	result, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err != nil {
 		t.Fatalf("v2 project export: %v", err)
 	}
@@ -49,6 +49,16 @@ func TestProjectExportV2ShellFormat(t *testing.T) {
 	}
 	if !strings.Contains(result.Output, "export GITHUB_TOKEN=") {
 		t.Fatalf("expected shell export, got:\n%s", result.Output)
+	}
+}
+
+func TestProjectExportRejectsRemovedEnvFormat(t *testing.T) {
+	dir, configPath := setupV2ProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.v2.json")
+
+	_, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	if err == nil || !strings.Contains(err.Error(), "unsupported format: env") {
+		t.Fatalf("expected removed env format error, got: %v", err)
 	}
 }
 
@@ -76,7 +86,7 @@ func TestProjectExportV2FailsOnMissingItem(t *testing.T) {
 		t.Fatalf("save manifest: %v", err)
 	}
 
-	result, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err == nil {
 		t.Fatal("expected error for missing item")
 	}
@@ -96,7 +106,7 @@ func TestProjectExportV2FailsOnMissingField(t *testing.T) {
 		t.Fatalf("save manifest: %v", err)
 	}
 
-	result, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err == nil {
 		t.Fatal("expected error for missing field")
 	}
@@ -116,7 +126,7 @@ func TestProjectExportV2OptionalMissingDoesNotFail(t *testing.T) {
 	if err := project.Save(manifestPath, m); err != nil {
 		t.Fatalf("save manifest: %v", err)
 	}
-	result, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err == nil {
 		t.Fatal("expected error for optional missing with no resolved entries")
 	}
@@ -140,7 +150,7 @@ func TestProjectExportV2DuplicateEnvIsValueFreeDiagnostic(t *testing.T) {
 		t.Fatalf("save manifest: %v", err)
 	}
 
-	result, err := testApp().ProjectExport(configPath, vaultPath, "env")
+	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
 	if err == nil {
 		t.Fatal("expected error for duplicate env")
 	}

@@ -58,6 +58,17 @@ shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]
 ```
 
+## `shelf secret copy`
+
+Copies a plaintext field value to the system clipboard without printing it. This is the interactive alternative to `secret get`; it does not replace stdout-oriented scripting workflows.
+
+```bash
+shelf secret copy <selector> [--field FIELD]
+shelf secret copy --env ENV [--field FIELD]
+```
+
+Clipboard initialization or write failures return an error and do not fall back to printing the value. On WSL, Shelf uses the Windows clipboard bridge (`clip.exe`); on Linux outside WSL, the clipboard backend requires `xclip` or `xsel`.
+
 ## `shelf secret list`
 
 Prints item metadata without secret values.
@@ -81,7 +92,7 @@ shelf secret info <selector>
 Materializes values for items that have all requested labels.
 
 ```bash
-shelf secret export --label LABEL [--label LABEL ...] [--format shell|env|json]
+shelf secret export --label LABEL [--label LABEL ...] [--format shell|json]
 ```
 
 Default format is `shell`:
@@ -92,7 +103,6 @@ source <(shelf secret export --label ai --format shell)
 
 Repeated labels use AND matching. Items without an explicit env-name field are skipped. Missing labels, missing secret values for exportable items, and duplicate env names fail with value-free diagnostics.
 
-`env` format rejects values containing newline, carriage return, or NUL. Use `shell` or `json` for values that need escaping.
 
 ## `shelf secret rm`
 
@@ -157,10 +167,9 @@ shelf project status
 Prints resolved project values in `shell`, `env`, or `json` format.
 
 ```bash
-shelf project export [--format shell|env|json]
+shelf project export [--format shell|json]
 ```
 
-`env` format rejects values containing newline, carriage return, or NUL. Use `shell` or `json` for values that need escaping.
 
 ## `shelf project run`
 

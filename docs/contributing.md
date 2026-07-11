@@ -55,6 +55,7 @@ cmd/shelf/           process entry point
 
 internal/cli/        Cobra command surface, flags, completions, and output routing
 internal/cliui/      Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
+internal/clipboard/  System clipboard adapter for explicit `secret copy` side effects
 internal/app/        application workflows for setup, doctor, secret, project, and run
 
 internal/vaultmodel/ item/field/template model, validation, profiles, and indexes
@@ -64,7 +65,7 @@ internal/config/     config and vault path resolution
 internal/util/       atomic write and env/shell/JSON binding formatting
 ```
 
-`docs/architecture.md` is the source of truth for dependency direction. Keep `internal/cli` command-family oriented; put reusable human output rendering in `internal/cliui` and reusable behavior in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
+`docs/architecture.md` is the source of truth for dependency direction. Keep `internal/cli` command-family oriented; put human output rendering in `internal/cliui`, explicit clipboard effects in `internal/clipboard`, and reusable behavior in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
 
 ## Documentation policy
 
@@ -82,7 +83,7 @@ internal/util/       atomic write and env/shell/JSON binding formatting
 - Return errors from package code instead of logging or exiting.
 - Use `cmd.OutOrStdout()` and `cmd.OutOrStderr()` in Cobra commands.
 - Use `internal/cliui` for human-facing command output.
-- Avoid printing secret values except in explicit value-producing commands: `secret get`, `secret export`, `project export`, and `project run`.
+- Avoid printing secret values except in explicit value-producing commands: `secret get`, `secret export`, `project export`, and `project run`. `secret copy` writes only to the clipboard and confirms without printing the value.
 
 ## Testing style
 

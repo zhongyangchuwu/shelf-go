@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -10,6 +12,27 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultjson"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
+
+type recordingClipboard struct {
+	text string
+	err  error
+}
+
+func (c *recordingClipboard) CopyText(text string) error {
+	c.text = text
+	return c.err
+}
+
+func runShelfWithClipboard(t *testing.T, copier *recordingClipboard, args ...string) (string, error) {
+	t.Helper()
+	cmd := newRootCmd(testApp(), copier)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs(args)
+	err := cmd.Execute()
+	return out.String(), err
+}
 
 func TestSecretCreateSetGetListInfoRmV2(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "vault.v2.json")
@@ -65,6 +88,39 @@ func TestSecretCreateSetGetListInfoRmV2(t *testing.T) {
 	}
 	if _, err := runShelf(t, "--vault", data, "secret", "get", "github"); err == nil {
 		t.Fatalf("get deleted item should fail")
+	}
+}
+
+func TestSecretCopyCopiesWithoutPrintingValue(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "vault.json")
+	if _, err := runShelfWithInput(t, "fake-copy-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	copier := &recordingClipboard{}
+	out, err := runShelfWithClipboard(t, copier, "--vault", data, "secret", "copy", "--env", "GITHUB_TOKEN")
+	if err != nil {
+		t.Fatalf("copy: %v\n%s", err, out)
+	}
+	if out != "Copied secret to clipboard.\n" {
+		t.Fatalf("copy output = %q", out)
+	}
+	if copier.text != "fake-copy-token" {
+		t.Fatalf("clipboard text = %q", copier.text)
+	}
+}
+
+func TestSecretCopyClipboardFailureDoesNotPrintValue(t *testing.T) {
+	data := filepath.Join(t.TempDir(), "vault.json")
+	if _, err := runShelfWithInput(t, "fake-copy-token", "--vault", data, "secret", "create", "github", "--env", "GITHUB_TOKEN", "--stdin"); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	copier := &recordingClipboard{err: errors.New("clipboard unavailable")}
+	out, err := runShelfWithClipboard(t, copier, "--vault", data, "secret", "copy", "github")
+	if err == nil || !strings.Contains(err.Error(), "copy secret to clipboard") {
+		t.Fatalf("expected copy error, got: %v", err)
+	}
+	if strings.Contains(out, "fake-copy-token") || strings.Contains(err.Error(), "fake-copy-token") {
+		t.Fatalf("copy failure leaked secret: out=%q err=%v", out, err)
 	}
 }
 
@@ -167,16 +223,16 @@ func TestSecretExportV2_ByLabelShell(t *testing.T) {
 	}
 }
 
-func TestSecretExportV2_ByLabelEnv(t *testing.T) {
+func TestSecretExportRejectsRemovedEnvFormat(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"api": {env: "API_KEY", value: "sk-abc123", labels: []string{"env", "test"}},
 	})
 	out, err := runShelf(t, "--vault", data, "secret", "export", "--label", "env", "--format", "env")
-	if err != nil {
-		t.Fatalf("export env: %v\n%s", err, out)
+	if err == nil || !strings.Contains(err.Error(), "unsupported export format: env") {
+		t.Fatalf("expected removed env format error, got: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "API_KEY=sk-abc123") {
-		t.Fatalf("missing API_KEY in env output:\n%s", out)
+	if strings.Contains(out, "sk-abc123") || strings.Contains(err.Error(), "sk-abc123") {
+		t.Fatalf("env format error leaked secret: out=%q err=%v", out, err)
 	}
 }
 
@@ -203,7 +259,7 @@ func TestSecretExportV2_MultipleLabelsAND(t *testing.T) {
 		"onlyprod":   {env: "ONLY_PROD", value: "prod-val", labels: []string{"prod"}},
 		"onlyregion": {env: "ONLY_REGION", value: "region-val", labels: []string{"us-east"}},
 	})
-	out, err := runShelf(t, "--vault", data, "secret", "export", "--label", "prod", "--label", "us-east", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "secret", "export", "--label", "prod", "--label", "us-east", "--format", "shell")
 	if err != nil {
 		t.Fatalf("export AND: %v\n%s", err, out)
 	}

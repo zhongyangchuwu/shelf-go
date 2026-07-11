@@ -53,6 +53,13 @@ shelf secret get openai
 shelf secret get --env OPENAI_API_KEY
 ```
 
+Copy a single value for interactive use without printing it:
+
+```bash
+shelf secret copy openai
+shelf secret copy --env OPENAI_API_KEY
+```
+
 Update fields from stdin:
 
 ```bash

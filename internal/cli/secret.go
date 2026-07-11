@@ -7,10 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
+	"github.com/zhongyangchuwu/shelf-go/internal/clipboard"
 	"github.com/zhongyangchuwu/shelf-go/internal/cliui"
 )
 
-func newSecretCmd(appSvc *app.App) *cobra.Command {
+func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "secret",
 		Short: "Manage secret items",
@@ -24,6 +25,7 @@ func newSecretCmd(appSvc *app.App) *cobra.Command {
 	cmd.AddCommand(newSecretCreateCmd(appSvc))
 	cmd.AddCommand(newSecretSetCmd(appSvc))
 	cmd.AddCommand(newSecretGetCmd(appSvc))
+	cmd.AddCommand(newSecretCopyCmd(appSvc, clipboardWriter))
 	cmd.AddCommand(newSecretListCmd(appSvc))
 	cmd.AddCommand(newSecretInfoCmd(appSvc))
 	cmd.AddCommand(newSecretExportCmd(appSvc))
@@ -123,6 +125,41 @@ func newSecretGetCmd(appSvc *app.App) *cobra.Command {
 	return cmd
 }
 
+func newSecretCopyCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Command {
+	var field, envName string
+	cmd := &cobra.Command{
+		Use:   "copy [selector]",
+		Short: "Copy a secret item field to the clipboard",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if envName != "" {
+				return cobra.MaximumNArgs(1)(cmd, args)
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			selector := ""
+			if len(args) > 0 {
+				selector = args[0]
+			}
+			configPath, vaultPath := runtimePaths(cmd)
+			value, err := appSvc.GetSecretFieldV2(configPath, vaultPath, app.GetSecretFieldRequest{Selector: selector, Env: envName, Field: field})
+			if err != nil {
+				return err
+			}
+			if err := clipboardWriter.CopyText(value); err != nil {
+				return fmt.Errorf("copy secret to clipboard: %w", err)
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "Copied secret to clipboard.")
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&field, "field", "", "Field id; defaults to the template primary secret field")
+	cmd.Flags().StringVar(&envName, "env", "", "Find the secret field by env-name field value")
+	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
+	return cmd
+}
+
 func newSecretExportCmd(appSvc *app.App) *cobra.Command {
 	var labels []string
 	var format string
@@ -141,9 +178,9 @@ func newSecretExportCmd(appSvc *app.App) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringArrayVar(&labels, "label", nil, "Label to export; repeat for AND matching")
-	cmd.Flags().StringVar(&format, "format", "shell", "Output format: shell, env, json")
+	cmd.Flags().StringVar(&format, "format", "shell", "Output format: shell or json")
 	_ = cmd.RegisterFlagCompletionFunc("label", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("format", cobra.FixedCompletions([]string{"shell", "env", "json"}, cobra.ShellCompDirectiveNoFileComp))
+	_ = cmd.RegisterFlagCompletionFunc("format", cobra.FixedCompletions([]string{"shell", "json"}, cobra.ShellCompDirectiveNoFileComp))
 	return cmd
 }
 

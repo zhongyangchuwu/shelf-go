@@ -9,6 +9,7 @@ cmd/shelf/                    process entry point
 
 internal/cli/                 Cobra command tree, flags, completions, and output routing
 internal/cliui/               Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
+internal/clipboard/           System clipboard adapter; uses `clip.exe` under WSL and github.com/atotto/clipboard elsewhere
 internal/app/                 application workflows for secret, project, setup, doctor, and run
 
 internal/vaultmodel/          item/field/template model, validation, profiles, and indexes
@@ -22,8 +23,9 @@ Dependency direction is enforced by `.go-arch-lint.yml`:
 
 ```text
 cmd/shelf -> cli
-cli -> app, cliui
+cli -> app, cliui, clipboard
 cliui -> lipgloss
+clipboard -> github.com/atotto/clipboard
 app -> config, project, util, vaultmodel, vaultjson
 project -> util, vaultmodel
 vaultjson -> vaultmodel, util
@@ -38,7 +40,7 @@ config -> yaml
 
 ## CLI workflows
 
-`internal/cli` parses command arguments and routes output through `internal/cliui` for human-facing titles, summaries, empty states, and tables. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
+`internal/cli` parses command arguments, routes human output through `internal/cliui`, and delegates the explicit `secret copy` side effect to `internal/clipboard`. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
 
 Active command groups:
 

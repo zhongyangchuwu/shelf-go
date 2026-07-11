@@ -107,11 +107,11 @@ func TestProjectExportUsesItemVault(t *testing.T) {
 	if _, err := runShelf(t, "--vault", data, "project", "add", "item_openai"); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "env")
+	out, err := runShelf(t, "--vault", data, "project", "export", "--format", "shell")
 	if err != nil {
-		t.Fatalf("project export env: %v\n%s", err, out)
+		t.Fatalf("project export shell: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "OPENAI_API_KEY=sk-project") {
+	if !strings.Contains(out, "export OPENAI_API_KEY=sk-project") {
 		t.Fatalf("project export missing value:\n%s", out)
 	}
 }

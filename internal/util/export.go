@@ -28,17 +28,6 @@ func ValueString(raw json.RawMessage) (string, error) {
 	return compact.String(), nil
 }
 
-func EnvBindings(entries []Binding) (string, error) {
-	var b strings.Builder
-	for _, entry := range entries {
-		if strings.ContainsAny(entry.Value, "\n\r\x00") {
-			return "", fmt.Errorf("cannot render %s in env format: value contains newline, carriage return, or NUL; use --format shell or --format json", entry.EnvName)
-		}
-		fmt.Fprintf(&b, "%s=%s\n", entry.EnvName, entry.Value)
-	}
-	return b.String(), nil
-}
-
 func ShellBindings(entries []Binding) (string, error) {
 	var b strings.Builder
 	for _, entry := range entries {
