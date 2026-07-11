@@ -18,6 +18,8 @@ vendors:
       - charm.land/lipgloss/v2/**
   atottoClipboard:
     in: github.com/atotto/clipboard
+  term:
+    in: golang.org/x/term
 
 components:
   cli:
@@ -47,6 +49,7 @@ deps:
       - clipboard
     canUse:
       - cobra
+      - term
 
   cliui:
     canUse:

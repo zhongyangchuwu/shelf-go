@@ -48,7 +48,7 @@ shelf secret info <selector>
 Set an env-name field when needed:
 
 ```bash
-printf %s OPENAI_API_KEY | shelf secret set openai --field credential_env --stdin
+printf %s OPENAI_API_KEY | shelf secret update openai --field credential_env
 ```
 
 ## Project manifest missing

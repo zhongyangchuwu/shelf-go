@@ -6,9 +6,9 @@ Make the local item catalog fully maintainable through explicit, scriptable CLI 
 
 ## Scope
 
-- Add `shelf secret update <selector>` backed by an app workflow; update title, add/remove labels, add/remove aliases, or one public field in one atomic operation.
-- Use `--field FIELD --value VALUE` for typed public-field changes, with repeatable values for string lists, and `--clear-field` for explicit clearing.
-- Keep secret field writes on the existing `secret set --stdin` path; update rejects attempts to write secret fields or to pass values without an explicit public field.
+- `shelf secret update <selector>` is the sole item-mutation command: it changes title, labels, aliases, or one field in one atomic operation.
+- A public field accepts explicit repeatable `--value`; any field without `--value` reads stdin. When stdin is an interactive terminal, Shelf prompts for the selected field and masks secret input.
+- Secret field values never accept `--value`; they must enter through stdin. Field writes default to the template primary secret field only when no other update flags are present.
 - Reuse vaultmodel validation and vaultjson atomic save; no workflow may mutate JSON directly. Preserve value-free output for list, info, diagnostics, completions, and edit confirmation.
 
 ## Non-Goals

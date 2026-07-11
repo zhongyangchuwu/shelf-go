@@ -41,8 +41,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 shelf setup
 shelf doctor
 shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
-shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD --value VALUE ... | --clear-field]
-shelf secret set <selector> [--field FIELD] --stdin
+shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
 shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]
 shelf secret copy <selector> [--field FIELD]
@@ -66,7 +65,7 @@ shelf completion <shell>
 | Component | Responsibility | Files |
 | --- | --- | --- |
 | Entry point | Construct and execute root command | `cmd/shelf/main.go` |
-| CLI | Cobra commands, flags, completions, output routing | `internal/cli` |
+| CLI | Cobra commands, flags, completions, output routing, and no-echo terminal field prompts | `internal/cli` |
 | CLI UI | Human output helpers for titles, summaries, empty states, and tables | `internal/cliui` |
 | App | Workflow orchestration for setup, doctor, secret, project, run | `internal/app` |
 | Clipboard | Copy secret values to the system clipboard without printing them | `internal/clipboard` |
@@ -76,7 +75,7 @@ shelf completion <shell>
 | Config | Config and vault path resolution | `internal/config` |
 | Util | Atomic write and env/shell/JSON binding formatting | `internal/util` |
 
-Dependency direction: `cli -> app/cliui/clipboard`; `cliui -> lipgloss`; `clipboard -> github.com/atotto/clipboard`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
+Dependency direction: `cli -> app/cliui/clipboard`, using Cobra and `golang.org/x/term` for command and terminal input adapters; `cliui -> lipgloss`; `clipboard -> github.com/atotto/clipboard`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
 ## Data Rules
 
 - Secret values enter through stdin only for writes.

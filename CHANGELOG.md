@@ -13,16 +13,17 @@ All notable user-facing changes will be recorded here.
 - Replaced the old `group:key` secret CLI with item/field workflows.
 - Removed v0.2.0 release packaging/tag automation from active local-development scope; public release work is deferred to a future v1.0.0 milestone.
 - Removed the redundant `env` export format; `secret export` and `project export` now support `shell` and `json` only.
+- Removed `secret set`; `secret update` is now the single item mutation command and reads field values from stdin by default.
 
 ### Added
 
 - Added `shelf setup` for config and item-vault JSON initialization.
 - Added item-vault `shelf doctor` checks for config, permissions, loadability, and completion state.
-- Added template-based secret item commands: `secret create`, `set --stdin`, `get`, `list --long`, `info`, `rm --yes`, and label-scoped `secret export --label`.
+- Added template-based secret item commands: `secret create`, `update`, `get`, `list --long`, `info`, `rm --yes`, and label-scoped `secret export --label`.
 - Added concrete project item/field bindings for `project status`, `project add`, `project list`, `project rm`, `project export`, and `project run`.
 - Added shared Lip Gloss-backed human output rendering for secret create/list output.
 - Added `shelf secret copy` for clipboard-only interactive secret retrieval with value-free confirmation.
-- Added `shelf secret update` for atomic title, label, alias, and typed public-field changes without editing vault JSON.
+- Added `shelf secret update` for atomic item title, label, alias, public field, and stdin field-value changes without editing vault JSON.
 
 ### Fixed
 

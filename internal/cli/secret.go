@@ -1,14 +1,17 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/clipboard"
 	"github.com/zhongyangchuwu/shelf-go/internal/cliui"
+	"golang.org/x/term"
 )
 
 func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Command {
@@ -24,7 +27,6 @@ func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Comm
 	}
 	cmd.AddCommand(newSecretCreateCmd(appSvc))
 	cmd.AddCommand(newSecretUpdateCmd(appSvc))
-	cmd.AddCommand(newSecretSetCmd(appSvc))
 	cmd.AddCommand(newSecretGetCmd(appSvc))
 	cmd.AddCommand(newSecretCopyCmd(appSvc, clipboardWriter))
 	cmd.AddCommand(newSecretListCmd(appSvc))
@@ -80,12 +82,21 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 	var req app.UpdateSecretRequest
 	cmd := &cobra.Command{
 		Use:   "update <selector>",
-		Short: "Update secret item metadata",
+		Short: "Update a secret item",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req.Selector = args[0]
 			req.TitleSet = cmd.Flags().Changed("title")
 			req.FieldValueSet = cmd.Flags().Changed("value")
+			metadataChanged := req.TitleSet || cmd.Flags().Changed("add-label") || cmd.Flags().Changed("remove-label") || cmd.Flags().Changed("add-alias") || cmd.Flags().Changed("remove-alias")
+			req.ReadField = !req.FieldValueSet && !req.ClearField && (cmd.Flags().Changed("field") || !metadataChanged)
+			if req.ReadField {
+				input, err := updateFieldInput(cmd, req.Field)
+				if err != nil {
+					return err
+				}
+				req.In = input
+			}
 			configPath, vaultPath := runtimePaths(cmd)
 			if err := appSvc.UpdateSecret(configPath, vaultPath, req); err != nil {
 				return err
@@ -99,7 +110,7 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 	cmd.Flags().StringArrayVar(&req.RemoveLabels, "remove-label", nil, "Label to remove; repeat for multiple labels")
 	cmd.Flags().StringArrayVar(&req.AddAliases, "add-alias", nil, "Alias to add; repeat for multiple aliases")
 	cmd.Flags().StringArrayVar(&req.RemoveAliases, "remove-alias", nil, "Alias to remove; repeat for multiple aliases")
-	cmd.Flags().StringVar(&req.Field, "field", "", "Public field id to update or clear")
+	cmd.Flags().StringVar(&req.Field, "field", "", "Field id; defaults to the primary secret field when reading stdin")
 	cmd.Flags().StringArrayVar(&req.Values, "value", nil, "Public field value; repeat for a string-list field")
 	cmd.Flags().BoolVar(&req.ClearField, "clear-field", false, "Clear the selected public field")
 	_ = cmd.RegisterFlagCompletionFunc("add-label", cobra.NoFileCompletions)
@@ -111,22 +122,23 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 	return cmd
 }
 
-func newSecretSetCmd(appSvc *app.App) *cobra.Command {
-	var field string
-	var stdin bool
-	cmd := &cobra.Command{
-		Use:   "set <selector>",
-		Short: "Set a secret item field from stdin",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath, vaultPath := runtimePaths(cmd)
-			return appSvc.SetSecretField(configPath, vaultPath, app.SetSecretFieldRequest{Selector: args[0], Field: field, Stdin: stdin, In: cmd.InOrStdin()})
-		},
+func updateFieldInput(cmd *cobra.Command, field string) (io.Reader, error) {
+	input := cmd.InOrStdin()
+	file, ok := input.(*os.File)
+	if !ok || !term.IsTerminal(int(file.Fd())) {
+		return input, nil
 	}
-	cmd.Flags().StringVar(&field, "field", "", "Field id; defaults to the template primary secret field")
-	cmd.Flags().BoolVar(&stdin, "stdin", false, "Read field value from stdin")
-	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
-	return cmd
+	prompt := field
+	if prompt == "" {
+		prompt = "the primary secret field"
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "Enter value for %s: ", prompt)
+	value, err := term.ReadPassword(int(file.Fd()))
+	fmt.Fprintln(cmd.ErrOrStderr())
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", prompt, err)
+	}
+	return bytes.NewReader(value), nil
 }
 
 func newSecretGetCmd(appSvc *app.App) *cobra.Command {

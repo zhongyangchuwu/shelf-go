@@ -60,11 +60,11 @@ shelf secret copy openai
 shelf secret copy --env OPENAI_API_KEY
 ```
 
-Update fields from stdin:
+Update a field from stdin; omit `--field` to update the primary secret field:
 
 ```bash
-printf %s "$NEW_TOKEN" | shelf secret set openai --stdin
-printf %s LLM_API_KEY | shelf secret set openai --field credential_env --stdin
+printf %s "$NEW_TOKEN" | shelf secret update openai
+printf %s LLM_API_KEY | shelf secret update openai --field credential_env
 ```
 
 Update item identity, organization, and public metadata without editing vault JSON:
@@ -76,7 +76,7 @@ shelf secret update openai-personal --field scopes --value responses --value emb
 shelf secret update openai-personal --field website --clear-field
 ```
 
-`secret update` accepts only public fields. Secret values continue to use `secret set --stdin`.
+`--value` is limited to public fields. If it is omitted for a selected field, Shelf reads stdin; on an interactive terminal it prompts without echoing input. Secret values never enter argv.
 
 Load a label group into the current shell without storing values in shell config:
 

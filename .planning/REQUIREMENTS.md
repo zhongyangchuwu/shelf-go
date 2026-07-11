@@ -8,7 +8,7 @@
 - [x] **ITEM-04**: Built-in age encryption, v1 encrypted vault code, v1 manager, import/migrate, and v1 export paths are removed from active product scope.
 - [x] **CLI-01**: `shelf setup` creates config and an empty item vault.
 - [x] **CLI-02**: `shelf doctor` validates config, permissions, vault loadability, and shell completion without printing values.
-- [x] **CLI-03**: `shelf secret create`, `set`, `get`, `list`, `info`, `export`, and `rm` operate over item vault JSON.
+- [x] **CLI-03**: `shelf secret create`, `update`, `get`, `list`, `info`, `export`, and `rm` operate over item vault JSON.
 - [x] **CLI-04**: Secret writes read values from stdin, not argv.
 - [x] **CLI-05**: Label-scoped export materializes only matching items with explicit env-name fields and keeps failure diagnostics value-free.
 - [x] **CLI-06**: Human-facing secret list/create output is centralized through `internal/cliui`.

@@ -28,7 +28,7 @@ shelf secret info openai
 
 ```bash
 shelf secret get openai
-printf %s "$NEW_OPENAI_API_KEY" | shelf secret set openai --stdin
+printf %s "$NEW_OPENAI_API_KEY" | shelf secret update openai
 ```
 
 ## 4. Export label groups for shell startup

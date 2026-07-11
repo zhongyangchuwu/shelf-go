@@ -153,19 +153,19 @@ func TestSecretCreateProfileOpenAI(t *testing.T) {
 	}
 }
 
-func TestSecretSetRequiresStdinAndCanSetPublicField(t *testing.T) {
+func TestSecretUpdateReadsPipedInput(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "vault.json")
 	if _, err := runShelf(t, "--vault", data, "secret", "create", "app", "--env", "APP_TOKEN"); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if _, err := runShelf(t, "--vault", data, "secret", "set", "app"); err == nil {
-		t.Fatalf("set without --stdin should fail")
+	if out, err := runShelfWithInput(t, "updated-token", "--vault", data, "secret", "update", "app"); err != nil || out != "Updated secret item.\n" {
+		t.Fatalf("update primary: out=%q err=%v", out, err)
 	}
-	if _, err := runShelfWithInput(t, "updated-token", "--vault", data, "secret", "set", "app", "--stdin"); err != nil {
-		t.Fatalf("set primary: %v", err)
+	if _, err := runShelfWithInput(t, "APP_TOKEN_RENAMED", "--vault", data, "secret", "update", "app", "--field", "value_env"); err != nil {
+		t.Fatalf("update public field: %v", err)
 	}
-	if _, err := runShelfWithInput(t, "APP_TOKEN_RENAMED", "--vault", data, "secret", "set", "app", "--field", "value_env", "--stdin"); err != nil {
-		t.Fatalf("set env field: %v", err)
+	if out, err := runShelf(t, "--vault", data, "secret", "update", "app", "--add-label", "local"); err != nil || out != "Updated secret item.\n" {
+		t.Fatalf("metadata-only update: out=%q err=%v", out, err)
 	}
 	out, err := runShelf(t, "--vault", data, "secret", "get", "--env", "APP_TOKEN_RENAMED")
 	if err != nil {
@@ -241,7 +241,7 @@ func TestSecretEnvSelectorAmbiguityIsValueFree(t *testing.T) {
 
 func TestSecretLegacyMutatingCommandsRemoved(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "vault.json")
-	for _, subcommand := range []string{"add", "edit"} {
+	for _, subcommand := range []string{"add", "edit", "set"} {
 		_, err := runShelf(t, "--vault", data, "secret", subcommand)
 		if err == nil {
 			t.Fatalf("secret %s should be removed", subcommand)

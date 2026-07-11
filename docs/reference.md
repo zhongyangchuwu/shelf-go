@@ -42,23 +42,15 @@ Useful public-field flags for `api_credential` are `--provider`, `--website`, `-
 
 `--template` accepts a vault template ID or alias; built-in aliases are `generic` and `api`.
 
-## `shelf secret set`
-
-Sets a field from stdin. Without `--field`, Shelf sets the template primary secret field.
-
-```bash
-shelf secret set <selector> [--field FIELD] --stdin
-```
-
 ## `shelf secret update`
 
-Updates an item's title, labels, aliases, or one public field without editing vault JSON. Secret fields remain writeable only through `secret set --stdin`.
+Updates an item's title, labels, aliases, or a selected field without editing vault JSON. Without metadata flags or `--field`, it updates the template primary secret field.
 
 ```bash
-shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD --value VALUE ... | --clear-field]
+shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
 ```
 
-`--field` names a public field. Use repeatable `--value` for a string-list field, or `--clear-field` to clear its value. Update output and errors do not print secret values.
+Use repeatable `--value` only for a public field; it supports string-list fields. Without `--value`, Shelf reads the selected field from stdin. An interactive terminal displays a corresponding no-echo prompt. Secret values never enter argv. `--clear-field` clears a public field.
 
 ## `shelf secret get`
 

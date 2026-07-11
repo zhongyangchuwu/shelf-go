@@ -220,48 +220,44 @@ func TestCreateSecretAcceptsAPIMetadataFlags(t *testing.T) {
 	}
 }
 
-func TestSetSecretField(t *testing.T) {
+func TestUpdateSecretReadsFieldInput(t *testing.T) {
 	vaultPath := filepath.Join(t.TempDir(), "vault.json")
 	configPath := writeConfig(t, vaultPath)
-
-	// Create a secret first
-	_, err := testApp().CreateSecret(configPath, vaultPath, CreateSecretRequest{
-		Title: "test-set",
+	if _, err := testApp().CreateSecret(configPath, vaultPath, CreateSecretRequest{
+		Title: "test-update",
+		Env:   "APP_TOKEN",
 		Stdin: true,
 		In:    strings.NewReader("initial-value"),
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-
-	// Set a new value via stdin
-	err = testApp().SetSecretField(configPath, vaultPath, SetSecretFieldRequest{
-		Selector: "test-set",
-		Stdin:    true,
-		In:       strings.NewReader("updated-value"),
-	})
-	if err != nil {
-		t.Fatalf("SetSecretField: %v", err)
+	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
+		Selector:  "test-update",
+		ReadField: true,
+		In:        strings.NewReader("updated-value"),
+	}); err != nil {
+		t.Fatalf("update primary from stdin: %v", err)
 	}
-
-	// Verify the updated value is returned
-	val, err := testApp().GetSecretField(configPath, vaultPath, GetSecretFieldRequest{
-		Selector: "test-set",
-	})
+	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
+		Selector:  "test-update",
+		Field:     "value_env",
+		ReadField: true,
+		In:        strings.NewReader("APP_TOKEN_RENAMED"),
+	}); err != nil {
+		t.Fatalf("update public field from stdin: %v", err)
+	}
+	val, err := testApp().GetSecretField(configPath, vaultPath, GetSecretFieldRequest{Selector: "test-update"})
 	if err != nil {
-		t.Fatalf("GetSecretField after set: %v", err)
+		t.Fatalf("get after update: %v", err)
 	}
 	if val != "updated-value" {
 		t.Fatalf("value = %q, want updated-value", val)
 	}
-
-	// Set without Stdin should fail
-	err = testApp().SetSecretField(configPath, vaultPath, SetSecretFieldRequest{
-		Selector: "test-set",
-		Stdin:    false,
-	})
-	if err == nil || !strings.Contains(err.Error(), "--stdin") {
-		t.Fatalf("expected --stdin error, got: %v", err)
+	if _, err := testApp().GetSecretField(configPath, vaultPath, GetSecretFieldRequest{Env: "APP_TOKEN_RENAMED"}); err != nil {
+		t.Fatalf("updated public env field unavailable: %v", err)
+	}
+	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "test-update"}); err == nil || !strings.Contains(err.Error(), "at least one change") {
+		t.Fatalf("empty update error = %v", err)
 	}
 }
 
@@ -371,7 +367,7 @@ func TestUpdateSecretClearAndFailureAreAtomicAndValueFree(t *testing.T) {
 		t.Fatal("invalid update changed vault")
 	}
 	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", Field: "credential", Values: []string{"attempted-secret"}, FieldValueSet: true})
-	if err == nil || !strings.Contains(err.Error(), "secret set --stdin") {
+	if err == nil || !strings.Contains(err.Error(), "stdin input") {
 		t.Fatalf("secret field update error = %v", err)
 	}
 	if strings.Contains(err.Error(), "actual-secret-value") || strings.Contains(err.Error(), "attempted-secret") {

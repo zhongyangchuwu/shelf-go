@@ -32,13 +32,6 @@ type CreateSecretRequest struct {
 	Scopes   []string
 }
 
-type SetSecretFieldRequest struct {
-	Selector string
-	Field    string
-	Stdin    bool
-	In       io.Reader
-}
-
 type UpdateSecretRequest struct {
 	Selector      string
 	Title         string
@@ -51,6 +44,8 @@ type UpdateSecretRequest struct {
 	Values        []string
 	FieldValueSet bool
 	ClearField    bool
+	In            io.Reader
+	ReadField     bool
 }
 
 type GetSecretFieldRequest struct {
@@ -122,35 +117,6 @@ func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecre
 	return item.ID, nil
 }
 
-func (a *App) SetSecretField(configPathFlag, vaultPathFlag string, req SetSecretFieldRequest) error {
-	if !req.Stdin {
-		return fmt.Errorf("secret set requires --stdin")
-	}
-	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
-	if err != nil {
-		return err
-	}
-	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
-	itemIndex, item, err := resolver.ResolveItem(req.Selector)
-	if err != nil {
-		return err
-	}
-	fieldIndex, field, err := resolver.DefaultField(item, req.Field)
-	if err != nil {
-		return err
-	}
-	value, err := readFieldValue(req.In, field.Type)
-	if err != nil {
-		return err
-	}
-	item.Fields[fieldIndex].Value = value
-	vault.Items[itemIndex] = item
-	if err := repo.Save(vault); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (a *App) UpdateSecret(configPathFlag, vaultPathFlag string, req UpdateSecretRequest) error {
 	if err := validateSecretFieldUpdate(req); err != nil {
 		return err
@@ -204,17 +170,26 @@ func (a *App) UpdateSecret(configPathFlag, vaultPathFlag string, req UpdateSecre
 			return err
 		}
 	}
-	if req.FieldValueSet || req.ClearField {
-		fieldIndex, field, err := resolver.Field(item, req.Field)
+	if req.FieldValueSet || req.ReadField || req.ClearField {
+		fieldIndex, field, err := resolver.DefaultField(item, req.Field)
 		if err != nil {
 			return err
 		}
-		if field.Sensitivity != vaultmodel.SensitivityPublic {
-			return fmt.Errorf("secret field must be set with secret set --stdin: %s", field.ID)
-		}
 		if req.ClearField {
+			if field.Sensitivity != vaultmodel.SensitivityPublic {
+				return fmt.Errorf("only public fields can be cleared: %s", field.ID)
+			}
 			item.Fields[fieldIndex].Value = nil
+		} else if req.ReadField {
+			value, err := readFieldValue(req.In, field.Type)
+			if err != nil {
+				return err
+			}
+			item.Fields[fieldIndex].Value = value
 		} else {
+			if field.Sensitivity != vaultmodel.SensitivityPublic {
+				return fmt.Errorf("secret field requires stdin input: %s", field.ID)
+			}
 			value, err := publicFieldValue(field.Type, req.Values)
 			if err != nil {
 				return err
@@ -479,21 +454,27 @@ func rawString(value string) json.RawMessage {
 }
 
 func hasSecretUpdate(req UpdateSecretRequest) bool {
-	return req.TitleSet || len(req.AddLabels) > 0 || len(req.RemoveLabels) > 0 || len(req.AddAliases) > 0 || len(req.RemoveAliases) > 0 || req.FieldValueSet || req.ClearField
+	return req.TitleSet || len(req.AddLabels) > 0 || len(req.RemoveLabels) > 0 || len(req.AddAliases) > 0 || len(req.RemoveAliases) > 0 || req.FieldValueSet || req.ClearField || req.ReadField
 }
 
 func validateSecretFieldUpdate(req UpdateSecretRequest) error {
-	if !req.FieldValueSet && !req.ClearField {
-		if req.Field != "" || len(req.Values) > 0 {
-			return fmt.Errorf("secret update field requires --value or --clear-field")
-		}
-		return nil
-	}
-	if req.Field == "" {
-		return fmt.Errorf("secret update requires --field")
+	if req.FieldValueSet && req.ReadField {
+		return fmt.Errorf("secret update cannot use --value with stdin input")
 	}
 	if req.FieldValueSet && req.ClearField {
 		return fmt.Errorf("secret update cannot use --value with --clear-field")
+	}
+	if req.ReadField && req.ClearField {
+		return fmt.Errorf("secret update cannot read stdin with --clear-field")
+	}
+	if req.FieldValueSet || req.ClearField {
+		if req.Field == "" {
+			return fmt.Errorf("secret update requires --field")
+		}
+		return nil
+	}
+	if !req.ReadField && (req.Field != "" || len(req.Values) > 0) {
+		return fmt.Errorf("secret update field requires --value, --clear-field, or stdin input")
 	}
 	return nil
 }
