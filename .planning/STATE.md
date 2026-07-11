@@ -2,10 +2,10 @@
 
 ## Current Position
 
-- Phase: Scriptable Item Lifecycle
-- Status: complete
-- Active Artifact: `.planning/phases/047-scriptable-item-lifecycle/CAPTURE.md`
-- Next Action: Execute Phase 48 Safe Catalog TUI.
+- Phase: Safe Catalog TUI
+- Status: design drafted — awaiting user review
+- Active Artifact: `.planning/phases/048-safe-catalog-tui/UI-SPEC.md`
+- Next Action: User review of the UI specification; do not implement before approval.
 
 ## Blockers
 
@@ -21,6 +21,7 @@
 - `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
 - `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
 - `secret update` atomically changes title, labels, aliases, or one typed public field; secret fields remain stdin-only.
+- Phase 48 UI/technical design is drafted; no TUI code or runtime dependencies have been added.
 - The proposed personal workflow sequence is scriptable item lifecycle → safe catalog TUI → TUI editing → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.

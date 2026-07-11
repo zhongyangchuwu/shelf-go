@@ -25,7 +25,7 @@ This milestone is for local development and personal use. Public repository/rele
 
 ## Planned Personal Workflow UX
 
-**Status:** Phase 47 complete; Phase 48 is next. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
+**Status:** Phase 47 complete; Phase 48 Safe Catalog TUI design is awaiting user review. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
 
 - [x] Phase 47: Scriptable Item Lifecycle — added safe, scriptable item mutations before interactive editing.
 - [ ] Phase 48: Safe Catalog TUI — keyboard-first, value-free catalog browsing, search, filtering, and detail views.

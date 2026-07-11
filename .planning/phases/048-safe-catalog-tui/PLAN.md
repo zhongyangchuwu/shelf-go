@@ -23,6 +23,6 @@ Add an optional, keyboard-first `shelf tui` for fast local browsing and selectio
 - TUI state transitions have deterministic model tests without a real terminal.
 - `go test ./...`, `go vet ./...`, and `go-arch-lint check` pass.
 
-## Research
+## Design Inputs
 
-See `RESEARCH.md` for library and security rationale.
+See `RESEARCH.md` for library and security rationale and `UI-SPEC.md` for the reviewed interaction, safety, architecture, and verification contract.
