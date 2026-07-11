@@ -21,12 +21,13 @@ This milestone is for local development and personal use. Public repository/rele
 - [x] Phase 43: Secret Copy and Export Simplification
 - [x] Phase 44: Current-Model Naming Cutover
 - [x] Phase 45: Vault Resolver Consolidation
+- [x] Phase 46: Template Role Lookup Consolidation
 
 ## Next Local Work
 
 **Status:** Ready for the next local CLI UX or staged refactor phase.
 
-**Most recent artifacts:** `.planning/phases/045-vault-resolver-consolidation/VERIFICATION.md`, `.planning/phases/045-vault-resolver-consolidation/CAPTURE.md`
+**Most recent artifacts:** `.planning/phases/046-template-role-lookup-consolidation/VERIFICATION.md`, `.planning/phases/046-template-role-lookup-consolidation/CAPTURE.md`
 
 **No release work:** no public repository preparation, GoReleaser packaging, GitHub Release, or tag workflow for v0.2.0.
 
@@ -52,6 +53,11 @@ This milestone is for local development and personal use. Public repository/rele
 - Centralized item selector, field, and env-name rules in `vaultmodel.Resolver`.
 - Reused resolver registry/index construction for repository-loaded vaults.
 
+## Completed Phase 46
+
+- Centralized primary-secret and env-name template-role lookup in `vaultmodel.Registry`.
+- Reused the registry API in secret item construction and instance resolution.
+
 ## Deferred After v0.2.0
 
 1. More complete `shelf secret` UX polish.
@@ -63,4 +69,4 @@ This milestone is for local development and personal use. Public repository/rele
 7. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-10 after current-model naming and resolver consolidation*
+*Last updated: 2026-07-11 after template-role lookup consolidation*

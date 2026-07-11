@@ -33,12 +33,14 @@ shelf doctor
 Creates an item. Secret values enter through stdin when `--stdin` is set.
 
 ```bash
-shelf secret create <title> [--template generic|api] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
+shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
 ```
 
 On success, prints a metadata summary with title, id, template, and env name. Secret values are not echoed.
 
 Useful public-field flags for `api_credential` are `--provider`, `--website`, `--expires`, and repeatable `--scope`.
+
+`--template` accepts a vault template ID or alias; built-in aliases are `generic` and `api`.
 
 ## `shelf secret set`
 

@@ -20,7 +20,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 ## Technology Stack
 
 - Go 1.26.4 production code in `cmd/shelf/main.go` and `internal/**`.
-- JSON item vault managed by `internal/vaultjson` and modeled by `internal/vaultmodel`.
+- JSON item vault managed by `internal/vaultjson` and modeled by `internal/vaultmodel`, including canonical template-role and item/field/env resolution.
 - YAML config parsed by `internal/config/config.go`.
 - Cobra command surface in `internal/cli`.
 - Cross-platform clipboard adapter in `internal/clipboard`, using `clip.exe` then `wl-copy` on WSL and a native backend elsewhere.
@@ -40,7 +40,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 ```text
 shelf setup
 shelf doctor
-shelf secret create <title> [--template generic|api] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
+shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
 shelf secret set <selector> [--field FIELD] --stdin
 shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]

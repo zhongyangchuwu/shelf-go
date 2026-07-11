@@ -120,6 +120,34 @@ func (r Registry) Profile(id string) (Profile, bool) {
 	return Profile{}, false
 }
 
+// PrimarySecretField returns the template's primary secret field.
+func (r Registry) PrimarySecretField(templateID string) (FieldTemplate, error) {
+	tmpl, ok := r.Template(templateID)
+	if !ok {
+		return FieldTemplate{}, fmt.Errorf("template not found: %s", templateID)
+	}
+	for _, field := range tmpl.Fields {
+		if field.Purpose == PurposePrimarySecret {
+			return field, nil
+		}
+	}
+	return FieldTemplate{}, fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
+}
+
+// EnvNameField returns the template's env-name field for a secret field.
+func (r Registry) EnvNameField(templateID, secretFieldID string) (FieldTemplate, bool, error) {
+	tmpl, ok := r.Template(templateID)
+	if !ok {
+		return FieldTemplate{}, false, fmt.Errorf("template not found: %s", templateID)
+	}
+	for _, field := range tmpl.Fields {
+		if field.Purpose == PurposeEnvName && field.EnvFor == secretFieldID {
+			return field, true, nil
+		}
+	}
+	return FieldTemplate{}, false, nil
+}
+
 func (r Registry) RequiredFields(id string) ([]FieldTemplate, error) {
 	tmpl, ok := r.Template(id)
 	if !ok {

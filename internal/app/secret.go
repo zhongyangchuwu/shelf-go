@@ -326,11 +326,18 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 		item.Fields = append(item.Fields, field)
 	}
 	if req.Env != "" {
-		primary, err := primaryFieldTemplateForTemplate(tmpl)
+		primary, err := registry.PrimarySecretField(tmpl.ID)
 		if err != nil {
 			return vaultmodel.Item{}, err
 		}
-		if err := setEnvNameField(&item, tmpl, primary.ID, rawString(req.Env)); err != nil {
+		envField, ok, err := registry.EnvNameField(tmpl.ID, primary.ID)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		if !ok {
+			return vaultmodel.Item{}, fmt.Errorf("template field has no env-name field: %s", primary.ID)
+		}
+		if err := setFieldValueIfPresent(&item, envField.ID, rawString(req.Env)); err != nil {
 			return vaultmodel.Item{}, err
 		}
 	}
@@ -359,22 +366,17 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 		}
 	}
 	if req.Stdin {
-		primary, err := primaryFieldTemplateForTemplate(tmpl)
+		primary, err := registry.PrimarySecretField(tmpl.ID)
 		if err != nil {
 			return vaultmodel.Item{}, err
 		}
-		idx, field, err := findField(item, primary.ID)
+		value, err := readFieldValue(req.In, primary.Type)
 		if err != nil {
 			return vaultmodel.Item{}, err
 		}
-		value, err := readFieldValue(req.In, field.Type)
-		if err != nil {
+		if err := setFieldValueIfPresent(&item, primary.ID, value); err != nil {
 			return vaultmodel.Item{}, err
 		}
-		item.Fields[idx].Value = value
-	}
-	if err := vaultmodel.Validate(vaultmodel.Vault{Version: vaultmodel.CurrentVersion, Items: []vaultmodel.Item{item}}); err != nil {
-		return vaultmodel.Item{}, err
 	}
 	return item, nil
 }
@@ -458,25 +460,6 @@ func stringValue(value json.RawMessage) (string, error) {
 	return out, nil
 }
 
-func primaryFieldTemplateForTemplate(tmpl vaultmodel.Template) (vaultmodel.FieldTemplate, error) {
-	for _, field := range tmpl.Fields {
-		if field.Purpose == vaultmodel.PurposePrimarySecret {
-			return field, nil
-		}
-	}
-	return vaultmodel.FieldTemplate{}, fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
-}
-
-func setEnvNameField(item *vaultmodel.Item, tmpl vaultmodel.Template, fieldID string, value json.RawMessage) error {
-	for _, templateField := range tmpl.Fields {
-		if templateField.Purpose != vaultmodel.PurposeEnvName || templateField.EnvFor != fieldID {
-			continue
-		}
-		return setFieldValueIfPresent(item, templateField.ID, value)
-	}
-	return fmt.Errorf("template field has no env-name field: %s", fieldID)
-}
-
 func setFieldValueIfPresent(item *vaultmodel.Item, fieldID string, value json.RawMessage) error {
 	for i := range item.Fields {
 		if item.Fields[i].ID == fieldID {
@@ -485,15 +468,6 @@ func setFieldValueIfPresent(item *vaultmodel.Item, fieldID string, value json.Ra
 		}
 	}
 	return fmt.Errorf("field not found: %s", fieldID)
-}
-
-func findField(item vaultmodel.Item, fieldID string) (int, vaultmodel.Field, error) {
-	for i, field := range item.Fields {
-		if field.ID == fieldID {
-			return i, field, nil
-		}
-	}
-	return 0, vaultmodel.Field{}, fmt.Errorf("field not found: %s", fieldID)
 }
 
 func findItemByID(items []vaultmodel.Item, id string) (vaultmodel.Item, bool) {

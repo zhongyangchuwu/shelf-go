@@ -2,9 +2,9 @@
 
 ## Current Position
 
-- Phase: Vault Resolver Consolidation
+- Phase: Template Role Lookup Consolidation
 - Status: complete
-- Active Artifact: `.planning/phases/045-vault-resolver-consolidation/CAPTURE.md`
+- Active Artifact: `.planning/phases/046-template-role-lookup-consolidation/CAPTURE.md`
 - Next Action: Select the next local CLI UX or staged refactor phase; public release work remains deferred.
 
 ## Blockers
@@ -19,6 +19,7 @@
 - `secret export` and `project export` now support only `shell` and `json` output.
 - Transitional implementation `V2` names were removed; persisted schema version fields remain.
 - `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
+- `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
 - Default vault path is `~/.local/share/shelf/vault.json`.
 - Local config points at `/home/han/.local/share/shelf/vault.json`.
 - Local backup before cutover: `/home/han/.local/share/shelf/backups/pre-plain-json-cutover-20260710-162158`.
@@ -32,4 +33,4 @@
 
 ## Updated
 
-- 2026-07-10
+- 2026-07-11

@@ -245,3 +245,43 @@ func TestIndex_ValidateError(t *testing.T) {
 		t.Fatal("expected error from NewIndex on invalid vault")
 	}
 }
+
+func TestRegistryTemplateRoleLookups(t *testing.T) {
+	registry := vaultmodel.NewDefaultRegistry()
+	primary, err := registry.PrimarySecretField(vaultmodel.TemplateAPICredential)
+	if err != nil {
+		t.Fatalf("primary secret field: %v", err)
+	}
+	if primary.ID != "credential" {
+		t.Fatalf("primary field = %q, want credential", primary.ID)
+	}
+	envField, ok, err := registry.EnvNameField(vaultmodel.TemplateAPICredential, primary.ID)
+	if err != nil {
+		t.Fatalf("env-name field: %v", err)
+	}
+	if !ok || envField.ID != "credential_env" {
+		t.Fatalf("env-name field = %+v, found = %t", envField, ok)
+	}
+	if _, ok, err := registry.EnvNameField(vaultmodel.TemplateAPICredential, "provider"); err != nil || ok {
+		t.Fatalf("provider env-name field: found = %t, err = %v", ok, err)
+	}
+}
+
+func TestRegistryTemplateRoleLookupErrors(t *testing.T) {
+	registry := vaultmodel.NewRegistry(vaultmodel.Template{
+		ID:   "metadata_only",
+		Name: "Metadata Only",
+		Fields: []vaultmodel.FieldTemplate{
+			{ID: "provider", Label: "Provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic},
+		},
+	})
+	if _, err := registry.PrimarySecretField("missing"); err == nil || err.Error() != "template not found: missing" {
+		t.Fatalf("missing template error = %v", err)
+	}
+	if _, err := registry.PrimarySecretField("metadata_only"); err == nil || err.Error() != "template has no primary secret field: metadata_only" {
+		t.Fatalf("missing primary error = %v", err)
+	}
+	if _, _, err := registry.EnvNameField("missing", "credential"); err == nil || err.Error() != "template not found: missing" {
+		t.Fatalf("missing env template error = %v", err)
+	}
+}

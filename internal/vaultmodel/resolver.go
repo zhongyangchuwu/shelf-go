@@ -101,41 +101,26 @@ func (r Resolver) DefaultField(item Item, fieldID string) (int, Field, error) {
 }
 
 func (r Resolver) PrimarySecretField(item Item) (FieldTemplate, error) {
-	template, ok := r.registry.Template(item.Template)
-	if !ok {
-		return FieldTemplate{}, fmt.Errorf("template not found: %s", item.Template)
-	}
-	for _, field := range template.Fields {
-		if field.Purpose == PurposePrimarySecret {
-			return field, nil
-		}
-	}
-	return FieldTemplate{}, fmt.Errorf("template has no primary secret field: %s", template.ID)
+	return r.registry.PrimarySecretField(item.Template)
 }
 
 func (r Resolver) EnvName(item Item, fieldID string) (string, bool, error) {
-	template, ok := r.registry.Template(item.Template)
-	if !ok {
-		return "", false, fmt.Errorf("template not found: %s", item.Template)
+	templateField, ok, err := r.registry.EnvNameField(item.Template, fieldID)
+	if err != nil || !ok {
+		return "", false, err
 	}
-	for _, templateField := range template.Fields {
-		if templateField.Purpose != PurposeEnvName || templateField.EnvFor != fieldID {
-			continue
-		}
-		_, field, err := r.Field(item, templateField.ID)
-		if err != nil || len(field.Value) == 0 {
-			return "", false, nil
-		}
-		var value string
-		if err := json.Unmarshal(field.Value, &value); err != nil {
-			return "", false, err
-		}
-		if value == "" {
-			return "", false, nil
-		}
-		return value, true, nil
+	_, field, err := r.Field(item, templateField.ID)
+	if err != nil || len(field.Value) == 0 {
+		return "", false, nil
 	}
-	return "", false, nil
+	var value string
+	if err := json.Unmarshal(field.Value, &value); err != nil {
+		return "", false, err
+	}
+	if value == "" {
+		return "", false, nil
+	}
+	return value, true, nil
 }
 
 func (r Resolver) SecretSelectors() []string {

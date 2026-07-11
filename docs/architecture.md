@@ -12,7 +12,7 @@ internal/cliui/               Lip Gloss-backed human output helpers for titles, 
 internal/clipboard/           System clipboard adapter; uses `clip.exe`, then `wl-copy`, under WSL and github.com/atotto/clipboard elsewhere
 internal/app/                 application workflows for secret, project, setup, doctor, and run
 
-internal/vaultmodel/          item/field/template model, validation, and shared item/field/env resolver
+internal/vaultmodel/          item/field/template model, validation, template-role lookups, and shared item/field/env resolver
 internal/vaultjson/           strict JSON codec/repository for the local item vault
 internal/project/             Git project identity, .shelf.json schema/IO/validation, and binding resolution
 internal/config/              config and vault path resolution

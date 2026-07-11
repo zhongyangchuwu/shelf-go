@@ -92,6 +92,45 @@ func TestCreateSecret(t *testing.T) {
 	}
 }
 
+func TestCreateSecretCustomTemplate(t *testing.T) {
+	vaultPath := filepath.Join(t.TempDir(), "vault.json")
+	configPath := writeConfig(t, vaultPath)
+	custom := vaultmodel.Template{
+		ID:   "service_token",
+		Name: "Service Token",
+		Fields: []vaultmodel.FieldTemplate{
+			{ID: "token", Label: "Token", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Required: true},
+			{ID: "token_env", Label: "Token Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, EnvFor: "token"},
+		},
+	}
+	repo := vaultjson.NewRepository(vaultPath)
+	if err := repo.Save(vaultmodel.Vault{Version: vaultmodel.CurrentVersion, Templates: []vaultmodel.Template{custom}}); err != nil {
+		t.Fatalf("write custom template vault: %v", err)
+	}
+	if _, err := testApp().CreateSecret(configPath, vaultPath, CreateSecretRequest{
+		Title:    "service credential",
+		Template: custom.ID,
+		Env:      "SERVICE_TOKEN",
+		Stdin:    true,
+		In:       strings.NewReader("fake-custom-token"),
+	}); err != nil {
+		t.Fatalf("create custom-template secret: %v", err)
+	}
+	info, err := testApp().SecretInfo(configPath, vaultPath, "service credential")
+	if err != nil {
+		t.Fatalf("custom secret info: %v", err)
+	}
+	if info.Template != custom.ID {
+		t.Fatalf("template = %q, want %q", info.Template, custom.ID)
+	}
+	for _, field := range info.Fields {
+		if field.ID == "token_env" && field.Value == "SERVICE_TOKEN" {
+			return
+		}
+	}
+	t.Fatalf("custom template env field missing from info: %#v", info.Fields)
+}
+
 func TestCreateSecretProfileOpenAI(t *testing.T) {
 	// Equivalent to `--profile openai --stdin` in the CLI
 	vaultPath := filepath.Join(t.TempDir(), "vault.json")
