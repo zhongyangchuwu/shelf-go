@@ -18,13 +18,19 @@
 - [x] **PROJECT-03**: Project manifests stay value-free and project diagnostics do not print secret values.
 - [x] **LOCAL-01**: Local workstation vault was backed up and cut over to `/home/han/.local/share/shelf/vault.json`.
 
+## Planned Personal Workflow Requirements
+
+- [ ] **UX-01**: Developers can update item identity, labels, aliases, and supported public metadata through scriptable workflows without editing vault JSON.
+- [ ] **TUI-01**: `shelf tui` provides a keyboard-first, value-free item catalog with search, filters, detail, and safe terminal lifecycle handling.
+- [ ] **TUI-02**: TUI mutations reuse app workflows, mask secret writes, and never render a secret value.
+- [ ] **TUI-03**: `shelf project tui` manages current-project value-free bindings without editing `.shelf.json` directly.
+- [ ] **OPS-01**: Credential expiry audit reports expired and upcoming credentials without values.
+
 ## Deferred Requirements
 
 - Built-in encryption if external encryption becomes insufficient.
 - Optional reviewed import/migration tooling only if a real local need appears.
 - Web manager.
-- TUI full-object editing.
-- Project configure TUI.
 - Team/hosted sync workflows.
 - Public repository/release packaging for a future v1.0.0 milestone.
 
@@ -37,6 +43,11 @@
 | CLI-01..CLI-07 | Phases 42, 43, and local CLI polish | Complete |
 | PROJECT-01..PROJECT-03 | Phases 39, 42 | Complete |
 | LOCAL-01 | Phase 42 | Complete |
+| UX-01 | Phase 47 | Planned |
+| TUI-01 | Phase 48 | Planned |
+| TUI-02 | Phase 49 | Planned |
+| TUI-03 | Phase 50 | Planned |
+| OPS-01 | Phase 51 | Planned |
 
 ---
-*Last updated: 2026-07-10 during secret copy and export simplification*
+*Last updated: 2026-07-11 after personal workflow UX planning*

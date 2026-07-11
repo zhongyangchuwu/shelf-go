@@ -2,10 +2,10 @@
 
 ## Current Position
 
-- Phase: Template Role Lookup Consolidation
-- Status: complete
-- Active Artifact: `.planning/phases/046-template-role-lookup-consolidation/CAPTURE.md`
-- Next Action: Select the next local CLI UX or staged refactor phase; public release work remains deferred.
+- Phase: Personal Workflow UX Plan
+- Status: planned
+- Active Artifact: `.planning/phases/047-scriptable-item-lifecycle/PLAN.md`
+- Next Action: Execute Phase 47 before adding an interactive TUI.
 
 ## Blockers
 
@@ -20,6 +20,9 @@
 - Transitional implementation `V2` names were removed; persisted schema version fields remain.
 - `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
 - `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
+- The proposed personal workflow sequence is scriptable item lifecycle → safe catalog TUI → TUI editing → project binding TUI → credential health audit.
+- TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
+- Named dev/staging/prod environments are not planned for the personal-use path.
 - Default vault path is `~/.local/share/shelf/vault.json`.
 - Local config points at `/home/han/.local/share/shelf/vault.json`.
 - Local backup before cutover: `/home/han/.local/share/shelf/backups/pre-plain-json-cutover-20260710-162158`.

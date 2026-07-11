@@ -23,11 +23,17 @@ This milestone is for local development and personal use. Public repository/rele
 - [x] Phase 45: Vault Resolver Consolidation
 - [x] Phase 46: Template Role Lookup Consolidation
 
-## Next Local Work
+## Planned Personal Workflow UX
 
-**Status:** Ready for the next local CLI UX or staged refactor phase.
+**Status:** Planned. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
 
-**Most recent artifacts:** `.planning/phases/046-template-role-lookup-consolidation/VERIFICATION.md`, `.planning/phases/046-template-role-lookup-consolidation/CAPTURE.md`
+- [ ] Phase 47: Scriptable Item Lifecycle — complete safe, scriptable item mutations before introducing interactive editing.
+- [ ] Phase 48: Safe Catalog TUI — keyboard-first, value-free catalog browsing, search, filtering, and detail views.
+- [ ] Phase 49: TUI Item Editing — create, edit, set, copy, and delete flows using the same app workflows as CLI.
+- [ ] Phase 50: Project Binding TUI — value-free current-project manifest management and binding picker.
+- [ ] Phase 51: Credential Health Audit — value-free expired and upcoming-expiry checks in CLI and TUI.
+
+**Execution order:** Phase 47 is the CLI/API foundation. Phase 48 proves safe TUI lifecycle and read paths before Phase 49 introduces secret writes. Phase 50 builds on both. Phase 51 is independent of TUI editing but follows it to surface operational data in the established UI.
 
 **No release work:** no public repository preparation, GoReleaser packaging, GitHub Release, or tag workflow for v0.2.0.
 
@@ -58,15 +64,13 @@ This milestone is for local development and personal use. Public repository/rele
 - Centralized primary-secret and env-name template-role lookup in `vaultmodel.Registry`.
 - Reused the registry API in secret item construction and instance resolution.
 
-## Deferred After v0.2.0
+## Deferred Beyond the Personal Workflow UX Plan
 
-1. More complete `shelf secret` UX polish.
-2. Web manager for item vaults.
-3. TUI/full-object item editing.
-4. Project configure TUI.
-5. Optional built-in encryption if external encryption becomes insufficient.
-6. Optional migration automation with explicit review/rollback UX.
-7. Public repository/release packaging for v1.0.0.
+1. Web manager for item vaults.
+2. Optional built-in encryption if external encryption becomes insufficient.
+3. Optional migration automation with explicit review/rollback UX.
+4. Team/hosted sync workflows.
+5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-11 after template-role lookup consolidation*
+*Last updated: 2026-07-11 after personal workflow UX planning*

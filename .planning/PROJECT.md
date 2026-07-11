@@ -14,15 +14,16 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] Human-facing secret list/create output is routed through `internal/cliui`.
 - [x] `secret copy` provides clipboard-only interactive retrieval while `secret get` remains scriptable stdout output.
 
-### Active
+### Planned
 
-- [ ] Complete the next local CLI UX or staged refactor phase; no public release work is planned for v0.2.0.
+- [ ] Personal workflow UX plan: scriptable item lifecycle, safe catalog TUI, TUI item editing, project binding TUI, and credential health audit.
+- [ ] The first executable phase is `.planning/phases/047-scriptable-item-lifecycle/PLAN.md`.
 
 ### Out of Scope
 
 - Built-in encryption; use chezmoi or another external tool.
 - v1 compatibility and automatic migration.
-- Web manager and TUI editing.
+- Web manager.
 - Team sharing, hosted sync, browser autofill, or daemon unlock flows.
 - Public repository/release packaging until a future v1.0.0 milestone.
 
@@ -52,10 +53,12 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Use external encryption | User prefers chezmoi encryption and a simpler personal tool. | Removed age/jsonvault/v1 encryption code from active product. |
 | Use item vault JSON as canonical file | It is easy to inspect, back up, and encrypt externally. | Default vault path is `~/.local/share/shelf/vault.json`. |
 | Drop v1 compatibility | Personal-use project; compatibility burden slows local iteration. | Removed v1 vault, manager, import/migrate/export, project selectors. |
-| Keep CLI before Web/TUI | CLI is the daily workflow and easiest to verify. | Active commands are setup, doctor, secret, project, completion. |
+| Keep CLI authoritative before adding TUI | Scriptability and one canonical workflow path must survive interactive UX work. | Existing CLI remains the authority; optional TUI phases start only after scriptable lifecycle parity. |
 | Defer public release work | Repository stays private/local until a future v1.0.0 milestone. | Removed v0.2.0 tag/release preparation from active scope. |
 | Copy through an explicit command | Interactive secret retrieval should not break stdout-based scripting. | `secret copy` writes only to the clipboard and returns value-free confirmation. |
 | Use a shared model resolver | Secret and project workflows must agree on item, field, and env-name semantics. | `vaultmodel.Resolver` is the only active owner of those rules. |
+| Treat `.env` as a projection, not the primary model | A developer should maintain values and context once, then select fields for a project or command. | The vault is item-first; project bindings and exports are value-free runtime projections. |
+| Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phase 47 precedes a read-only Phase 48; all later TUI mutations reuse app workflows. |
 
 ---
-*Last updated: 2026-07-10 after current-model naming and resolver consolidation*
+*Last updated: 2026-07-11 after personal workflow UX planning*
