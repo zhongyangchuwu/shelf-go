@@ -6,6 +6,8 @@ v0.2.0 is the local item-vault CLI milestone. The product intentionally drops bu
 
 This milestone is for local development and personal use. Public repository/release work is deferred until a future v1.0.0 milestone.
 
+**Current version:** `v0.2.0` is the local milestone label and the default CLI version. It does not create a public tag, release, or packaging workflow.
+
 ## Completed v0.2.0 Work
 
 - [x] Phase 34: Template Item Vault Design
@@ -103,4 +105,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-12 after technical debt review*
+*Last updated: 2026-07-12 after marking the local v0.2.0 milestone*

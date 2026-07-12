@@ -4,6 +4,8 @@ Shelf Go is a local, CLI-first secret manager for one developer. It stores item-
 
 The current product is CLI-first: scriptable secret and project workflows remain authoritative, while optional wide-screen workspaces support interactive secret and project-binding management.
 
+**Current local milestone:** `v0.2.0`. This marks the shipped personal-workflow feature set; it is not a public tag or release.
+
 ## Setup
 
 Create a config file and an empty item vault:

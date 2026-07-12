@@ -6,7 +6,8 @@ import (
 	"runtime/debug"
 )
 
-var releaseVersion string
+// releaseVersion is the local milestone version and may be overridden with -ldflags -X for a distribution build.
+var releaseVersion = "v0.2.0"
 
 func String() string {
 	info, ok := debug.ReadBuildInfo()

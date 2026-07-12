@@ -2,6 +2,7 @@
 
 ## Current Position
 
+- Version: v0.2.0 local milestone
 - Phase: Technical Debt Review
 - Status: complete
 - Active Artifact: `.planning/phases/051-technical-debt-review/VERIFICATION.md`
@@ -12,6 +13,7 @@
 - None.
 
 ## Recent Evidence
+- The default CLI version is `v0.2.0`; `shelf --version` reported the local milestone without creating a public tag or release.
 
 - Item-vault-only cutover is implemented and committed.
 - Active packages are now CLI/app/cliui/clipboard/config/project/util/vaultjson/vaultmodel.
