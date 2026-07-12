@@ -18,6 +18,14 @@ type Service interface {
 	RemoveSecret(configPathFlag, vaultPathFlag, selector string) error
 }
 
+type ProjectService interface {
+	ProjectWorkspace(configPathFlag, vaultPathFlag string) (app.ProjectWorkspace, error)
+	ProjectBindingCandidates(configPathFlag, vaultPathFlag string) ([]app.ProjectBindingCandidate, error)
+	ProjectAdd(configPathFlag, vaultPathFlag string, req app.ProjectAddRequest) (string, error)
+	InitializeProject(force bool) (string, error)
+	RemoveProjectBinding(key string) (string, error)
+}
+
 type Options struct {
 	ConfigPath string
 	VaultPath  string
@@ -31,5 +39,13 @@ func Run(service Service, clipboardWriter clipboard.Writer, options Options) err
 		return fmt.Errorf("TUI clipboard writer is required")
 	}
 	_, err := tea.NewProgram(NewModel(service, clipboardWriter, options)).Run()
+	return err
+}
+
+func RunProject(service ProjectService, options Options) error {
+	if service == nil {
+		return fmt.Errorf("project TUI service is required")
+	}
+	_, err := tea.NewProgram(NewProjectModel(service, options)).Run()
 	return err
 }

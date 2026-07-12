@@ -19,6 +19,13 @@ type Diagnostic struct {
 	Message string
 }
 
+type BindingStatus struct {
+	Binding Binding
+	Path    string
+	Status  string
+	Message string
+}
+
 func RenderDiagnostics(w io.Writer, diagnostics []Diagnostic) {
 	for _, diagnostic := range diagnostics {
 		fmt.Fprintf(w, "%s %s %s\n", diagnostic.Status, diagnostic.Path, diagnostic.Message)

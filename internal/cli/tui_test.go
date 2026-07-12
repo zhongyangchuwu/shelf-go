@@ -14,3 +14,13 @@ func TestTUIRejectsNonInteractiveStreams(t *testing.T) {
 		t.Fatalf("non-TTY error = %q", err)
 	}
 }
+
+func TestProjectTUIRejectsNonInteractiveStreams(t *testing.T) {
+	_, err := runShelf(t, "project", "tui")
+	if err == nil {
+		t.Fatal("shelf project tui with buffered streams returned nil error")
+	}
+	if !strings.Contains(err.Error(), "requires an interactive terminal") {
+		t.Fatalf("non-TTY error = %q", err)
+	}
+}

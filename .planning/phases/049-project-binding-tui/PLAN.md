@@ -22,3 +22,14 @@ Make value-free project binding management discoverable and fast without turning
 - Project status and error screens never display resolved values.
 - The same binding decisions are available through scriptable CLI commands.
 - `go test ./...`, `go vet ./...`, and `go-arch-lint check` pass.
+
+## Design
+
+See `UI-SPEC.md` for the accepted workspace, picker, confirmation, and value-free data contract.
+
+## Implementation
+
+- Added safe app project-workspace and binding-candidate DTOs plus a value-free project resolver status path.
+- Added `shelf project tui` with the existing terminal preflight and alternate-screen lifecycle.
+- Added current-worktree binding list/detail, missing-manifest initialization confirmation, candidate picker/filter, add form, remove confirmation, and safe diagnostics.
+- Kept project export/run CLI-first and preserved app-only manifest/vault access.

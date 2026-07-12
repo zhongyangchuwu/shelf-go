@@ -25,11 +25,11 @@ This milestone is for local development and personal use. Public repository/rele
 
 ## Planned Personal Workflow UX
 
-**Status:** Phase 48 Wide-Screen Secret Workspace TUI is complete. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
+**Status:** Phase 49 Project Binding TUI is complete. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
 
 - [x] Phase 47: Scriptable Item Lifecycle — added safe, scriptable item mutations before interactive editing.
 - [x] Phase 48: Wide-Screen Secret Workspace TUI — keyboard-first catalog plus item create, update, copy, and remove actions.
-- [ ] Phase 49: Project Binding TUI — value-free current-project manifest management and binding picker.
+- [x] Phase 49: Project Binding TUI — value-free current-project manifest management and binding picker.
 - [ ] Phase 50: Credential Health Audit — value-free expired and upcoming-expiry checks in CLI and TUI.
 
 **Execution order:** Phase 47 is the CLI/API foundation. Phase 48 delivers the complete personal secret workspace on wide terminals. Phase 49 adds project bindings to the established workspace. Phase 50 surfaces operational health in both CLI and TUI.
@@ -75,6 +75,13 @@ This milestone is for local development and personal use. Public repository/rele
 - Added masked create/edit forms, value-free review and confirmation views, app-backed create/update/remove actions, and clipboard-only copy.
 - Preserved value-free TUI state and architecture boundaries; full checks and pseudo-terminal lifecycle smoke passed.
 
+## Completed Phase 49
+
+- Added `shelf project tui` with the existing terminal preflight, alternate-screen lifecycle, and resize-required view.
+- Added safe project-workspace/candidate app DTOs and value-free binding-status resolution without materializing values.
+- Added manifest initialization confirmation, candidate picker/filter, env override and optional form, remove confirmation, and resolution diagnostics.
+- Kept manifest/vault I/O in app and project export/run as explicit CLI actions.
+
 ## Deferred Beyond the Personal Workflow UX Plan
 
 1. Web manager for item vaults.
@@ -84,4 +91,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-12 after wide-screen secret workspace TUI*
+*Last updated: 2026-07-12 after project binding TUI*

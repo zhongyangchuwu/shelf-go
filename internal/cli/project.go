@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
+	"github.com/zhongyangchuwu/shelf-go/internal/tui"
 )
 
 func newProjectCmd(appSvc *app.App) *cobra.Command {
@@ -14,12 +15,28 @@ func newProjectCmd(appSvc *app.App) *cobra.Command {
 	cmd.AddCommand(newProjectIDCmd())
 	cmd.AddCommand(newProjectInitCmd())
 	cmd.AddCommand(newProjectStatusCmd(appSvc))
+	cmd.AddCommand(newProjectTUICmd(appSvc))
 	cmd.AddCommand(newProjectAddCmd(appSvc))
 	cmd.AddCommand(newProjectRmCmd())
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectExportCmd(appSvc))
 	cmd.AddCommand(newRunCmd(appSvc))
 	return cmd
+}
+
+func newProjectTUICmd(appSvc *app.App) *cobra.Command {
+	return &cobra.Command{
+		Use:   "tui",
+		Short: "Open the interactive project binding workspace",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := requireInteractiveTerminal(cmd); err != nil {
+				return err
+			}
+			configPath, vaultPath := runtimePaths(cmd)
+			return tui.RunProject(appSvc, tui.Options{ConfigPath: configPath, VaultPath: vaultPath})
+		},
+	}
 }
 
 func newProjectIDCmd() *cobra.Command {

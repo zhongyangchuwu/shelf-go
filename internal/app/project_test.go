@@ -188,6 +188,75 @@ func TestProjectStatusValueFree(t *testing.T) {
 	}
 }
 
+func TestProjectWorkspaceIsValueFreeAndProvidesCandidates(t *testing.T) {
+	_, configPath := setupProjectTest(t)
+	appSvc := testApp()
+
+	workspace, err := appSvc.ProjectWorkspace(configPath, "")
+	if err != nil {
+		t.Fatalf("ProjectWorkspace: %v", err)
+	}
+	if !workspace.ManifestPresent || len(workspace.Bindings) != 1 {
+		t.Fatalf("workspace = %#v", workspace)
+	}
+	binding := workspace.Bindings[0]
+	if binding.Key != "github.credential" || binding.Env != "GITHUB_TOKEN" || binding.Status != "ready" || !binding.Required {
+		t.Fatalf("binding = %#v", binding)
+	}
+	candidates, err := appSvc.ProjectBindingCandidates(configPath, "")
+	if err != nil {
+		t.Fatalf("ProjectBindingCandidates: %v", err)
+	}
+	if len(candidates) != 2 || candidates[0].Field != "credential" || candidates[0].Env == "" {
+		t.Fatalf("candidates = %#v", candidates)
+	}
+	encoded, err := json.Marshal(struct {
+		Workspace  ProjectWorkspace
+		Candidates []ProjectBindingCandidate
+	}{workspace, candidates})
+	if err != nil {
+		t.Fatalf("marshal workspace: %v", err)
+	}
+	if strings.Contains(string(encoded), "ghp_fake_token") || strings.Contains(string(encoded), "sk-openai-test") {
+		t.Fatalf("workspace DTO leaked secret values: %s", encoded)
+	}
+}
+
+func TestProjectWorkspaceReportsDuplicateEnvWithoutValues(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	manifest := project.New()
+	if err := manifest.AddBinding(project.Binding{Item: "github", Field: "credential", Env: "DUPLICATE"}); err != nil {
+		t.Fatalf("add github binding: %v", err)
+	}
+	if err := manifest.AddBinding(project.Binding{Item: "openai", Field: "credential", Env: "DUPLICATE", Required: new(false)}); err != nil {
+		t.Fatalf("add openai binding: %v", err)
+	}
+	if err := project.Save(filepath.Join(dir, project.FileName), manifest); err != nil {
+		t.Fatalf("save manifest: %v", err)
+	}
+	workspace, err := testApp().ProjectWorkspace(configPath, "")
+	if err != nil {
+		t.Fatalf("ProjectWorkspace: %v", err)
+	}
+	if got := workspace.Bindings[1]; got.Status != "fail" || !strings.Contains(got.Message, "conflicts") || strings.Contains(got.Message, "sk-openai-test") {
+		t.Fatalf("duplicate status = %#v", got)
+	}
+}
+
+func TestProjectWorkspaceHandlesMissingManifest(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	if err := os.Remove(filepath.Join(dir, project.FileName)); err != nil {
+		t.Fatalf("remove manifest: %v", err)
+	}
+	workspace, err := testApp().ProjectWorkspace(configPath, "")
+	if err != nil {
+		t.Fatalf("ProjectWorkspace: %v", err)
+	}
+	if workspace.ManifestPresent || len(workspace.Bindings) != 0 {
+		t.Fatalf("missing-manifest workspace = %#v", workspace)
+	}
+}
+
 func TestProjectRunInjectsSecret(t *testing.T) {
 	dir, configPath := setupProjectTest(t)
 	vaultPath := filepath.Join(dir, "vault.json")

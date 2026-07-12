@@ -104,6 +104,14 @@ Inside a Git worktree, create a value-free project manifest:
 shelf project init
 ```
 
+On a 100×24-or-larger interactive terminal, manage value-free bindings in the optional workspace:
+
+```bash
+shelf project tui
+```
+
+Use `a` to choose a secret field and env name, `d` to remove a binding after confirmation, and `i` to initialize a missing manifest. The workspace shows binding resolution state and diagnostics without values; `project export` and `project run` stay explicit CLI actions.
+
 Add concrete item-field bindings:
 
 ```bash
@@ -144,5 +152,5 @@ shelf doctor
 
 - Built-in age encryption. Use chezmoi or another external tool for encrypted sync.
 - v1 vault compatibility or automated migration.
-- Web manager. Keyboard-first TUI editing is planned but not yet available.
+- Web manager. Both secret and project binding TUI workspaces are available; browser and hosted interfaces remain deferred.
 - Team sharing, hosted sync, browser autofill, or daemon-based unlock flows.

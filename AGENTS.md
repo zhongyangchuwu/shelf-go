@@ -54,6 +54,7 @@ shelf secret export --label LABEL [--label LABEL ...] [--format shell|json]
 shelf secret rm <selector> --yes
 shelf project id
 shelf project init [--force]
+shelf project tui
 shelf project add <item-id-or-title> [--field FIELD] [--env NAME] [--optional]
 shelf project rm <item.field>
 shelf project list
@@ -68,7 +69,7 @@ shelf completion <shell>
 | --- | --- | --- |
 | Entry point | Construct and execute root command | `cmd/shelf/main.go` |
 | CLI | Cobra commands, flags, completions, output routing, and no-echo terminal field prompts | `internal/cli` |
-| TUI | Wide-screen catalog, masked forms, and safe item actions through app/clipboard | `internal/tui` |
+| TUI | Wide-screen secret and project-binding workspaces, masked forms, and safe actions through app/clipboard | `internal/tui` |
 | CLI UI | Human output helpers for titles, summaries, empty states, and tables | `internal/cliui` |
 | App | Workflow orchestration for setup, doctor, secret, project, run | `internal/app` |
 | Clipboard | Copy secret values to the system clipboard without printing them | `internal/clipboard` |

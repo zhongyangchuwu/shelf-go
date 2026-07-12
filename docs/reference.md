@@ -143,6 +143,17 @@ Creates `<git-root>/.shelf.json`.
 shelf project init [--force]
 ```
 
+## `shelf project tui`
+
+Opens the optional, keyboard-first binding workspace for the current Git worktree. It requires interactive stdin and stdout plus a terminal at least 100 columns × 24 rows.
+
+```bash
+shelf project tui
+```
+
+The workspace lists value-free bindings and their ready/warn/fail status, including safe missing-value and duplicate-env diagnostics. `a` selects a secret field and env name, `d` removes a binding after confirmation, and `i` initializes a missing manifest after confirmation. It never reads or writes `.shelf.json` directly, reveals values, exports, or runs child processes.
+
+
 ## `shelf project add`
 
 Adds a concrete item-field binding to the project manifest.
