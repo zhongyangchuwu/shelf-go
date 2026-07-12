@@ -20,12 +20,26 @@ vendors:
     in: github.com/atotto/clipboard
   term:
     in: golang.org/x/term
+  bubbletea:
+    in:
+      - charm.land/bubbletea/v2
+      - charm.land/bubbletea/v2/**
+  bubbles:
+    in:
+      - charm.land/bubbles/v2
+      - charm.land/bubbles/v2/**
+  huh:
+    in:
+      - charm.land/huh/v2
+      - charm.land/huh/v2/**
 
 components:
   cli:
     in: cli
   cliui:
     in: cliui
+  tui:
+    in: tui
   clipboard:
     in: clipboard
   app:
@@ -47,9 +61,19 @@ deps:
       - app
       - cliui
       - clipboard
+      - tui
     canUse:
       - cobra
       - term
+  tui:
+    mayDependOn:
+      - app
+      - clipboard
+    canUse:
+      - bubbletea
+      - bubbles
+      - huh
+      - lipgloss
 
   cliui:
     canUse:

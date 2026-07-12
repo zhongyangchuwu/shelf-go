@@ -2,10 +2,10 @@
 
 ## Current Position
 
-- Phase: Safe Catalog TUI
-- Status: design drafted — awaiting user review
-- Active Artifact: `.planning/phases/048-safe-catalog-tui/UI-SPEC.md`
-- Next Action: User review of the UI specification; do not implement before approval.
+- Phase: Project Binding TUI
+- Status: planned
+- Active Artifact: `.planning/phases/049-project-binding-tui/`
+- Next Action: Design the value-free current-project binding workspace.
 
 ## Blockers
 
@@ -21,7 +21,7 @@
 - `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
 - `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
 - `secret update` atomically changes title, labels, aliases, or a field; secret values remain stdin-only.
-- Phase 48 wide-screen workspace design is drafted; it includes catalog browsing plus create, update, copy, and remove actions, but no TUI code or runtime dependencies have been added.
+- Phase 48 implemented `shelf tui`: an optional Bubble Tea workspace with safe catalog search/filter/detail views, masked create/edit forms, clipboard copy, app-backed create/update/remove actions, terminal preflight, and a 100×24 resize contract.
 - The proposed personal workflow sequence is scriptable item lifecycle → wide-screen secret workspace TUI → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.
@@ -29,12 +29,14 @@
 - Local config points at `/home/han/.local/share/shelf/vault.json`.
 - Local backup before cutover: `/home/han/.local/share/shelf/backups/pre-plain-json-cutover-20260710-162158`.
 - Built-in release packaging/tagging is deferred until a future public v1.0.0 milestone.
-- Latest verification passed:
+- Latest Phase 48 verification passed:
+  - deterministic app, CLI, and TUI model tests
+  - pseudo-terminal wide-screen alternate-screen lifecycle smoke
+  - pseudo-terminal narrow-screen resize-required smoke
   - `go test ./...`
   - `go vet ./...`
   - `go-arch-lint check`
   - `go build ./cmd/shelf`
-  - installed-binary `secret update` smoke test with a temporary vault and fake value
 
 ## Updated
 

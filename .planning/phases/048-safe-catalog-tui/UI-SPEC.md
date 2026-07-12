@@ -1,6 +1,6 @@
 # UI Specification: Wide-Screen Secret Workspace TUI
 
-**Status:** Revised draft — awaiting user review before implementation.
+**Status:** Implemented and verified.
 
 ## Product Target
 
@@ -230,10 +230,10 @@ No key writes, copies, deletes, exports, or runs a command without explicit user
 | Layer | Choice | Reason |
 | --- | --- | --- |
 | Program model/lifecycle | `charm.land/bubbletea/v2` | Model–Update–View state machine, full-screen terminal handling, resize/key messages, deterministic model tests |
-| Catalog / filtering | `charm.land/bubbles/v2/list`, `textinput` | Keyboard list and text filter without custom cursor/filter machinery |
-| Detail scrolling | `charm.land/bubbles/v2/viewport` | Long detail and form content inside the right pane |
-| Key help | `charm.land/bubbles/v2/help`, `key` | Discoverable short/full keyboard help |
-| Forms | `github.com/charmbracelet/huh/v2` | Composable Bubble Tea forms, validation, and masked secret input |
+| Catalog / filtering | `charm.land/bubbles/v2/textinput` plus an explicit fixed-pane selection model | Keyboard search while preserving lazygit-style catalog focus and selection. |
+| Detail scrolling | `charm.land/bubbles/v2/viewport` | Scroll long detail content within the right pane. |
+| Key help | Explicit in-workspace text keymap | Discoverable short/full keyboard help without hiding the persistent catalog. |
+| Forms | `charm.land/huh/v2` | Composable Bubble Tea forms, validation, and masked secret input |
 | Styling | existing `charm.land/lipgloss/v2` | Adaptive terminal styling and existing project convention |
 
 ### Package Boundaries
@@ -278,7 +278,7 @@ The catalog loads once and filters in TUI memory. Selected details use existing 
 
 ## Review Gate
 
-Do not implement until the user approves this revised wide-screen workspace contract.
+Implementation began after this approved revised wide-screen workspace contract.
 
 ## Sources
 

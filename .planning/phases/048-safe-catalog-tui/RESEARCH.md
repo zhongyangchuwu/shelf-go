@@ -8,7 +8,7 @@ Add an optional, keyboard-first TUI as the interactive front-end for Shelf's loc
 
 - `charm.land/bubbletea/v2`: stateful Model-Update-View application, full-window or inline rendering, terminal lifecycle, key handling, and efficient cell-based rendering.
 - `github.com/charmbracelet/bubbles/v2`: list, table, text input, viewport, and paginator components where they reduce custom state.
-- `github.com/charmbracelet/huh/v2`: create/edit forms embedded as a Bubble Tea model; supports field validation and masked inputs.
+- `charm.land/huh/v2`: create/edit forms embedded as a Bubble Tea model; supports field validation and masked inputs.
 - Existing `charm.land/lipgloss/v2`: shared styling dependency already present in this module.
 
 Bubble Tea's documented Model/Init/Update/View architecture keeps screen state testable without an interactive terminal. Huh forms are Tea models and compose directly into a parent screen.

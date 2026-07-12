@@ -2,9 +2,9 @@
 
 **Shelf Go**
 
-Shelf Go is a fast local secret manager for solo developers who want developer-secret workflows without `.env` sprawl or hosted services. The current product is a Go CLI that manages item-based secrets, value-free project bindings, label-scoped exports, and `shelf project run`.
+Shelf Go is a fast local secret manager for solo developers who want developer-secret workflows without `.env` sprawl or hosted services. The current product is a Go CLI with an optional wide-screen secret workspace; it manages item-based secrets, value-free project bindings, label-scoped exports, and `shelf project run`.
 
-Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Built-in encryption is intentionally removed for the current personal-use direction; use chezmoi or another external tool to encrypt/sync the vault file.
+Shelf is CLI-first. The TUI is an optional interactive front-end over existing workflows, not a separate persistence path. Web manager is intentionally deferred. Built-in encryption is intentionally removed for the current personal-use direction; use chezmoi or another external tool to encrypt/sync the vault file.
 
 **Core Value:** A single developer can manage project secrets locally through a simple item vault and scriptable CLI while keeping project manifests and shell config value-free.
 
@@ -25,6 +25,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 - Cobra command surface in `internal/cli`.
 - Cross-platform clipboard adapter in `internal/clipboard`, using `clip.exe` then `wl-copy` on WSL and a native backend elsewhere.
 - Lip Gloss-backed human CLI output helpers in `internal/cliui`.
+- Bubble Tea v2, Bubbles v2, Huh v2, and Lip Gloss v2 power `internal/tui`; it invokes only app and clipboard boundaries.
 - Standard Go `testing` package for tests.
 
 ## Configuration
@@ -40,6 +41,7 @@ Shelf is CLI-first. Web manager and TUI editing are intentionally deferred. Buil
 ```text
 shelf setup
 shelf doctor
+shelf tui
 shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
 shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
 shelf secret get <selector> [--field FIELD]
@@ -66,6 +68,7 @@ shelf completion <shell>
 | --- | --- | --- |
 | Entry point | Construct and execute root command | `cmd/shelf/main.go` |
 | CLI | Cobra commands, flags, completions, output routing, and no-echo terminal field prompts | `internal/cli` |
+| TUI | Wide-screen catalog, masked forms, and safe item actions through app/clipboard | `internal/tui` |
 | CLI UI | Human output helpers for titles, summaries, empty states, and tables | `internal/cliui` |
 | App | Workflow orchestration for setup, doctor, secret, project, run | `internal/app` |
 | Clipboard | Copy secret values to the system clipboard without printing them | `internal/clipboard` |
@@ -75,11 +78,11 @@ shelf completion <shell>
 | Config | Config and vault path resolution | `internal/config` |
 | Util | Atomic write and env/shell/JSON binding formatting | `internal/util` |
 
-Dependency direction: `cli -> app/cliui/clipboard`, using Cobra and `golang.org/x/term` for command and terminal input adapters; `cliui -> lipgloss`; `clipboard -> github.com/atotto/clipboard`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
+Dependency direction: `cli -> app/cliui/clipboard/tui`, using Cobra and `golang.org/x/term` for command and terminal input adapters; `tui -> app/clipboard`; `cliui -> lipgloss`; `clipboard -> github.com/atotto/clipboard`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
 ## Data Rules
 
 - Secret values enter through stdin only for writes.
-- `secret get`, `secret export`, `project export`, and `project run` intentionally materialize values. `secret copy` materializes a value only to the system clipboard and must not print it.
+- `secret get`, `secret export`, `project export`, and `project run` intentionally materialize values. `secret copy` and TUI copy materialize a value only to the system clipboard and must not print it; TUI must never reveal a secret value.
 - `.shelf.json` stores concrete `item`, `field`, `env`, optional `required`, and optional `title` only.
 - Label-scoped export skips items without an explicit env-name field.
 

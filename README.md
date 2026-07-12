@@ -2,7 +2,7 @@
 
 Shelf Go is a local, CLI-first secret manager for one developer. It stores item-based secrets in a local JSON vault and leaves encryption/sync to your dotfile tooling, such as chezmoi.
 
-The current product focus is the CLI: create secrets, inspect metadata, export label groups, and bind project commands to item fields. Web and TUI surfaces are deferred.
+The current product is CLI-first: scriptable secret and project workflows remain authoritative, while `shelf tui` adds an optional wide-screen workspace for interactive secret management.
 
 ## Setup
 
@@ -85,6 +85,16 @@ source <(shelf secret export --label ai --format shell)
 ```
 
 Repeated labels use AND matching. Items without an explicit env-name field are skipped.
+
+## Interactive secret workspace
+
+On a 100×24-or-larger interactive terminal, open the optional full-screen catalog:
+
+```bash
+shelf tui
+```
+
+Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input and never reveals a secret value; `get`, export, and project run remain CLI-first.
 
 ## Use secrets in a project
 

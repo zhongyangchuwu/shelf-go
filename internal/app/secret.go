@@ -25,6 +25,8 @@ type CreateSecretRequest struct {
 	Profile  string
 	Env      string
 	Stdin    bool
+	Labels   []string
+	Aliases  []string
 	In       io.Reader
 	Provider string
 	Website  string
@@ -72,6 +74,16 @@ type SecretItemSummary struct {
 	ValueSet bool   `json:"value_set"`
 }
 
+type SecretCatalogItem struct {
+	ID       string   `json:"id"`
+	Title    string   `json:"title"`
+	Template string   `json:"template"`
+	Env      string   `json:"env,omitempty"`
+	Labels   []string `json:"labels,omitempty"`
+	Aliases  []string `json:"aliases,omitempty"`
+	ValueSet bool     `json:"value_set"`
+}
+
 type SecretFieldInfo struct {
 	ID          string                 `json:"id"`
 	Type        vaultmodel.FieldType   `json:"type"`
@@ -93,6 +105,16 @@ func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecre
 	if strings.TrimSpace(req.Title) == "" {
 		return "", fmt.Errorf("title is required")
 	}
+	labels, err := normalizedTokens(req.Labels, "label")
+	if err != nil {
+		return "", err
+	}
+	aliases, err := normalizedTokens(req.Aliases, "alias")
+	if err != nil {
+		return "", err
+	}
+	req.Labels = labels
+	req.Aliases = aliases
 	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
@@ -108,6 +130,17 @@ func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecre
 	for _, existing := range vault.Items {
 		if existing.Title == item.Title {
 			return "", fmt.Errorf("item title already exists: %s", item.Title)
+		}
+	}
+	if err := ensureSelectorAvailable(vault.Items, -1, item.Title); err != nil {
+		return "", err
+	}
+	for _, alias := range item.Aliases {
+		if alias == item.ID || alias == item.Title {
+			return "", fmt.Errorf("alias conflicts with item identity: %s", alias)
+		}
+		if err := ensureSelectorAvailable(vault.Items, -1, alias); err != nil {
+			return "", err
 		}
 	}
 	vault.Items = append(vault.Items, item)
@@ -264,6 +297,40 @@ func (a *App) ListSecretItems(configPathFlag, vaultPathFlag string, req ListSecr
 	return out, nil
 }
 
+func (a *App) SecretCatalog(configPathFlag, vaultPathFlag string) ([]SecretCatalogItem, error) {
+	vault, err := a.loadVaultForRead(configPathFlag, vaultPathFlag)
+	if err != nil {
+		return nil, err
+	}
+	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
+	items := make([]SecretCatalogItem, 0, len(vault.Items))
+	for _, item := range vault.Items {
+		primary, err := resolver.PrimarySecretField(item)
+		if err != nil {
+			return nil, fmt.Errorf("catalog %s: %w", item.Title, err)
+		}
+		env, _, err := resolver.EnvName(item, primary.ID)
+		if err != nil {
+			return nil, fmt.Errorf("catalog %s env name: %w", item.Title, err)
+		}
+		_, field, err := resolver.Field(item, primary.ID)
+		if err != nil {
+			return nil, fmt.Errorf("catalog %s: %w", item.Title, err)
+		}
+		items = append(items, SecretCatalogItem{
+			ID:       item.ID,
+			Title:    item.Title,
+			Template: item.Template,
+			Env:      env,
+			Labels:   append([]string(nil), item.Labels...),
+			Aliases:  append([]string(nil), item.Aliases...),
+			ValueSet: len(field.Value) > 0,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].Title < items[j].Title })
+	return items, nil
+}
+
 func (a *App) ExportSecretItems(configPathFlag, vaultPathFlag string, req ExportSecretItemsRequest) (string, error) {
 	labels := normalizeLabels(req.Labels)
 	if len(labels) == 0 {
@@ -378,7 +445,7 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 	if !ok {
 		return vaultmodel.Item{}, fmt.Errorf("template not found: %s", templateID)
 	}
-	item := vaultmodel.Item{ID: req.ID, Title: req.Title, Template: tmpl.ID}
+	item := vaultmodel.Item{ID: req.ID, Title: req.Title, Template: tmpl.ID, Labels: append([]string(nil), req.Labels...), Aliases: append([]string(nil), req.Aliases...)}
 	if item.ID == "" {
 		item.ID = itemIDFromTitle(req.Title)
 	}

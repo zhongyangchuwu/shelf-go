@@ -14,12 +14,14 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] Human-facing secret list/create output is routed through `internal/cliui`.
 - [x] `secret copy` provides clipboard-only interactive retrieval while `secret get` remains scriptable stdout output.
 - [x] `secret update` maintains item title, labels, aliases, and public fields atomically while keeping secret writes stdin-only.
+- [x] `shelf tui` provides a wide-screen secret workspace with safe catalog/filter/detail views, masked forms, clipboard copy, and app-backed mutations.
 
 ### Planned
 
 - [x] Scriptable item lifecycle is complete.
-- [ ] Remaining personal workflow UX: safe catalog TUI, TUI item editing, project binding TUI, and credential health audit.
-- [ ] The next executable phase is `.planning/phases/048-safe-catalog-tui/PLAN.md`.
+- [x] Wide-screen secret workspace TUI is complete.
+- [ ] Remaining personal workflow UX: project binding TUI and credential health audit.
+- [ ] The next executable phase is `.planning/phases/049-project-binding-tui/`.
 
 ### Out of Scope
 
@@ -40,6 +42,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 
 - `internal/cli`: Cobra command surface.
 - `internal/cliui`: Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables.
+- `internal/tui`: optional Bubble Tea workspace adapter over `app` and `clipboard`; no direct vault, config, or project I/O.
 - `internal/clipboard`: system clipboard boundary for the explicit `secret copy` workflow.
 - `internal/app`: application workflows.
 - `internal/vaultmodel`: item/field/template/profile model, validation, and shared item/field/env resolver.
@@ -60,7 +63,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Copy through an explicit command | Interactive secret retrieval should not break stdout-based scripting. | `secret copy` writes only to the clipboard and returns value-free confirmation. |
 | Use a shared model resolver | Secret and project workflows must agree on item, field, and env-name semantics. | `vaultmodel.Resolver` is the only active owner of those rules. |
 | Treat `.env` as a projection, not the primary model | A developer should maintain values and context once, then select fields for a project or command. | The vault is item-first; project bindings and exports are value-free runtime projections. |
-| Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phase 47 precedes a read-only Phase 48; all later TUI mutations reuse app workflows. |
+| Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phase 48 delivers item create/update/copy/remove through existing app and clipboard workflows. |
 
 ---
-*Last updated: 2026-07-12 after scriptable item lifecycle*
+*Last updated: 2026-07-12 after wide-screen secret workspace TUI*

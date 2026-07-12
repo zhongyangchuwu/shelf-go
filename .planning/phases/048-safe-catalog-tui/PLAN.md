@@ -29,3 +29,10 @@ Add an optional, wide-screen, keyboard-first `shelf tui` that provides safe cata
 ## Design Inputs
 
 See `RESEARCH.md` for library and security rationale and `UI-SPEC.md` for the reviewed interaction, safety, architecture, and verification contract.
+
+## Implementation
+
+- Added a value-free `app.SecretCatalog` DTO/query and atomic create support for labels and aliases.
+- Added `internal/tui` with Bubble Tea lifecycle, Bubbles text input and viewport, Huh masked multi-step forms, adaptive Lip Gloss styles, and deterministic state tests.
+- Added `shelf tui` with stdin/stdout TTY preflight and preserved app/clipboard-only mutation boundaries.
+- Added value-free behavior tests, command preflight coverage, architecture rules, and pseudo-terminal wide/narrow smoke coverage.

@@ -25,10 +25,10 @@ This milestone is for local development and personal use. Public repository/rele
 
 ## Planned Personal Workflow UX
 
-**Status:** Phase 47 complete; the revised Phase 48 Wide-Screen Secret Workspace TUI design is awaiting user review. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
+**Status:** Phase 48 Wide-Screen Secret Workspace TUI is complete. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
 
 - [x] Phase 47: Scriptable Item Lifecycle — added safe, scriptable item mutations before interactive editing.
-- [ ] Phase 48: Wide-Screen Secret Workspace TUI — keyboard-first catalog plus item create, update, copy, and remove actions.
+- [x] Phase 48: Wide-Screen Secret Workspace TUI — keyboard-first catalog plus item create, update, copy, and remove actions.
 - [ ] Phase 49: Project Binding TUI — value-free current-project manifest management and binding picker.
 - [ ] Phase 50: Credential Health Audit — value-free expired and upcoming-expiry checks in CLI and TUI.
 
@@ -68,6 +68,13 @@ This milestone is for local development and personal use. Public repository/rele
 - Added atomic `secret update` changes for item title, labels, aliases, and typed public fields.
 - Kept secret field writes stdin-only and all update output and errors value-free.
 
+## Completed Phase 48
+
+- Added `shelf tui` with interactive-terminal preflight, a 100×24 minimum, alternate-screen cleanup, and a resize-required view.
+- Added safe catalog/search/filter/detail views, including AND label filtering and scrollable detail content.
+- Added masked create/edit forms, value-free review and confirmation views, app-backed create/update/remove actions, and clipboard-only copy.
+- Preserved value-free TUI state and architecture boundaries; full checks and pseudo-terminal lifecycle smoke passed.
+
 ## Deferred Beyond the Personal Workflow UX Plan
 
 1. Web manager for item vaults.
@@ -77,4 +84,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-12 after scriptable item lifecycle*
+*Last updated: 2026-07-12 after wide-screen secret workspace TUI*

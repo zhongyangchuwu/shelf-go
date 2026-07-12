@@ -27,6 +27,17 @@ Checks config resolution, version, item-vault path, permissions, JSON validity, 
 shelf doctor
 ```
 
+## `shelf tui`
+
+Opens the optional, keyboard-first secret workspace. It requires interactive stdin and stdout plus a terminal at least 100 columns × 24 rows; a smaller terminal shows a resize-required screen.
+
+```bash
+shelf tui
+```
+
+The catalog, search, filters, detail, help, and confirmation screens are value-free. `a`, `e`, `c`, and `d` create, update, copy, and delete through the existing app and clipboard workflows. Secret-field form input is masked; the workspace has no reveal action. `secret get`, exports, and project execution remain CLI commands.
+
+
 
 ## `shelf secret create`
 

@@ -92,6 +92,51 @@ func TestCreateSecret(t *testing.T) {
 	}
 }
 
+func TestCreateSecretStoresMetadataAtomically(t *testing.T) {
+	vaultPath := filepath.Join(t.TempDir(), "vault.json")
+	configPath := writeConfig(t, vaultPath)
+	appSvc := testApp()
+
+	if _, err := appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{
+		Title:   "OpenAI personal",
+		Labels:  []string{"ai", "personal", "ai"},
+		Aliases: []string{"openai", "llm", "openai"},
+		Stdin:   true,
+		In:      strings.NewReader("fake-openai-token"),
+	}); err != nil {
+		t.Fatalf("CreateSecret: %v", err)
+	}
+	info, err := appSvc.SecretInfo(configPath, vaultPath, "openai")
+	if err != nil {
+		t.Fatalf("SecretInfo: %v", err)
+	}
+	if got, want := strings.Join(info.Labels, ","), "ai,personal"; got != want {
+		t.Fatalf("labels = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(info.Aliases, ","), "openai,llm"; got != want {
+		t.Fatalf("aliases = %q, want %q", got, want)
+	}
+
+	_, err = appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{
+		Title:   "GitHub work",
+		Aliases: []string{"openai"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "selector already exists") {
+		t.Fatalf("conflicting alias error = %v", err)
+	}
+	_, err = appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{Title: "openai"})
+	if err == nil || !strings.Contains(err.Error(), "selector already exists") {
+		t.Fatalf("conflicting title error = %v", err)
+	}
+	catalog, err := appSvc.SecretCatalog(configPath, vaultPath)
+	if err != nil {
+		t.Fatalf("SecretCatalog: %v", err)
+	}
+	if len(catalog) != 1 {
+		t.Fatalf("catalog count after rejected create = %d, want 1", len(catalog))
+	}
+}
+
 func TestCreateSecretCustomTemplate(t *testing.T) {
 	vaultPath := filepath.Join(t.TempDir(), "vault.json")
 	configPath := writeConfig(t, vaultPath)
@@ -492,6 +537,44 @@ func TestListSecretItems_ValueFree(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].ID != "item_alpha" {
 		t.Fatalf("query gave %#v, want [item_alpha]", items)
+	}
+}
+
+func TestSecretCatalogIsValueFreeAndIncludesOrganization(t *testing.T) {
+	vaultPath := filepath.Join(t.TempDir(), "vault.json")
+	configPath := writeConfig(t, vaultPath)
+	if _, err := testApp().CreateSecret(configPath, vaultPath, CreateSecretRequest{
+		Title: "OpenAI personal",
+		Env:   "OPENAI_API_KEY",
+		Stdin: true,
+		In:    strings.NewReader("fake-catalog-secret"),
+	}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
+		Selector:   "OpenAI personal",
+		AddLabels:  []string{"ai", "personal"},
+		AddAliases: []string{"openai"},
+	}); err != nil {
+		t.Fatalf("organize: %v", err)
+	}
+	catalog, err := testApp().SecretCatalog(configPath, vaultPath)
+	if err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+	if len(catalog) != 1 {
+		t.Fatalf("catalog length = %d", len(catalog))
+	}
+	item := catalog[0]
+	if item.ID != "item_openai_personal" || item.Env != "OPENAI_API_KEY" || !item.ValueSet || !hasString(item.Labels, "ai") || !hasString(item.Aliases, "openai") {
+		t.Fatalf("catalog item = %#v", item)
+	}
+	content, err := json.Marshal(catalog)
+	if err != nil {
+		t.Fatalf("marshal catalog: %v", err)
+	}
+	if strings.Contains(string(content), "fake-catalog-secret") {
+		t.Fatalf("catalog leaked a secret: %s", content)
 	}
 }
 
