@@ -403,3 +403,48 @@ func rawJSON(value string) json.RawMessage {
 	}
 	return raw
 }
+
+func TestSecretAuditReportsValueFreeHealthAndExitCodes(t *testing.T) {
+	expiredVault := filepath.Join(t.TempDir(), "expired-vault.json")
+	if _, err := runShelfWithInput(t, "fake-expired-token", "--vault", expiredVault, "secret", "create", "expired", "--template", "api", "--expires", "2000-01-01", "--stdin"); err != nil {
+		t.Fatalf("create expired credential: %v", err)
+	}
+	out, err := runShelf(t, "--vault", expiredVault, "secret", "audit", "--format", "json")
+	if err == nil || ExitCode(err) != 3 {
+		t.Fatalf("expired audit error = %v, exit code = %d", err, ExitCode(err))
+	}
+	if !strings.Contains(out, `"status":"expired"`) || strings.Contains(out, "fake-expired-token") {
+		t.Fatalf("expired audit output = %q", out)
+	}
+
+	missingVault := filepath.Join(t.TempDir(), "missing-vault.json")
+	if _, err := runShelfWithInput(t, "fake-missing-token", "--vault", missingVault, "secret", "create", "missing", "--template", "api", "--stdin"); err != nil {
+		t.Fatalf("create missing credential: %v", err)
+	}
+	out, err = runShelf(t, "--vault", missingVault, "secret", "audit")
+	if err == nil || ExitCode(err) != 2 {
+		t.Fatalf("missing audit error = %v, exit code = %d", err, ExitCode(err))
+	}
+	if !strings.Contains(out, "missing") || strings.Contains(out, "fake-missing-token") {
+		t.Fatalf("missing audit output = %q", out)
+	}
+
+	healthyVault := filepath.Join(t.TempDir(), "healthy-vault.json")
+	if _, err := runShelfWithInput(t, "fake-healthy-token", "--vault", healthyVault, "secret", "create", "healthy", "--template", "api", "--expires", "2099-01-01", "--stdin"); err != nil {
+		t.Fatalf("create healthy credential: %v", err)
+	}
+	out, err = runShelf(t, "--vault", healthyVault, "secret", "audit")
+	if err != nil {
+		t.Fatalf("healthy audit error = %v", err)
+	}
+	if !strings.Contains(out, "healthy") || strings.Contains(out, "fake-healthy-token") {
+		t.Fatalf("healthy audit output = %q", out)
+	}
+}
+
+func TestSecretAuditRejectsNegativeHorizon(t *testing.T) {
+	_, err := runShelf(t, "--vault", filepath.Join(t.TempDir(), "vault.json"), "secret", "audit", "--within", "-1")
+	if err == nil || !strings.Contains(err.Error(), "horizon") {
+		t.Fatalf("negative audit horizon error = %v", err)
+	}
+}

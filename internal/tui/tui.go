@@ -16,6 +16,7 @@ type Service interface {
 	UpdateSecret(configPathFlag, vaultPathFlag string, req app.UpdateSecretRequest) error
 	GetSecretField(configPathFlag, vaultPathFlag string, req app.GetSecretFieldRequest) (string, error)
 	RemoveSecret(configPathFlag, vaultPathFlag, selector string) error
+	CredentialAudit(configPathFlag, vaultPathFlag string, req app.CredentialAuditRequest) (app.CredentialAuditReport, error)
 }
 
 type ProjectService interface {

@@ -119,6 +119,16 @@ source <(shelf secret export --label ai --format shell)
 Repeated labels use AND matching. Items without an explicit env-name field are skipped. Missing labels, missing secret values for exportable items, and duplicate env names fail with value-free diagnostics.
 
 
+## `shelf secret audit`
+
+Reports credential expiry health from public expiry metadata without printing secret values.
+
+```bash
+shelf secret audit [--within DAYS] [--format text|json]
+```
+
+The default horizon is 30 UTC calendar days. `expired` means the date is before today; `due` covers today through the horizon; tracked expiry metadata can also be `missing` or `invalid`. Items without expiry metadata are omitted. Exit status is `3` for expired credentials, `2` for due/missing/invalid credentials, and `0` for healthy/no tracked credentials.
+
 ## `shelf secret rm`
 
 Removes an item after explicit confirmation.

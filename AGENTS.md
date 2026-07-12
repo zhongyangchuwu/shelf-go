@@ -52,6 +52,7 @@ shelf secret list [query] [--long]
 shelf secret info <selector>
 shelf secret export --label LABEL [--label LABEL ...] [--format shell|json]
 shelf secret rm <selector> --yes
+shelf secret audit [--within DAYS] [--format text|json]
 shelf project id
 shelf project init [--force]
 shelf project tui
@@ -83,6 +84,7 @@ Dependency direction: `cli -> app/cliui/clipboard/tui`, using Cobra and `golang.
 ## Data Rules
 
 - Secret values enter through stdin only for writes.
+- `secret audit`, status views, and health indicators use public expiry metadata only and must never render secret values.
 - `secret get`, `secret export`, `project export`, and `project run` intentionally materialize values. `secret copy` and TUI copy materialize a value only to the system clipboard and must not print it; TUI must never reveal a secret value.
 - `.shelf.json` stores concrete `item`, `field`, `env`, optional `required`, and optional `title` only.
 - Label-scoped export skips items without an explicit env-name field.

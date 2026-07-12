@@ -94,7 +94,7 @@ On a 100×24-or-larger interactive terminal, open the optional full-screen catal
 shelf tui
 ```
 
-Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input and never reveals a secret value; `get`, export, and project run remain CLI-first.
+Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input, never reveals a secret value, and shows value-free expiry health where configured; `get`, export, and project run remain CLI-first.
 
 ## Use secrets in a project
 
@@ -132,6 +132,7 @@ Run a child command with project secrets injected:
 shelf project run -- npm run dev
 ```
 
+
 Preview injected env names without values:
 
 ```bash
@@ -139,6 +140,16 @@ shelf project run --dry-run -- npm run dev
 ```
 
 `.shelf.json` stores item IDs, field IDs, env names, and required flags only. It must not contain secret values.
+
+## Credential health
+
+Audit expiry metadata without materializing values:
+
+```bash
+shelf secret audit --within 30
+```
+
+Tracked credentials report `expired`, `due`, `missing`, `invalid`, or `healthy` status. The command exits `3` for expired credentials, `2` for warnings, and `0` when all tracked credentials are healthy. Use `--format json` for value-free script output.
 
 ## Health check
 

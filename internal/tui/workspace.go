@@ -50,6 +50,11 @@ type detailLoadedMsg struct {
 	err  error
 }
 
+type healthLoadedMsg struct {
+	report app.CredentialAuditReport
+	err    error
+}
+
 type actionDoneMsg struct {
 	status  string
 	refresh bool
@@ -66,11 +71,13 @@ type Model struct {
 	width  int
 	height int
 
-	items          []app.SecretCatalogItem
-	filtered       []app.SecretCatalogItem
-	selected       int
-	detail         app.SecretInfo
-	detailViewport viewport.Model
+	items             []app.SecretCatalogItem
+	filtered          []app.SecretCatalogItem
+	selected          int
+	detail            app.SecretInfo
+	detailViewport    viewport.Model
+	health            map[string]app.CredentialHealthItem
+	healthUnavailable bool
 
 	fieldSelected  int
 	query          textinput.Model
@@ -106,11 +113,12 @@ func NewModel(service Service, clipboardWriter clipboard.Writer, options Options
 		labels:          make(map[string]bool),
 		styles:          newWorkspaceStyles(true),
 		detailViewport:  newDetailViewport(),
+		health:          make(map[string]app.CredentialHealthItem),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.loadCatalog(), tea.RequestBackgroundColor)
+	return tea.Batch(m.reloadCatalog(), tea.RequestBackgroundColor)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -126,6 +134,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.screen = screenWorkspace
 		}
 		m.configureDetailViewport()
+		m.syncDetailViewport()
+		return m, nil
+	case healthLoadedMsg:
+		if msg.err != nil {
+			m.health = nil
+			m.healthUnavailable = true
+			m.syncDetailViewport()
+			return m, nil
+		}
+		m.health = credentialHealthItemsByID(msg.report)
+		m.healthUnavailable = false
 		m.syncDetailViewport()
 		return m, nil
 	case catalogLoadedMsg:
@@ -164,7 +183,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.screen = screenLoading
-		return m, m.loadCatalog()
+		return m, m.reloadCatalog()
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
@@ -188,14 +207,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.screen == screenResize {
 		if key == "r" {
-			return m, m.loadCatalog()
+			return m, m.reloadCatalog()
 		}
 		return m, nil
 	}
 	if m.screen == screenError {
 		if key == "r" {
 			m.screen = screenLoading
-			return m, m.loadCatalog()
+			return m, m.reloadCatalog()
 		}
 		return m, nil
 	}
@@ -247,7 +266,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "r":
 		m.screen = screenLoading
-		return m, m.loadCatalog()
+		return m, m.reloadCatalog()
 	case "tab", "h", "l":
 		if m.pane == paneCatalog {
 			m.pane = paneDetail
@@ -303,7 +322,7 @@ func (m Model) render() string {
 }
 
 func (m Model) renderWorkspace() string {
-	header := m.styles.header.Render(fmt.Sprintf("Shelf  ·  Catalog    %d items  ·  template: %s  ·  labels: %s", len(m.filtered), displayTemplate(m.template), displayLabels(m.labels)))
+	header := m.styles.header.Render(fmt.Sprintf("Shelf  ·  Catalog    %d items  ·  template: %s  ·  labels: %s  ·  health: %s", len(m.filtered), displayTemplate(m.template), displayLabels(m.labels), m.healthSummary()))
 	leftWidth := max(34, m.width*36/100)
 	rightWidth := max(50, m.width-leftWidth-3)
 	left := m.renderCatalog(leftWidth)
@@ -338,6 +357,9 @@ func (m Model) renderCatalog(width int) string {
 		state := "unset"
 		if item.ValueSet {
 			state = "set"
+		}
+		if health, ok := m.health[item.ID]; ok {
+			state += " · " + healthLabel(health.Status)
 		}
 		row := fmt.Sprintf("%s %-20s %-16s %s", cursor, truncate(item.Title, 20), truncate(item.Template, 16), state)
 		b.WriteString(truncate(row, width) + "\n")
@@ -519,6 +541,43 @@ func (m Model) loadCatalog() tea.Cmd {
 	}
 }
 
+func (m Model) loadHealth() tea.Cmd {
+	return func() tea.Msg {
+		report, err := m.service.CredentialAudit(m.options.ConfigPath, m.options.VaultPath, app.CredentialAuditRequest{WithinDays: app.DefaultCredentialAuditWithinDays})
+		return healthLoadedMsg{report: report, err: err}
+	}
+}
+
+func (m Model) reloadCatalog() tea.Cmd {
+	return tea.Batch(m.loadCatalog(), m.loadHealth())
+}
+
+func credentialHealthItemsByID(report app.CredentialAuditReport) map[string]app.CredentialHealthItem {
+	health := make(map[string]app.CredentialHealthItem, len(report.Items))
+	for _, candidate := range report.Items {
+		current, exists := health[candidate.ID]
+		if !exists || healthStatusRank(candidate.Status) < healthStatusRank(current.Status) {
+			health[candidate.ID] = candidate
+		}
+	}
+	return health
+}
+
+func healthStatusRank(status app.CredentialHealthStatus) int {
+	switch status {
+	case app.CredentialHealthExpired:
+		return 0
+	case app.CredentialHealthExpiring:
+		return 1
+	case app.CredentialHealthMissing:
+		return 2
+	case app.CredentialHealthMalformed:
+		return 3
+	default:
+		return 4
+	}
+}
+
 func (m Model) loadDetail(id string) tea.Cmd {
 	if id == "" {
 		return nil
@@ -616,4 +675,39 @@ func cloneLabels(labels map[string]bool) map[string]bool {
 		clone[label] = selected
 	}
 	return clone
+}
+
+func (m Model) healthSummary() string {
+	if m.healthUnavailable {
+		return "unavailable"
+	}
+	counts := map[app.CredentialHealthStatus]int{}
+	for _, health := range m.health {
+		counts[health.Status]++
+	}
+	parts := make([]string, 0, 4)
+	for _, status := range []app.CredentialHealthStatus{app.CredentialHealthExpired, app.CredentialHealthExpiring, app.CredentialHealthMissing, app.CredentialHealthMalformed} {
+		if count := counts[status]; count > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", count, healthLabel(status)))
+		}
+	}
+	if len(parts) == 0 {
+		return "clear"
+	}
+	return strings.Join(parts, ", ")
+}
+
+func healthLabel(status app.CredentialHealthStatus) string {
+	switch status {
+	case app.CredentialHealthExpired:
+		return "expired"
+	case app.CredentialHealthExpiring:
+		return "due"
+	case app.CredentialHealthMissing:
+		return "missing"
+	case app.CredentialHealthMalformed:
+		return "invalid"
+	default:
+		return "healthy"
+	}
 }

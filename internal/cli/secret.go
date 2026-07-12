@@ -33,6 +33,7 @@ func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Comm
 	cmd.AddCommand(newSecretInfoCmd(appSvc))
 	cmd.AddCommand(newSecretExportCmd(appSvc))
 	cmd.AddCommand(newSecretRmCmd(appSvc))
+	cmd.AddCommand(newSecretAuditCmd(appSvc))
 	return cmd
 }
 

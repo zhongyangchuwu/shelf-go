@@ -32,6 +32,15 @@ func (m Model) detailContent() string {
 	if len(m.detail.Aliases) > 0 {
 		fmt.Fprintf(&b, "aliases:  %s\n", strings.Join(m.detail.Aliases, ", "))
 	}
+	if health, ok := m.health[m.detail.ID]; ok {
+		fmt.Fprintf(&b, "health:   %s", healthLabel(health.Status))
+		if health.Expires != "" {
+			fmt.Fprintf(&b, " · expires %s", health.Expires)
+		}
+		b.WriteByte('\n')
+	} else if m.healthUnavailable {
+		b.WriteString("health:   unavailable\n")
+	}
 	b.WriteString("\nfields\n")
 	for i, field := range m.detail.Fields {
 		cursor := " "

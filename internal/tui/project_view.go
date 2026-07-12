@@ -58,7 +58,11 @@ func (m ProjectModel) renderProjectBindings(width int) string {
 		if !binding.Required {
 			required = "optional"
 		}
-		row := fmt.Sprintf("%s %-18s %-16s %s %s", cursor, truncate(binding.Key, 18), truncate(binding.Env, 16), required, binding.Status)
+		health := binding.Status
+		if binding.Health != "" {
+			health += " · " + healthLabel(binding.Health)
+		}
+		row := fmt.Sprintf("%s %-18s %-16s %s %s", cursor, truncate(binding.Key, 18), truncate(binding.Env, 16), required, health)
 		b.WriteString(truncate(row, width) + "\n")
 	}
 	return lipgloss.NewStyle().Width(width).Render(b.String())
@@ -102,6 +106,13 @@ func (m ProjectModel) renderProjectDetail(width int) string {
 	fmt.Fprintf(&b, "env:      %s\n", binding.Env)
 	fmt.Fprintf(&b, "required: %s\n", required)
 	fmt.Fprintf(&b, "status:   %s\n", binding.Status)
+	if binding.Health != "" {
+		fmt.Fprintf(&b, "health:   %s", healthLabel(binding.Health))
+		if binding.Expires != "" {
+			fmt.Fprintf(&b, " · expires %s", binding.Expires)
+		}
+		b.WriteByte('\n')
+	}
 	if binding.Message != "" {
 		fmt.Fprintf(&b, "\n%s\n", binding.Message)
 	}

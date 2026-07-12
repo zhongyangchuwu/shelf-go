@@ -16,14 +16,15 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] `secret update` maintains item title, labels, aliases, and public fields atomically while keeping secret writes stdin-only.
 - [x] `shelf tui` provides a wide-screen secret workspace with safe catalog/filter/detail views, masked forms, clipboard copy, and app-backed mutations.
 - [x] `shelf project tui` manages current-worktree bindings with safe resolution diagnostics, picker/form workflows, and app-owned manifest persistence.
+- [x] `shelf secret audit` supplies value-free credential expiry signals in CLI, secret TUI, project TUI, and project status without changing export/run enforcement.
 
 ### Planned
 
 - [x] Scriptable item lifecycle is complete.
 - [x] Wide-screen secret workspace TUI is complete.
 - [x] Project binding TUI is complete.
-- [ ] Remaining personal workflow UX: credential health audit.
-- [ ] The next executable phase is `.planning/phases/050-credential-health-audit/`.
+- [x] Credential health audit is complete.
+- [x] Personal workflow UX roadmap is complete; a future milestone requires explicit planning.
 
 ### Out of Scope
 
@@ -66,6 +67,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Use a shared model resolver | Secret and project workflows must agree on item, field, and env-name semantics. | `vaultmodel.Resolver` is the only active owner of those rules. |
 | Treat `.env` as a projection, not the primary model | A developer should maintain values and context once, then select fields for a project or command. | The vault is item-first; project bindings and exports are value-free runtime projections. |
 | Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phases 48–49 deliver secret and project binding workflows through existing app and clipboard boundaries. |
+| Use expiry metadata as an advisory health signal | Local workflows need timely maintenance signals without hidden runtime enforcement or remote dependencies. | Phase 50 adds value-free audit status; export/run remain unchanged. |
 
 ---
-*Last updated: 2026-07-12 after project binding TUI*
+*Last updated: 2026-07-12 after credential health audit*

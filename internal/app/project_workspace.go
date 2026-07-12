@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/project"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
@@ -26,6 +27,8 @@ type ProjectBindingStatus struct {
 	Required bool
 	Status   string
 	Message  string
+	Health   CredentialHealthStatus
+	Expires  string
 }
 
 type ProjectBindingCandidate struct {
@@ -59,6 +62,7 @@ func (a *App) ProjectWorkspace(configPathFlag, vaultPathFlag string) (ProjectWor
 		return ProjectWorkspace{}, err
 	}
 	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
+	healthByItem := credentialHealthByItem(credentialAuditForVault(vault, DefaultCredentialAuditWithinDays, time.Now()))
 	statuses := project.ResolveBindingStatuses(manifest, resolver)
 	statusByPath := make(map[string]project.BindingStatus, len(statuses))
 	for _, bindingStatus := range statuses {
@@ -81,6 +85,10 @@ func (a *App) ProjectWorkspace(configPathFlag, vaultPathFlag string) (ProjectWor
 		if bindingStatus, ok := statusByPath[status.Key]; ok {
 			status.Status = bindingStatus.Status
 			status.Message = bindingStatus.Message
+		}
+		if health, ok := healthByItem[binding.Item]; ok && health.Field == binding.Field {
+			status.Health = health.Status
+			status.Expires = health.Expires
 		}
 		workspace.Bindings = append(workspace.Bindings, status)
 	}

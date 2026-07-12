@@ -2,10 +2,10 @@
 
 ## Current Position
 
-- Phase: Credential Health Audit
-- Status: planned
-- Active Artifact: `.planning/phases/050-credential-health-audit/PLAN.md`
-- Next Action: Design value-free expiry health checks for CLI and TUI.
+- Phase: Personal Workflow UX
+- Status: complete
+- Active Artifact: `.planning/phases/050-credential-health-audit/VERIFICATION.md`
+- Next Action: Start a new milestone only after explicit scope selection.
 
 ## Blockers
 
@@ -23,6 +23,7 @@
 - `secret update` atomically changes title, labels, aliases, or a field; secret values remain stdin-only.
 - Phase 48 implemented `shelf tui`: an optional Bubble Tea workspace with safe catalog search/filter/detail views, masked create/edit forms, clipboard copy, app-backed create/update/remove actions, terminal preflight, and a 100×24 resize contract.
 - Phase 49 implemented `shelf project tui`: a value-free current-worktree binding workspace with safe status diagnostics, candidate picker/filter, add/remove actions, missing-manifest initialization confirmation, terminal preflight, and a 100×24 resize contract.
+- Phase 50 implemented `shelf secret audit`: a value-free UTC expiry audit with deterministic health exit codes, secret/project TUI indicators, and project-status annotations; project export/run behavior is unchanged.
 - The proposed personal workflow sequence is scriptable item lifecycle → wide-screen secret workspace TUI → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.
@@ -30,9 +31,9 @@
 - Local config points at `/home/han/.local/share/shelf/vault.json`.
 - Local backup before cutover: `/home/han/.local/share/shelf/backups/pre-plain-json-cutover-20260710-162158`.
 - Built-in release packaging/tagging is deferred until a future public v1.0.0 milestone.
-- Latest Phase 49 verification passed:
-  - deterministic app, CLI, project resolver, and project TUI model tests
-  - pseudo-terminal wide-screen and resize-required lifecycle smoke
+- Latest Phase 50 verification passed:
+  - deterministic app, CLI, project status, and TUI model tests
+  - credential audit CLI/TUI pseudo-terminal smoke
   - `bash scripts/test.sh` (`go vet`, `go test`, and `go-arch-lint`)
   - `go build ./cmd/shelf`
 

@@ -173,6 +173,9 @@ func TestProjectStatusReportsDiagnostics(t *testing.T) {
 	if !strings.Contains(out, "GITHUB_TOKEN") {
 		t.Fatalf("expected env name in status output, got:\n%s", out)
 	}
+	if !strings.Contains(out, "health:missing") {
+		t.Fatalf("expected missing credential health in status output, got:\n%s", out)
+	}
 }
 
 func TestProjectStatusValueFree(t *testing.T) {

@@ -21,3 +21,14 @@ Turn existing item metadata into actionable local maintenance signals before cre
 - Audit output and TUI warnings remain value-free.
 - Existing project run/export semantics remain unchanged unless a future user-approved enforcement policy is added.
 - `go test ./...`, `go vet ./...`, and `go-arch-lint check` pass.
+
+## Design
+
+See `UI-SPEC.md` for status semantics, exit codes, TUI indicators, and value-free constraints.
+
+## Implementation
+
+- Added a value-free app audit over expiry-purpose metadata with UTC date semantics, configurable horizon, deterministic sort, and expired/expiring/missing/malformed/healthy states.
+- Added `shelf secret audit --within DAYS --format text|json` with deterministic health exit codes.
+- Added health indicators to the secret catalog/detail, project binding workspace, and `project status`; project export/run behavior remains unchanged.
+- Added app, CLI, TUI, malformed-custom-metadata, and pseudo-terminal smoke coverage.

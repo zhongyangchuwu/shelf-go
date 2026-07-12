@@ -24,7 +24,7 @@
 - [x] **TUI-01**: `shelf tui` provides a keyboard-first, value-free item catalog with search, filters, detail, and safe terminal lifecycle handling.
 - [x] **TUI-02**: TUI mutations reuse app workflows, mask secret writes, and never render a secret value.
 - [x] **TUI-03**: `shelf project tui` manages current-project value-free bindings without editing `.shelf.json` directly.
-- [ ] **OPS-01**: Credential expiry audit reports expired and upcoming credentials without values.
+- [x] **OPS-01**: Credential expiry audit reports expired and upcoming credentials without values.
 
 ## Deferred Requirements
 
@@ -47,7 +47,7 @@
 | TUI-01 | Phase 48 | Complete |
 | TUI-02 | Phase 48 | Complete |
 | TUI-03 | Phase 49 | Complete |
-| OPS-01 | Phase 50 | Planned |
+| OPS-01 | Phase 50 | Complete |
 
 ---
-*Last updated: 2026-07-12 after project binding TUI*
+*Last updated: 2026-07-12 after credential health audit*

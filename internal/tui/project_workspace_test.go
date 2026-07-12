@@ -52,7 +52,7 @@ func readyProjectModel(t *testing.T) (ProjectModel, *fakeProjectService) {
 			Root:            "/safe/project",
 			ManifestPresent: true,
 			Bindings: []app.ProjectBindingStatus{
-				{Key: "openai.credential", Item: "openai", Title: "OpenAI personal", Field: "credential", Env: "OPENAI_API_KEY", Required: true, Status: "ready"},
+				{Key: "openai.credential", Item: "openai", Title: "OpenAI personal", Field: "credential", Env: "OPENAI_API_KEY", Required: true, Status: "ready", Health: app.CredentialHealthExpiring, Expires: "2026-07-12"},
 				{Key: "github.credential", Item: "github", Title: "GitHub work", Field: "credential", Env: "GITHUB_TOKEN", Required: false, Status: "warn", Message: "missing value optional"},
 			},
 		},
@@ -157,5 +157,13 @@ func TestProjectModelSafeErrorAndResizeViews(t *testing.T) {
 	m = updateProjectModel(t, m, tea.WindowSizeMsg{Width: 80, Height: 20})
 	if m.screen != projectResize || !strings.Contains(m.renderProject(), "100 columns") {
 		t.Fatalf("resize state = %v view=%q", m.screen, m.renderProject())
+	}
+}
+
+func TestProjectModelRendersValueFreeCredentialHealth(t *testing.T) {
+	m, _ := readyProjectModel(t)
+	view := m.renderProject()
+	if !strings.Contains(view, "due") || !strings.Contains(view, "2026-07-12") || strings.Contains(view, projectFakeSecret) {
+		t.Fatalf("project health view = %q", view)
 	}
 }

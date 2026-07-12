@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -14,6 +15,7 @@ const fakeSecret = "fake-secret-value"
 type fakeService struct {
 	catalog []app.SecretCatalogItem
 	info    map[string]app.SecretInfo
+	health  app.CredentialAuditReport
 
 	created []app.CreateSecretRequest
 	updated []app.UpdateSecretRequest
@@ -33,6 +35,9 @@ func (s *fakeService) SecretInfo(_, _, selector string) (app.SecretInfo, error) 
 	return s.info[selector], nil
 }
 
+func (s *fakeService) CredentialAudit(_, _ string, _ app.CredentialAuditRequest) (app.CredentialAuditReport, error) {
+	return s.health, s.err
+}
 func (s *fakeService) CreateSecret(_, _ string, req app.CreateSecretRequest) (string, error) {
 	s.created = append(s.created, req)
 	if s.err != nil {
@@ -86,13 +91,15 @@ func readyModel(t *testing.T) (Model, *fakeService, *fakeClipboard) {
 				Fields: []app.SecretFieldInfo{{ID: "value", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, ValueSet: true}},
 			},
 		},
-		value: fakeSecret,
+		health: app.CredentialAuditReport{WithinDays: app.DefaultCredentialAuditWithinDays, Items: []app.CredentialHealthItem{{ID: "item_openai", Title: "OpenAI personal", Field: "credential", Expires: "2026-07-12", Status: app.CredentialHealthExpiring}}},
+		value:  fakeSecret,
 	}
 	clipboard := &fakeClipboard{}
 	m := NewModel(service, clipboard, Options{})
 	m = updateModel(t, m, tea.WindowSizeMsg{Width: 120, Height: 32})
 	m = updateModel(t, m, catalogLoadedMsg{items: service.catalog})
 	m = updateModel(t, m, detailLoadedMsg{id: "item_openai", info: service.info["item_openai"]})
+	m = updateModel(t, m, healthLoadedMsg{report: service.health})
 	return m, service, clipboard
 }
 
@@ -166,5 +173,17 @@ func TestModelCancelsUnappliedFilters(t *testing.T) {
 	m = updateModel(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
 	if m.template != vaultmodel.TemplateAPICredential || !m.labels["ai"] {
 		t.Fatalf("cancelled filters = template %q labels %#v", m.template, m.labels)
+	}
+}
+
+func TestModelRendersValueFreeCredentialHealth(t *testing.T) {
+	m, _, _ := readyModel(t)
+	view := m.render()
+	if !strings.Contains(view, "due") || !strings.Contains(view, "2026-07-12") || strings.Contains(view, fakeSecret) {
+		t.Fatalf("health view = %q", view)
+	}
+	m = updateModel(t, m, healthLoadedMsg{err: fmt.Errorf("failed for %s", fakeSecret)})
+	if view := m.render(); !strings.Contains(view, "health: unavailable") || strings.Contains(view, fakeSecret) {
+		t.Fatalf("health unavailable view = %q", view)
 	}
 }

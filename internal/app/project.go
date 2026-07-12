@@ -68,9 +68,23 @@ func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []st
 	if err != nil {
 		return out.String(), err
 	}
+	healthReport, err := a.CredentialAudit(configPathFlag, vaultPathFlag, CredentialAuditRequest{WithinDays: DefaultCredentialAuditWithinDays})
+	if err != nil {
+		return out.String(), err
+	}
+	healthByItem := credentialHealthByItem(healthReport)
 	writeProjectDiagnostics(&out, diagnostics)
 	for _, entry := range resolvedEntries {
-		fmt.Fprintf(&out, "ok   %s -> %s\n", entry.Path, entry.EnvName)
+		fmt.Fprintf(&out, "ok   %s -> %s", entry.Path, entry.EnvName)
+		if itemID, fieldID, ok := strings.Cut(entry.Path, "."); ok {
+			if health, exists := healthByItem[itemID]; exists && health.Field == fieldID {
+				fmt.Fprintf(&out, " health:%s", health.Status)
+				if health.Expires != "" {
+					fmt.Fprintf(&out, " expires:%s", health.Expires)
+				}
+			}
+		}
+		fmt.Fprintln(&out)
 	}
 	for _, warning := range project.EnvOverrideWarnings(resolvedEntries, parentEnv) {
 		fmt.Fprintln(&out, warning)
