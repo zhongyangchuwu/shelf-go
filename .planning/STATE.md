@@ -20,9 +20,9 @@
 - Transitional implementation `V2` names were removed; persisted schema version fields remain.
 - `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
 - `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
-- `secret update` atomically changes title, labels, aliases, or one typed public field; secret fields remain stdin-only.
-- Phase 48 UI/technical design is drafted; no TUI code or runtime dependencies have been added.
-- The proposed personal workflow sequence is scriptable item lifecycle → safe catalog TUI → TUI editing → project binding TUI → credential health audit.
+- `secret update` atomically changes title, labels, aliases, or a field; secret values remain stdin-only.
+- Phase 48 wide-screen workspace design is drafted; it includes catalog browsing plus create, update, copy, and remove actions, but no TUI code or runtime dependencies have been added.
+- The proposed personal workflow sequence is scriptable item lifecycle → wide-screen secret workspace TUI → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.
 - Default vault path is `~/.local/share/shelf/vault.json`.

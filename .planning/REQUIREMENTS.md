@@ -45,9 +45,9 @@
 | LOCAL-01 | Phase 42 | Complete |
 | UX-01 | Phase 47 | Complete |
 | TUI-01 | Phase 48 | Planned |
-| TUI-02 | Phase 49 | Planned |
-| TUI-03 | Phase 50 | Planned |
-| OPS-01 | Phase 51 | Planned |
+| TUI-02 | Phase 48 | Planned |
+| TUI-03 | Phase 49 | Planned |
+| OPS-01 | Phase 50 | Planned |
 
 ---
 *Last updated: 2026-07-12 after scriptable item lifecycle*

@@ -2,24 +2,27 @@
 
 ## Goal
 
-Add an optional, keyboard-first `shelf tui` for fast local browsing and selection of structured secret items without displaying secret values.
+Add an optional, wide-screen, keyboard-first `shelf tui` that provides safe catalog browsing plus core interactive item workflows: create, update, copy, and remove.
 
 ## Scope
 
-- Add `internal/tui` on Bubble Tea v2, Bubbles v2, and the existing Lip Gloss v2 styling stack. Huh v2 is deferred until the editing forms in Phase 49.
-- Implement full-window catalog list, text search, label/template filters, item detail, keyboard help, resize handling, and graceful terminal restoration.
-- Render only value-free data: title, ID, template, labels, aliases, public metadata, and secret `value_set` state.
-- Keep the TUI read-only in this phase; it delegates loading to `internal/app` and never reads vault JSON directly.
-- Reject non-interactive stdin/stdout with a clear error; all existing Cobra commands remain unchanged and scriptable.
+- Add `internal/tui` on Bubble Tea v2, Bubbles v2, Huh v2, and existing Lip Gloss v2.
+- Require a 100×24 interactive terminal; show a resize-required screen rather than implementing a narrow layout.
+- Implement a persistent lazygit-like workspace: left catalog, right detail/editor, keyboard help, search, template/label filters, resize handling, and graceful terminal restoration.
+- Render only value-free catalog/detail data; secret fields expose only metadata and `value_set`.
+- Add create, update, copy, and remove actions through existing app and clipboard boundaries. Secret form input is masked; no secret is revealed in the workspace.
+- Keep the TUI free of direct vault/config/manifest I/O. Existing scriptable Cobra commands remain authoritative.
 
 ## Non-Goals
 
-- No in-TUI secret reveal, editing, project mutation, custom-template authoring, or daemon.
+- No secret reveal, `.env` editor, named runtime environments, project-manifest mutation, custom-template authoring, daemon, or Web UI.
+- `get`, export, run, setup, doctor, and completion remain CLI-first because they materialize stdout data, launch a child process, or are one-shot system actions.
 
 ## Acceptance
 
-- `shelf tui` starts and exits cleanly on supported interactive terminals.
-- List, filter, detail, error, and help views cannot contain a secret value.
+- `shelf tui` starts and exits cleanly on a supported wide interactive terminal and reports resize-required on a smaller terminal.
+- Catalog, filter, detail, form, confirmation, error, and help views cannot contain a secret value.
+- TUI create/update/delete use app workflows; copy uses the clipboard boundary without rendering the copied value.
 - TUI state transitions have deterministic model tests without a real terminal.
 - `go test ./...`, `go vet ./...`, and `go-arch-lint check` pass.
 

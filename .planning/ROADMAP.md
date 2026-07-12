@@ -25,15 +25,14 @@ This milestone is for local development and personal use. Public repository/rele
 
 ## Planned Personal Workflow UX
 
-**Status:** Phase 47 complete; Phase 48 Safe Catalog TUI design is awaiting user review. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
+**Status:** Phase 47 complete; the revised Phase 48 Wide-Screen Secret Workspace TUI design is awaiting user review. These phases reinforce Shelf as a local, item-first catalog with explicit runtime projections; they do not add a multi-environment manifest model.
 
 - [x] Phase 47: Scriptable Item Lifecycle — added safe, scriptable item mutations before interactive editing.
-- [ ] Phase 48: Safe Catalog TUI — keyboard-first, value-free catalog browsing, search, filtering, and detail views.
-- [ ] Phase 49: TUI Item Editing — create, edit, set, copy, and delete flows using the same app workflows as CLI.
-- [ ] Phase 50: Project Binding TUI — value-free current-project manifest management and binding picker.
-- [ ] Phase 51: Credential Health Audit — value-free expired and upcoming-expiry checks in CLI and TUI.
+- [ ] Phase 48: Wide-Screen Secret Workspace TUI — keyboard-first catalog plus item create, update, copy, and remove actions.
+- [ ] Phase 49: Project Binding TUI — value-free current-project manifest management and binding picker.
+- [ ] Phase 50: Credential Health Audit — value-free expired and upcoming-expiry checks in CLI and TUI.
 
-**Execution order:** Phase 47 is the CLI/API foundation. Phase 48 proves safe TUI lifecycle and read paths before Phase 49 introduces secret writes. Phase 50 builds on both. Phase 51 is independent of TUI editing but follows it to surface operational data in the established UI.
+**Execution order:** Phase 47 is the CLI/API foundation. Phase 48 delivers the complete personal secret workspace on wide terminals. Phase 49 adds project bindings to the established workspace. Phase 50 surfaces operational health in both CLI and TUI.
 
 **No release work:** no public repository preparation, GoReleaser packaging, GitHub Release, or tag workflow for v0.2.0.
 

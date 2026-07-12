@@ -1,126 +1,127 @@
-# UI Specification: Safe Catalog TUI
+# UI Specification: Wide-Screen Secret Workspace TUI
 
-**Status:** Draft — awaiting user review before implementation.
+**Status:** Revised draft — awaiting user review before implementation.
 
-## Product Slice
+## Product Target
 
-`shelf tui` is an optional full-screen, keyboard-first catalog for a single personal vault. It helps a developer find and understand an item without opening JSON or materializing a secret value.
+`shelf tui` is an optional, full-screen, keyboard-first workspace for one personal vault. It provides a safe item catalog and the interactive equivalents of the core item-oriented CLI workflows:
 
-It is deliberately read-only in Phase 48. Creation, editing, copy, deletion, and project binding are later phases. Existing CLI commands stay scriptable and authoritative.
+- browse, search, and filter item metadata;
+- create an item;
+- update item identity, labels, aliases, and fields;
+- copy a selected field to the system clipboard;
+- delete an item after confirmation.
 
-### User Job
+The TUI is not a lower-security path. It invokes the same application workflows and validation as the CLI; the difference is high-bandwidth selection, masked form input, and a persistent workspace layout.
 
-> Find the right structured secret item quickly; inspect its safe context; then choose the explicit CLI action that intentionally materializes or changes a value.
+### CLI Functions That Stay CLI-First
+
+The following are intentionally not TUI actions because their primary contract is machine output or child-process execution:
+
+- `secret get` and `secret export` write values to stdout;
+- `project export` and `project run` materialize values for an external consumer;
+- `setup`, `doctor`, and `completion` are one-shot system commands.
+
+Project binding management receives its own TUI phase after the secret workspace is stable.
 
 ### Scope Fences
 
-- No secret reveal, copy, write, or project-manifest mutation.
+- No secret reveal view and no secret text in a catalog/detail/error/help screen.
 - No `.env` editor, named runtime environments, daemon, Web UI, or custom-template authoring.
-- No automatic loading into the current shell.
+- No automatic shell loading.
 
-## Entry and Lifecycle
+## Entry, Terminal Contract, and Lifecycle
 
 ```text
 shelf tui
-  ├─ non-interactive stdin or stdout → CLI error: requires an interactive terminal
-  ├─ valid TTY → alternate-screen TUI
+  ├─ stdin or stdout is not a TTY → CLI error: requires an interactive terminal
+  ├─ terminal is smaller than 100×24 → resize screen; no narrow fallback
+  ├─ valid wide TTY → alternate-screen workspace
   ├─ q / Ctrl+C → restore terminal and exit
-  └─ startup/load error → safe error screen with Retry or Quit
+  └─ load error → safe error screen with Retry or Quit
 ```
 
-The CLI performs TTY preflight. TUI loading is asynchronous through a Bubble Tea command so the first screen can render immediately. `r` retries an error or reloads the catalog.
+This phase intentionally optimizes a normal desktop terminal. A narrow layout is not implemented or silently degraded; the resize screen is explicit.
 
-## Screen Model
+```text
+Shelf TUI needs a terminal at least 100 columns × 24 rows.
+Current size: 82 × 23
+
+Resize the terminal, then press r.  q quit
+```
+
+The CLI performs TTY preflight. The TUI loads catalog data asynchronously through a Bubble Tea command. `r` retries an error or reloads catalog data.
+
+## Workspace Layout
+
+```text
+Shelf  ·  Catalog                           12 items  ·  template: All  ·  labels: All
+┌─ Catalog (36%) ──────────────────────────┬─ Detail / Editor (64%) ──────────────────────────┐
+│ › OpenAI personal  api_credential  set   │ OpenAI personal                                    │
+│   GitHub work      generic_secret  set   │ id:       item_openai                              │
+│   Database local   generic_secret  unset │ template: api_credential                            │
+│                                          │ labels:   ai, personal                              │
+│ / search  f filters                    │ aliases:  openai, llm                               │
+│                                          │                                                     │
+│                                          │ fields                                              │
+│                                          │ › credential      secret · set                      │
+│                                          │   credential_env  OPENAI_API_KEY                    │
+│                                          │   provider        OpenAI                            │
+│                                          │   website         https://…                         │
+│                                          │   expires_at      2026-12-31                        │
+└──────────────────────────────────────────┴─────────────────────────────────────────────────────┘
+Tab pane  a add  e edit  c copy  d delete  / search  f filters  r reload  ? help  q quit
+```
+
+- Left catalog: approximately 36% of width, with a minimum of 34 columns.
+- Right workspace: approximately 64%, switching among detail, form, confirmation, help, and safe error states.
+- The selected row and active pane use a cursor/focus border plus text, never color alone.
+- The item list always remains visible behind an editor or confirmation state, giving a persistent lazygit-like sense of context.
+
+## Screen and Action Model
 
 ```mermaid
 stateDiagram-v2
     [*] --> Loading
-    Loading --> Catalog: safe catalog loaded
+    Loading --> Workspace: safe catalog loaded
     Loading --> Error: load failure
     Error --> Loading: r retry
     Error --> [*]: q / Ctrl+C
-    Catalog --> Search: /
-    Search --> Catalog: enter / esc
-    Catalog --> Filters: f
-    Filters --> Catalog: enter apply / esc cancel
-    Catalog --> Detail: enter on narrow terminal
-    Detail --> Catalog: esc / backspace
-    Catalog --> Help: ?
-    Help --> Catalog: ? / esc
-    Catalog --> [*]: q / Ctrl+C
+
+    Workspace --> Search: /
+    Search --> Workspace: enter / esc
+    Workspace --> Filters: f
+    Filters --> Workspace: enter apply / esc cancel
+    Workspace --> Help: ?
+    Help --> Workspace: ? / esc
+
+    Workspace --> CreateForm: a
+    Workspace --> EditForm: e
+    Workspace --> CopyAction: c
+    Workspace --> DeleteConfirm: d
+    CreateForm --> Workspace: save / esc
+    EditForm --> Workspace: save / esc
+    CopyAction --> Workspace: clipboard result
+    DeleteConfirm --> Workspace: confirm / esc
+
+    Workspace --> ResizeRequired: size < 100x24
+    ResizeRequired --> Workspace: size >= 100x24
+    Workspace --> [*]: q / Ctrl+C
 ```
 
-### Loading
+### Browse, Search, and Filters
 
-```text
-Shelf  ·  Catalog
-
-Loading local vault…
-```
-
-No item data is rendered until safe catalog data is available.
-
-### Empty Catalog
-
-```text
-Shelf  ·  Catalog
-
-No secrets found.
-Create one with:
-  shelf secret create <title> --stdin
-
-q quit   r reload
-```
-
-### Catalog — Wide Terminal
-
-At width >= 100 columns and height >= 18 rows, show a two-pane layout.
-
-```text
-Shelf  ·  Catalog                         12 items  ·  template: All  ·  labels: All
-────────────────────────────────────────────────────────────────────────────────────────────
-› OpenAI personal          api_credential  set      OpenAI personal
-  GitHub work              generic_secret  set      work, source-control    OpenAI personal
-  Database local           generic_secret  unset    local                   id: item_openai
-                                                                         template: api_credential
-                                                                         labels: ai, personal
-                                                                         aliases: openai, llm
-                                                                         fields
-                                                                           credential      secret · set
-                                                                           credential_env  OPENAI_API_KEY
-                                                                           provider        OpenAI
-                                                                           website         https://…
-                                                                           expires_at      2026-12-31
-────────────────────────────────────────────────────────────────────────────────────────────
-↑/↓ move  / search  f filters  r reload  ? help  q quit
-```
-
-The list consumes about 40% of width. The detail pane has the remaining width. Terminal width never causes values to be elided into a secret-bearing representation because secret values are never present in the view model.
-
-### Catalog — Narrow Terminal
-
-At width < 100 or height < 18, show the catalog list only. `enter` opens a full-screen detail view; `esc` or `backspace` returns to the list.
-
-At width < 60 or height < 14, show only:
-
-```text
-Terminal too small (minimum 60×14).
-Resize the terminal, then press r.  q quit
-```
-
-### Search and Filters
-
-- `/` focuses a text query. Search is case-insensitive substring matching over title, ID, template, labels, and aliases only.
-- `f` opens a compact filter sheet:
+- `/` focuses a text query. It is case-insensitive substring matching across title, ID, template, labels, and aliases only.
+- `f` opens a compact right-pane filter sheet:
   - one template: All or a concrete template;
   - zero or more labels; all selected labels must match, consistent with label export semantics;
   - `enter` applies, `esc` cancels, `c` clears.
-- The header always shows active filters and result count.
-- Search/filter results remain catalog metadata only.
+- The header always reports active filters and result count.
+- No field values participate in searching or filtering.
 
-### Detail
+### Detail and Field Selection
 
-Detail displays item identity, labels, aliases, and fields in template order:
+`Tab` switches focus between catalog and the detail field list. In the detail pane, `j`/`k` selects a field.
 
 | Field kind | Rendered content |
 | --- | --- |
@@ -128,50 +129,99 @@ Detail displays item identity, labels, aliases, and fields in template order:
 | Public, set | field ID and public value |
 | Public, unset | field ID and `unset` |
 
-The detail screen never calls `GetSecretField`, export, project resolution, or clipboard operations.
+Selecting a field controls `e` and `c`. The default field is the template primary secret field when no field is selected.
 
-### Help
+### Create
 
-`?` opens full keyboard help. Every interaction has a keyboard path; color is never the only status signal.
+`a` replaces the right pane with a multi-step form:
+
+1. choose built-in template or profile;
+2. enter item identity: title, optional stable ID, labels, aliases;
+3. enter supported public metadata;
+4. enter the primary secret field with masked input;
+5. review a value-free summary and save or cancel.
+
+The form calls `app.CreateSecret`; no direct vault mutation occurs. Secret form input is masked and is not rendered after save or cancellation.
+
+### Edit
+
+`e` opens a right-pane form for the selected item or field:
+
+- item focus: title, labels, aliases;
+- public field: typed public input or explicit clear;
+- secret field: masked replacement input only; there is no prefilled value and no reveal operation.
+
+The form calls `app.UpdateSecret`. A save returns to refreshed safe detail. `esc` discards all unsaved form changes.
+
+### Copy
+
+`c` explicitly copies the selected field through the existing clipboard adapter. It briefly shows one value-free outcome:
+
+```text
+Copied credential to clipboard.
+```
+
+The copied string is never rendered or stored in the Bubble Tea model. Clipboard failures are value-free and leave the detail view active.
+
+### Delete
+
+`d` opens an inline confirmation showing title, ID, and template only:
+
+```text
+Remove “OpenAI personal”?
+This removes the local item and cannot be undone by Shelf.
+
+enter confirm   esc cancel
+```
+
+Confirmation calls the existing remove workflow. The catalog reloads after success.
 
 ## Keymap
 
 | Context | Keys | Behavior |
 | --- | --- | --- |
-| Catalog | `↑`/`k`, `↓`/`j` | Move selection |
-| Catalog | `enter` | Open detail on narrow layout; focus detail on wide layout |
-| Catalog | `/` | Search |
-| Catalog | `f` | Filters |
-| Catalog | `r` | Reload catalog |
-| Any | `?` | Toggle help |
-| Detail / Help / Search / Filters | `esc` | Return to previous screen or cancel transient state |
+| Catalog or detail field list | `↑`/`k`, `↓`/`j` | Move selection in active pane |
+| Workspace | `Tab`, `h`/`l` | Switch active pane |
+| Workspace | `/` | Search |
+| Workspace | `f` | Filters |
+| Workspace | `a` | Create item |
+| Workspace | `e` | Edit selected item or field |
+| Workspace | `c` | Copy selected/default field |
+| Workspace | `d` | Delete selected item after confirmation |
+| Workspace | `r` | Reload catalog |
+| Any | `?` | Toggle full keyboard help |
+| Form / filter / confirmation / help | `esc` | Cancel or return to workspace |
 | Any | `q`, `Ctrl+C` | Quit and restore terminal |
 
-There are no write, reveal, copy, or run keys in Phase 48.
+No key writes, copies, deletes, exports, or runs a command without explicit user action.
 
 ## Safety Contract
 
-### Allowed Data in TUI State
+### Renderable Data
 
-- `SecretItemSummary`: ID, title, template, primary env name, primary `value_set`.
-- Catalog-only additions: labels and aliases.
-- `SecretInfo`: safe public field values and secret field `value_set` metadata.
-- Current screen, selection index, query, filters, dimensions, and safe error text.
+- Catalog: ID, title, template, primary env name, labels, aliases, primary `value_set`.
+- Detail: safe public field values and secret-field `value_set` metadata.
+- Form state: public drafts and labels/aliases; masked secret draft only while the active form needs it.
+- UI state: screen, selection, query, filters, dimensions, and value-free error/status text.
 
-### Forbidden
+### Never Rendered
 
 - `vaultmodel.Field.Value` for any secret field.
-- Outputs of `GetSecretField`, `ExportSecretItems`, `ProjectExport`, or project resolution.
-- Secret text in list delegates, filter values, detail content, errors, logs, test snapshots, or clipboard state.
+- `GetSecretField` output, export output, or project-resolved values.
+- Secret text in list delegates, filter values, detail, confirmation, help, error, logs, or test snapshots.
 
-A new app-level safe catalog query must supply labels and aliases without giving `internal/tui` direct access to a vault, JSON repository, config, or resolver.
+### Controlled Materialization
+
+- Copy materializes a secret only in a short-lived action local, then passes it to `internal/clipboard`; it never enters model state or a rendered string.
+- Create/edit secret drafts are held only by the active masked form. Save/cancel drops the form model. Go cannot promise complete memory zeroization, so the design promises short lifetime, no logging, and no rendering—not impossible memory erasure.
+- The TUI uses existing app validation and repository writes; it never reads or writes vault JSON directly.
 
 ## Visual System
 
-- Inherit the project’s restrained Lip Gloss treatment: text-first, no decorative panels unless they separate input from detail.
-- Use the terminal background-color message to choose light/dark adaptive styles.
-- Use semantic text (`set`, `unset`, `secret`, `public`), cursor position, and focus styles; do not rely only on color.
-- Avoid a dense grid: catalog rows are scannable, detail is vertically ordered, and help is compact by default.
+- Text-first, restrained Lip Gloss styling; borders only delineate the persistent catalog and right workspace.
+- Adaptive light/dark styles from the terminal background-color message.
+- Status is always expressed with text (`set`, `unset`, `secret`, `public`) plus focus indicators, not color alone.
+- Avoid decorative panels, gauges, or wide empty gutters; the right pane prioritizes field context and forms.
 
 ## Technical Contract
 
@@ -180,25 +230,25 @@ A new app-level safe catalog query must supply labels and aliases without giving
 | Layer | Choice | Reason |
 | --- | --- | --- |
 | Program model/lifecycle | `charm.land/bubbletea/v2` | Model–Update–View state machine, full-screen terminal handling, resize/key messages, deterministic model tests |
-| Catalog / filter input | `charm.land/bubbles/v2/list`, `textinput` | Keyboard list and filter input without custom cursor/filter machinery |
-| Detail scrolling | `charm.land/bubbles/v2/viewport` | Safe long detail rendering and resize-aware scrolling |
+| Catalog / filtering | `charm.land/bubbles/v2/list`, `textinput` | Keyboard list and text filter without custom cursor/filter machinery |
+| Detail scrolling | `charm.land/bubbles/v2/viewport` | Long detail and form content inside the right pane |
 | Key help | `charm.land/bubbles/v2/help`, `key` | Discoverable short/full keyboard help |
-| Styling | existing `charm.land/lipgloss/v2` | Existing dependency and adaptive terminal styling |
-| Forms | none in Phase 48 | `huh/v2` enters only in Phase 49 editing flows |
+| Forms | `github.com/charmbracelet/huh/v2` | Composable Bubble Tea forms, validation, and masked secret input |
+| Styling | existing `charm.land/lipgloss/v2` | Adaptive terminal styling and existing project convention |
 
 ### Package Boundaries
 
 ```text
 cmd/shelf -> cli
 cli       -> app, tui, cliui, Cobra, x/term
-internal/tui -> app, Bubble Tea, Bubbles, Lip Gloss
+tui       -> app, clipboard, Bubble Tea, Bubbles, Huh, Lip Gloss
 ```
 
-`internal/tui` is an adapter. It calls app-level safe query methods, owns terminal state/rendering, and performs no vault or manifest I/O itself.
+`internal/tui` is an adapter. It owns terminal state/rendering and calls app workflows plus the existing clipboard boundary. It performs no direct vault, project-manifest, config, or resolver I/O.
 
-### App Data Shape
+### Safe Catalog Data
 
-Phase 48 adds a safe catalog DTO/query, conceptually:
+The app provides a safe catalog query, conceptually:
 
 ```go
 type SecretCatalogItem struct {
@@ -208,30 +258,32 @@ type SecretCatalogItem struct {
 }
 ```
 
-It is loaded once at startup, filtered in TUI memory, and reloaded only on `r`. Selecting an item loads `SecretInfo` on demand for safe detail data.
+The catalog loads once and filters in TUI memory. Selected details use existing safe item info. Action forms call `CreateSecret`, `UpdateSecret`, or remove workflows; copy uses a short-lived materialization local only.
 
-### Test Strategy
+## Test Strategy
 
-- App tests: catalog DTO includes labels/aliases and never secret values.
-- TUI model tests: loading, empty, error/retry, search, AND-label filter, template filter, selection, narrow-detail navigation, resize threshold, and key help.
-- Security tests: fake secret input must be absent from every catalog/detail/filter/help/error view exercised by tests.
+- App tests: safe catalog DTO contains labels/aliases but no secret values; existing workflows preserve atomic validation.
+- TUI model tests: loading, empty, error/retry, search, AND-label filter, template filter, pane focus, field selection, resize-required state, forms, cancellation, delete confirmation, and key help.
+- Safety tests: fake secret values must be absent from every catalog/detail/filter/help/error/confirmation view; masked input must not echo.
+- Action tests: create/update/delete call app workflows; copy invokes the clipboard writer with no value-bearing rendered status.
 - CLI tests: `shelf tui` rejects non-TTY streams before a program starts.
-- Manual smoke: launch in a real terminal; verify alternate-screen cleanup, resize, search, filter, and `q` restoration.
+- Manual smoke: launch in a wide real terminal; verify alternate-screen cleanup, resize-required behavior, browse, create, edit, copy, delete, filter, and `q` restoration.
 
-## Implementation Order
+## Implementation Sequence
 
-1. Add safe app catalog DTO/query plus app tests.
-2. Add `internal/tui` pure model, styles, keymap, list/detail screens, and model tests.
-3. Add `shelf tui` Cobra command with TTY preflight and architecture-lint dependencies.
-4. Run full verification and manual terminal smoke.
+1. Add safe app catalog query and its tests.
+2. Add `internal/tui` workspace model, styles, keymap, wide layout, catalog/detail, and safety tests.
+3. Add create/edit/copy/delete forms/actions against existing app and clipboard boundaries.
+4. Add `shelf tui` Cobra command, TTY preflight, dependencies, architecture-lint rules, full verification, and manual terminal smoke.
 
 ## Review Gate
 
-Do not implement Phase 48 until this interaction model and safety contract are approved by the user.
+Do not implement until the user approves this revised wide-screen workspace contract.
 
 ## Sources
 
 - Bubble Tea v2: https://github.com/charmbracelet/bubbletea
 - Bubble Tea package docs: https://pkg.go.dev/charm.land/bubbletea/v2
 - Bubbles v2 list/help/viewport: https://github.com/charmbracelet/bubbles
+- Huh v2: https://github.com/charmbracelet/huh
 - Lip Gloss v2: https://github.com/charmbracelet/lipgloss
