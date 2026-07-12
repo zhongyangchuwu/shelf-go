@@ -192,11 +192,13 @@ shelf project list
 
 ## `shelf project status`
 
-Checks manifest resolution without printing secret values.
+Checks manifest resolution and applicable credential health without printing secret values. Health uses only public expiry metadata; it does not block export or run.
 
 ```bash
 shelf project status
 ```
+
+Binding rows include `health:<status>` and a public `expires:<YYYY-MM-DD>` value when the bound primary credential field has expiry metadata.
 
 ## `shelf project export`
 

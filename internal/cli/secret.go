@@ -302,7 +302,7 @@ func renderSecretCreateResult(w io.Writer, info app.SecretInfo) {
 		{Key: "title", Value: info.Title},
 		{Key: "id", Value: info.ID},
 		{Key: "template", Value: info.Template},
-		{Key: "env", Value: primaryEnvFromInfo(info)},
+		{Key: "env", Value: info.PrimaryEnv},
 	})
 }
 
@@ -327,13 +327,4 @@ func renderSecretList(w io.Writer, items []app.SecretItemSummary, long bool) {
 		rows = append(rows, []string{item.ID, item.Title, item.Template, item.Env, state})
 	}
 	cliui.RenderTable(w, cliui.Table{Title: "Secrets", Headers: []string{"ID", "TITLE", "TEMPLATE", "ENV", "VALUE"}, Rows: rows})
-}
-
-func primaryEnvFromInfo(info app.SecretInfo) string {
-	for _, field := range info.Fields {
-		if (field.ID == "value_env" || field.ID == "credential_env") && field.Value != "" {
-			return field.Value
-		}
-	}
-	return ""
 }

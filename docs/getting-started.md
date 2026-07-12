@@ -60,3 +60,11 @@ Preview env names without values:
 ```bash
 shelf project run --dry-run -- npm run dev
 ```
+
+## 6. Audit credential expiry metadata
+
+```bash
+shelf secret audit --within 30
+```
+
+The audit is value-free: exit `3` means expired credentials, `2` means due, missing, or invalid expiry metadata, and `0` means healthy or no tracked expiry metadata.

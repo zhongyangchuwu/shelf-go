@@ -168,6 +168,9 @@ func TestCreateSecretCustomTemplate(t *testing.T) {
 	if info.Template != custom.ID {
 		t.Fatalf("template = %q, want %q", info.Template, custom.ID)
 	}
+	if info.PrimaryEnv != "SERVICE_TOKEN" {
+		t.Fatalf("primary env = %q, want SERVICE_TOKEN", info.PrimaryEnv)
+	}
 	for _, field := range info.Fields {
 		if field.ID == "token_env" && field.Value == "SERVICE_TOKEN" {
 			return

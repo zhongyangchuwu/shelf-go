@@ -55,6 +55,7 @@ cmd/shelf/           process entry point
 
 internal/cli/        Cobra command surface, flags, completions, and output routing
 internal/cliui/      Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
+internal/tui/          Bubble Tea secret and project-binding workspaces backed by app and clipboard boundaries
 internal/clipboard/  System clipboard adapter for explicit `secret copy` side effects
 internal/app/        application workflows for setup, doctor, secret, project, and run
 

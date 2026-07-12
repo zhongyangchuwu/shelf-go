@@ -88,6 +88,12 @@ This milestone is for local development and personal use. Public repository/rele
 - Added app health classifications for expired, due, missing, invalid, and healthy expiry metadata without reading secret field values.
 - Added safe health indicators to secret/project TUI views and project status; project export/run semantics remain unchanged.
 
+## Completed Technical Debt Review
+
+- Repaired existing vault-backup permissions on every backup write and added regression coverage.
+- Replaced built-in env-field assumptions in create summaries with canonical template-role resolution.
+- Removed a package panic/dead setup helper and corrected stale architecture, security, contributor, quickstart, and troubleshooting documentation.
+
 ## Deferred Beyond the Personal Workflow UX Plan
 
 1. Web manager for item vaults.
@@ -97,4 +103,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-12 after credential health audit*
+*Last updated: 2026-07-12 after technical debt review*

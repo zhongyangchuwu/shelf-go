@@ -1,6 +1,6 @@
 # Architecture
 
-Shelf Go is now a local item-vault CLI. Built-in age encryption, the v1 encrypted vault stack, Web manager, and TUI project configure flow are removed from the active product. External tools such as chezmoi own encryption/sync.
+Shelf Go is a local item-vault CLI with optional wide-screen secret and project-binding workspaces. Built-in age encryption, the v1 encrypted vault stack, and Web manager are outside the active product; external tools such as chezmoi own encryption and sync.
 
 ## Package layers
 
@@ -9,8 +9,9 @@ cmd/shelf/                    process entry point
 
 internal/cli/                 Cobra command tree, flags, completions, output routing, and no-echo terminal field prompts
 internal/cliui/               Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
+internal/tui/                 Bubble Tea secret and project-binding workspaces; app/clipboard-backed only
 internal/clipboard/           System clipboard adapter; uses `clip.exe`, then `wl-copy`, under WSL and github.com/atotto/clipboard elsewhere
-internal/app/                 application workflows for secret, project, setup, doctor, and run
+internal/app/                 application workflows for secret, credential health, project, setup, doctor, and run
 
 internal/vaultmodel/          item/field/template model, validation, template-role lookups, and shared item/field/env resolver
 internal/vaultjson/           strict JSON codec/repository for the local item vault
@@ -23,8 +24,9 @@ Dependency direction is enforced by `.go-arch-lint.yml`:
 
 ```text
 cmd/shelf -> cli
-cli -> app, cliui, clipboard, Cobra, x/term
+cli -> app, cliui, clipboard, tui, Cobra, x/term
 cliui -> lipgloss
+tui -> app, clipboard, Bubble Tea, Bubbles, Huh, Lip Gloss
 clipboard -> github.com/atotto/clipboard
 app -> config, project, util, vaultmodel, vaultjson
 project -> util, vaultmodel
@@ -40,23 +42,24 @@ config -> yaml
 
 ## CLI workflows
 
-`internal/cli` parses command arguments, routes human output through `internal/cliui`, and delegates the explicit `secret copy` side effect to `internal/clipboard`. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`.
+`internal/cli` parses command arguments, routes human output through `internal/cliui`, and delegates the explicit `secret copy` side effect to `internal/clipboard`. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`. `shelf secret audit` derives value-free credential health only from public expiry metadata.
 
 Active command groups:
 
 - `setup`
 - `doctor`
+- `tui`
 - `secret`
 - `project`
 - `completion`
 
 ## Project workflows
 
-`.shelf.json` stores concrete item/field/env bindings. `project status`, `project export`, and `project run` resolve those bindings against the item vault. Project manifests remain value-free.
+`.shelf.json` stores concrete item/field/env bindings. `project status`, `project export`, and `project run` resolve those bindings against the item vault. Project manifests remain value-free. `shelf project tui` is an optional app-backed manifest workspace and does not read/write the manifest directly.
 
-## Planned, not yet implemented
+## Interactive workspaces
 
-- Keyboard-first catalog, item-editing, and project-binding TUI flows backed by the existing app workflows.
+`shelf tui` and `shelf project tui` require an interactive terminal at least 100 columns × 24 rows. They use app workflows (plus clipboard for explicit copy), mask secret input, and never provide a secret-reveal view.
 
 ## Explicitly deferred
 

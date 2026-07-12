@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/zhongyangchuwu/shelf-go/internal/config"
@@ -93,12 +94,13 @@ type SecretFieldInfo struct {
 }
 
 type SecretInfo struct {
-	ID       string            `json:"id"`
-	Title    string            `json:"title"`
-	Template string            `json:"template"`
-	Labels   []string          `json:"labels,omitempty"`
-	Aliases  []string          `json:"aliases,omitempty"`
-	Fields   []SecretFieldInfo `json:"fields"`
+	ID         string            `json:"id"`
+	Title      string            `json:"title"`
+	Template   string            `json:"template"`
+	Labels     []string          `json:"labels,omitempty"`
+	Aliases    []string          `json:"aliases,omitempty"`
+	PrimaryEnv string            `json:"-"`
+	Fields     []SecretFieldInfo `json:"fields"`
 }
 
 func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecretRequest) (string, error) {
@@ -365,7 +367,15 @@ func (a *App) SecretInfo(configPathFlag, vaultPathFlag, selector string) (Secret
 	if err != nil {
 		return SecretInfo{}, err
 	}
-	info := SecretInfo{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...)}
+	primary, err := resolver.PrimarySecretField(item)
+	if err != nil {
+		return SecretInfo{}, err
+	}
+	primaryEnv, _, err := resolver.EnvName(item, primary.ID)
+	if err != nil {
+		return SecretInfo{}, err
+	}
+	info := SecretInfo{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...), PrimaryEnv: primaryEnv}
 	for _, field := range item.Fields {
 		fieldInfo := SecretFieldInfo{ID: field.ID, Type: field.Type, Sensitivity: field.Sensitivity, ValueSet: len(field.Value) > 0}
 		if field.Sensitivity == vaultmodel.SensitivityPublic && len(field.Value) > 0 {
@@ -513,11 +523,7 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 }
 
 func rawString(value string) json.RawMessage {
-	content, err := json.Marshal(value)
-	if err != nil {
-		panic(err)
-	}
-	return content
+	return json.RawMessage(strconv.AppendQuote(nil, value))
 }
 
 func hasSecretUpdate(req UpdateSecretRequest) bool {

@@ -47,8 +47,11 @@ func ProjectInit(force bool) (string, error) {
 	if err := project.Save(manifestPath, project.New()); err != nil {
 		return "", err
 	}
-	label := map[bool]string{true: "overwritten", false: "created"}
-	return fmt.Sprintf("manifest: %s (%s)\n", manifestPath, label[existed]), nil
+	status := "created"
+	if existed {
+		status = "overwritten"
+	}
+	return fmt.Sprintf("manifest: %s (%s)\n", manifestPath, status), nil
 }
 
 func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []string) (string, error) {

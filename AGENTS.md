@@ -2,7 +2,7 @@
 
 **Shelf Go**
 
-Shelf Go is a fast local secret manager for solo developers who want developer-secret workflows without `.env` sprawl or hosted services. The current product is a Go CLI with an optional wide-screen secret workspace; it manages item-based secrets, value-free project bindings, label-scoped exports, and `shelf project run`.
+Shelf Go is a fast local secret manager for solo developers who want developer-secret workflows without `.env` sprawl or hosted services. The current product is a Go CLI with optional wide-screen secret and project-binding workspaces; it manages item-based secrets, value-free project bindings, label-scoped exports, and `shelf project run`.
 
 Shelf is CLI-first. The TUI is an optional interactive front-end over existing workflows, not a separate persistence path. Web manager is intentionally deferred. Built-in encryption is intentionally removed for the current personal-use direction; use chezmoi or another external tool to encrypt/sync the vault file.
 
@@ -61,6 +61,7 @@ shelf project rm <item.field>
 shelf project list
 shelf project status
 shelf project export [--format shell|json]
+shelf project run [--dry-run] -- <command> [args...]
 shelf completion <shell>
 ```
 

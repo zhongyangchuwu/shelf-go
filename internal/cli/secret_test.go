@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultjson"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
@@ -32,6 +33,14 @@ func runShelfWithClipboard(t *testing.T, copier *recordingClipboard, args ...str
 	cmd.SetArgs(args)
 	err := cmd.Execute()
 	return out.String(), err
+}
+
+func TestRenderSecretCreateResultUsesPrimaryEnv(t *testing.T) {
+	var out bytes.Buffer
+	renderSecretCreateResult(&out, app.SecretInfo{ID: "item_service", Title: "service", Template: "service_token", PrimaryEnv: "SERVICE_TOKEN"})
+	if !strings.Contains(out.String(), "env     : SERVICE_TOKEN") {
+		t.Fatalf("create summary = %q, want role-derived env", out.String())
+	}
 }
 
 func TestSecretCreateSetGetListInfoRm(t *testing.T) {

@@ -3,7 +3,6 @@ package cli
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -49,20 +48,22 @@ func newSetupCmd(appSvc *app.App) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			label := map[bool]string{true: "created", false: "exists"}
-			fmt.Fprintf(cmd.OutOrStdout(), "vault:  %s (%s)\n", runtime.VaultPath, label[vaultCreated])
-			fmt.Fprintf(cmd.OutOrStdout(), "config: %s (%s)\n", runtime.ConfigPath, label[configCreated])
+			vaultStatus := "exists"
+			if vaultCreated {
+				vaultStatus = "created"
+			}
+			configStatus := "exists"
+			if configCreated {
+				configStatus = "created"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "vault:  %s (%s)\n", runtime.VaultPath, vaultStatus)
+			fmt.Fprintf(cmd.OutOrStdout(), "config: %s (%s)\n", runtime.ConfigPath, configStatus)
 			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "Overwrite config file")
 	cmd.Flags().StringVar(&vaultPath, "vault-path", "", "Path to Shelf item vault JSON")
 	return cmd
-}
-
-func initConfigExists(configPath string) bool {
-	_, err := os.Stat(configPath)
-	return err == nil
 }
 
 func promptDefault(cmd *cobra.Command, label, fallback string) string {

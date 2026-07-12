@@ -75,6 +75,16 @@ Common causes:
 - duplicate env name;
 - binding points at a public field instead of a secret field.
 
+## Credential audit reports warnings or expired credentials
+
+Run the value-free audit to inspect public expiry metadata:
+
+```bash
+shelf secret audit --within 30
+```
+
+Exit `3` means at least one credential is expired. Exit `2` means a credential is due within the horizon, has no expiry date, or has invalid expiry metadata. The audit never prints secret values and does not block `project export` or `project run`.
+
 ## Completion not installed
 
 Install completions for your shell and make sure `FPATH`/`fpath` contains the directory that holds `_shelf`.

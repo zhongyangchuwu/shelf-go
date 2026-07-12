@@ -2,7 +2,7 @@
 
 Shelf Go is a local, CLI-first secret manager for one developer. It stores item-based secrets in a local JSON vault and leaves encryption/sync to your dotfile tooling, such as chezmoi.
 
-The current product is CLI-first: scriptable secret and project workflows remain authoritative, while `shelf tui` adds an optional wide-screen workspace for interactive secret management.
+The current product is CLI-first: scriptable secret and project workflows remain authoritative, while optional wide-screen workspaces support interactive secret and project-binding management.
 
 ## Setup
 
@@ -31,7 +31,6 @@ The vault JSON contains secret values. Do not commit it unless an external tool 
 ## Store and inspect secrets
 
 Secret values enter through stdin, not argv:
-
 
 `secret create` prints a small summary with title, id, template, and env name. `secret list --long` prints a titled, aligned table without secret values.
 ```bash
@@ -131,7 +130,6 @@ Run a child command with project secrets injected:
 ```bash
 shelf project run -- npm run dev
 ```
-
 
 Preview injected env names without values:
 

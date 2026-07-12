@@ -76,6 +76,10 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	if err != nil {
 		return err
 	}
+	if err := out.Chmod(mode); err != nil {
+		out.Close()
+		return err
+	}
 	defer out.Close()
 	if _, err := io.Copy(out, in); err != nil {
 		return err

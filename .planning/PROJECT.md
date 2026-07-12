@@ -68,6 +68,6 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Treat `.env` as a projection, not the primary model | A developer should maintain values and context once, then select fields for a project or command. | The vault is item-first; project bindings and exports are value-free runtime projections. |
 | Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phases 48–49 deliver secret and project binding workflows through existing app and clipboard boundaries. |
 | Use expiry metadata as an advisory health signal | Local workflows need timely maintenance signals without hidden runtime enforcement or remote dependencies. | Phase 50 adds value-free audit status; export/run remain unchanged. |
+| Keep vault backups at the configured restrictive mode | A `.bak` file contains the prior plaintext vault and is equally sensitive. | Atomic backup writes now repair the requested mode even when the backup already exists. |
 
----
-*Last updated: 2026-07-12 after credential health audit*
+*Last updated: 2026-07-12 after technical debt review*

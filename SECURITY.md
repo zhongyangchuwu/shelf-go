@@ -59,10 +59,10 @@ These operations intentionally handle plaintext values:
 - `shelf secret export` prints values in shell/env/JSON form.
 - `shelf project export` prints resolved project values.
 - `shelf project run` puts values in a child process environment.
-- `shelf secret create --stdin` and `shelf secret set --stdin` read plaintext values from stdin.
+- `shelf secret create --stdin` and `shelf secret update` read plaintext values from stdin; interactive `secret update` prompts without echoing input.
 
 Generated `.env` and `.env.local` files are plaintext artifacts. Add them to `.gitignore`, do not commit them unless encrypted by an external tool, and delete them when no longer needed.
 
 ## Non-goals
 
-Shelf does not currently provide built-in encryption, team sharing, hosted sync, browser autofill, a Web manager, a TUI editor, or a long-running unlock daemon. The current product is for one developer managing local project secrets with external encryption/sync tooling.
+Shelf does not currently provide built-in encryption, team sharing, hosted sync, browser autofill, a Web manager, or a long-running unlock daemon. It does provide optional wide-screen secret and project-binding TUI workspaces; they reuse app workflows and never reveal secret values.
