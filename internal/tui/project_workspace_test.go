@@ -167,3 +167,19 @@ func TestProjectModelRendersValueFreeCredentialHealth(t *testing.T) {
 		t.Fatalf("project health view = %q", view)
 	}
 }
+
+func TestProjectModelRendersDistinctMochaPanels(t *testing.T) {
+	m, service := readyProjectModel(t)
+	view := m.renderProject()
+	if got := strings.Count(view, "╭"); got != 2 {
+		t.Fatalf("panel frame count = %d, want 2:\n%s", got, view)
+	}
+	if !strings.Contains(view, "› Bindings") || !strings.Contains(view, "  Detail") {
+		t.Fatalf("initial panel focus = %q", view)
+	}
+	m = updateProjectModel(t, m, tea.KeyPressMsg{Text: "a"})
+	m = updateProjectModel(t, m, projectCandidatesLoadedMsg{candidates: service.candidates})
+	if view = m.renderProject(); !strings.Contains(view, "  Bindings") || !strings.Contains(view, "› Add binding") {
+		t.Fatalf("picker panel focus = %q", view)
+	}
+}

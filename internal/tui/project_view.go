@@ -27,27 +27,28 @@ func (m ProjectModel) renderProjectWorkspace() string {
 	if projectID == "" {
 		projectID = "current worktree"
 	}
-	header := m.styles.header.Render(fmt.Sprintf("Shelf  ·  Project bindings    %s  ·  %d bindings", projectID, len(m.workspace.Bindings)))
-	leftWidth := max(34, m.width*36/100)
-	rightWidth := max(50, m.width-leftWidth-3)
-	body := lipgloss.JoinHorizontal(lipgloss.Top, m.renderProjectBindings(leftWidth), "   ", m.renderProjectRight(rightWidth))
-	footer := "a add  d remove  i initialize  r reload  ? help  q quit"
+	header := m.styles.renderHeader(fmt.Sprintf("Shelf  ·  Project bindings    %s  ·  %d bindings", projectID, len(m.workspace.Bindings)), m.width)
+	leftWidth, rightWidth := workspacePanelWidths(m.width)
+	panelHeight := workspacePanelHeight(m.height, m.status != "")
+	left := m.styles.renderPanel("Bindings", m.renderProjectBindings(panelContentWidth(leftWidth)), m.projectLeftPanelActive(), leftWidth, panelHeight)
+	right := m.styles.renderPanel(m.projectRightPanelTitle(), m.renderProjectRight(panelContentWidth(rightWidth)), m.projectRightPanelActive(), rightWidth, panelHeight)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right)
+	footer := m.styles.renderFooter("a add  d remove  i initialize  r reload  ? help  q quit", m.width)
 	if m.status != "" {
-		footer = m.status + "\n" + footer
+		footer = m.styles.renderStatus(m.status, m.width) + "\n" + footer
 	}
-	return header + "\n" + strings.Repeat("─", max(1, m.width)) + "\n" + body + "\n" + strings.Repeat("─", max(1, m.width)) + "\n" + footer + "\n"
+	return header + "\n" + body + "\n" + footer + "\n"
 }
 
 func (m ProjectModel) renderProjectBindings(width int) string {
 	var b strings.Builder
-	b.WriteString(m.styles.focus.Render("> Bindings") + "\n\n")
 	if !m.workspace.ManifestPresent {
 		b.WriteString("No .shelf.json in this worktree.\n\nPress i to initialize it.")
-		return lipgloss.NewStyle().Width(width).Render(b.String())
+		return b.String()
 	}
 	if len(m.workspace.Bindings) == 0 {
 		b.WriteString("No bindings.\n\nPress a to add a secret field.")
-		return lipgloss.NewStyle().Width(width).Render(b.String())
+		return b.String()
 	}
 	for index, binding := range m.workspace.Bindings {
 		cursor := " "
@@ -65,7 +66,7 @@ func (m ProjectModel) renderProjectBindings(width int) string {
 		row := fmt.Sprintf("%s %-18s %-16s %s %s", cursor, truncate(binding.Key, 18), truncate(binding.Env, 16), required, health)
 		b.WriteString(truncate(row, width) + "\n")
 	}
-	return lipgloss.NewStyle().Width(width).Render(b.String())
+	return b.String()
 }
 
 func (m ProjectModel) renderProjectRight(width int) string {
@@ -75,20 +76,46 @@ func (m ProjectModel) renderProjectRight(width int) string {
 	case projectForm:
 		return m.renderProjectForm(width)
 	case projectConfirmInit:
-		return lipgloss.NewStyle().Width(width).Render("Initialize .shelf.json for this worktree?\n\nThe new manifest contains no secret values.\n\nenter confirm   esc cancel")
+		return "Initialize .shelf.json for this worktree?\n\nThe new manifest contains no secret values.\n\nenter confirm   esc cancel"
 	case projectConfirmRemove:
 		return m.renderProjectRemoveConfirm(width)
 	}
 	return m.renderProjectDetail(width)
 }
 
-func (m ProjectModel) renderProjectDetail(width int) string {
+func (m ProjectModel) projectLeftPanelActive() bool {
+	return !m.projectRightPanelActive()
+}
+
+func (m ProjectModel) projectRightPanelActive() bool {
+	switch m.screen {
+	case projectPicker, projectPickerSearch, projectForm, projectConfirmInit, projectConfirmRemove:
+		return true
+	default:
+		return false
+	}
+}
+
+func (m ProjectModel) projectRightPanelTitle() string {
+	switch m.screen {
+	case projectPicker, projectPickerSearch, projectForm:
+		return "Add binding"
+	case projectConfirmInit:
+		return "Initialize manifest"
+	case projectConfirmRemove:
+		return "Remove binding"
+	default:
+		return "Detail"
+	}
+}
+
+func (m ProjectModel) renderProjectDetail(_ int) string {
 	if !m.workspace.ManifestPresent {
-		return lipgloss.NewStyle().Width(width).Render("Project manifest\n\nNo .shelf.json exists for this Git worktree.\n\nPress i to create an empty, value-free manifest.")
+		return "Project manifest\n\nNo .shelf.json exists for this Git worktree.\n\nPress i to create an empty, value-free manifest."
 	}
 	binding, ok := m.currentProjectBinding()
 	if !ok {
-		return lipgloss.NewStyle().Width(width).Render("Project manifest\n\nNo bindings yet.\n\nPress a to choose a secret field.")
+		return "Project manifest\n\nNo bindings yet.\n\nPress a to choose a secret field."
 	}
 	title := binding.Title
 	if title == "" {
@@ -99,7 +126,6 @@ func (m ProjectModel) renderProjectDetail(width int) string {
 		required = "no (optional)"
 	}
 	var b strings.Builder
-	b.WriteString(m.styles.pane.Render("Detail") + "\n\n")
 	fmt.Fprintf(&b, "%s\n", title)
 	fmt.Fprintf(&b, "item:     %s\n", binding.Item)
 	fmt.Fprintf(&b, "field:    %s\n", binding.Field)
@@ -116,15 +142,14 @@ func (m ProjectModel) renderProjectDetail(width int) string {
 	if binding.Message != "" {
 		fmt.Fprintf(&b, "\n%s\n", binding.Message)
 	}
-	return lipgloss.NewStyle().Width(width).Render(b.String())
+	return b.String()
 }
 
 func (m ProjectModel) renderProjectPicker(width int) string {
 	var b strings.Builder
-	b.WriteString(m.styles.focus.Render("> Add binding") + "\n\n")
 	if m.loadingCandidates {
 		b.WriteString("Loading secret fields…")
-		return lipgloss.NewStyle().Width(width).Render(b.String())
+		return b.String()
 	}
 	if m.screen == projectPickerSearch {
 		b.WriteString(m.candidateQuery.View() + "\n\n")
@@ -132,7 +157,7 @@ func (m ProjectModel) renderProjectPicker(width int) string {
 	candidates := m.filteredCandidates()
 	if len(candidates) == 0 {
 		b.WriteString("No secret fields match.\n\n/ filter   esc cancel")
-		return lipgloss.NewStyle().Width(width).Render(b.String())
+		return b.String()
 	}
 	for index, candidate := range candidates {
 		cursor := " "
@@ -147,10 +172,10 @@ func (m ProjectModel) renderProjectPicker(width int) string {
 		b.WriteString(truncate(row, width) + "\n")
 	}
 	b.WriteString("\n/ filter   enter choose   esc cancel")
-	return lipgloss.NewStyle().Width(width).Render(b.String())
+	return b.String()
 }
 
-func (m ProjectModel) renderProjectRemoveConfirm(width int) string {
+func (m ProjectModel) renderProjectRemoveConfirm(_ int) string {
 	binding, ok := m.currentProjectBinding()
 	if !ok {
 		return "No binding selected."
@@ -159,8 +184,7 @@ func (m ProjectModel) renderProjectRemoveConfirm(width int) string {
 	if !binding.Required {
 		required = "optional"
 	}
-	content := fmt.Sprintf("Remove %s?\n\nenv:      %s\nrequired: %s\n\nThis changes only the value-free project manifest.\n\nenter confirm   esc cancel", binding.Key, binding.Env, required)
-	return lipgloss.NewStyle().Width(width).Render(content)
+	return fmt.Sprintf("Remove %s?\n\nenv:      %s\nrequired: %s\n\nThis changes only the value-free project manifest.\n\nenter confirm   esc cancel", binding.Key, binding.Env, required)
 }
 
 func (m ProjectModel) renderProjectHelp() string {

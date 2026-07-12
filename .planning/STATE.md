@@ -3,9 +3,9 @@
 ## Current Position
 
 - Version: v0.2.0 local milestone
-- Phase: Technical Debt Review
+- Phase: Catppuccin Mocha Panel TUI
 - Status: complete
-- Active Artifact: `.planning/phases/051-technical-debt-review/VERIFICATION.md`
+- Active Artifact: `.planning/phases/052-mocha-panel-tui/VERIFICATION.md`
 - Next Action: Start a new product milestone only after explicit scope selection.
 
 ## Blockers
@@ -27,16 +27,16 @@
 - Phase 49 implemented `shelf project tui`: a value-free current-worktree binding workspace with safe status diagnostics, candidate picker/filter, add/remove actions, missing-manifest initialization confirmation, terminal preflight, and a 100×24 resize contract.
 - Phase 50 implemented `shelf secret audit`: a value-free UTC expiry audit with deterministic health exit codes, secret/project TUI indicators, and project-status annotations; project export/run behavior is unchanged.
 - Phase 51 completed an active-code/documentation debt review: vault backups now repair restrictive permissions, custom template create summaries use canonical env roles, stale TUI/command documentation was corrected, and low-value panic/dead-code paths were removed.
+- Phase 52 refined both workspaces into persistent Catppuccin Mocha two-panel frames: rounded panels, active blue borders and text markers, retained catalog/binding context during right-pane actions, and no theme configuration surface.
 - The proposed personal workflow sequence is scriptable item lifecycle → wide-screen secret workspace TUI → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.
 - Default vault path is `~/.local/share/shelf/vault.json`.
 - Local config points at `/home/han/.local/share/shelf/vault.json`.
 - Local backup before cutover: `/home/han/.local/share/shelf/backups/pre-plain-json-cutover-20260710-162158`.
-- Built-in release packaging/tagging is deferred until a future public v1.0.0 milestone.
-- Latest Phase 51 verification passed:
-  - focused app, CLI, and atomic-write regression tests
-  - documentation stale-claim checks
+- Latest Phase 52 verification passed:
+  - secret and project model panel/focus/value-free tests
+  - 120×32 secret and project pseudo-terminal Mocha panel smokes
   - `bash scripts/test.sh` (`go vet`, `go test`, and `go-arch-lint`)
   - `go build ./cmd/shelf`
 

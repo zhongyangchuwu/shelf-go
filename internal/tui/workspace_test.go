@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
@@ -160,6 +161,44 @@ func TestModelResizeAndPaneSelection(t *testing.T) {
 	m = updateModel(t, m, tea.KeyPressMsg{Text: "j"})
 	if m.pane != paneDetail || m.fieldSelected != 0 {
 		t.Fatalf("detail selection = pane %v field %d, want detail field 0", m.pane, m.fieldSelected)
+	}
+}
+
+func TestModelRendersDistinctMochaPanels(t *testing.T) {
+	m, _, _ := readyModel(t)
+	view := m.render()
+	if got := strings.Count(view, "╭"); got != 2 {
+		t.Fatalf("panel frame count = %d, want 2:\n%s", got, view)
+	}
+	if !strings.Contains(view, "› Catalog") || !strings.Contains(view, "  Detail") {
+		t.Fatalf("initial panel focus = %q", view)
+	}
+	leftWidth, rightWidth := workspacePanelWidths(m.width)
+	panelHeight := workspacePanelHeight(m.height, false)
+	if got := lipgloss.Width(m.styles.renderPanel("Catalog", "", true, leftWidth, panelHeight)); got != leftWidth {
+		t.Fatalf("left panel width = %d, want %d", got, leftWidth)
+	}
+	if got := lipgloss.Width(m.styles.renderPanel("Detail", "", false, rightWidth, panelHeight)); got != rightWidth {
+		t.Fatalf("right panel width = %d, want %d", got, rightWidth)
+	}
+	if got := lipgloss.Height(m.styles.renderPanel("Catalog", "", true, leftWidth, panelHeight)); got != panelHeight {
+		t.Fatalf("left panel height = %d, want %d", got, panelHeight)
+	}
+	if got := lipgloss.Height(m.styles.renderPanel("Detail", "", false, rightWidth, panelHeight)); got != panelHeight {
+		t.Fatalf("right panel height = %d, want %d", got, panelHeight)
+	}
+	m = updateModel(t, m, tea.KeyPressMsg{Text: "l"})
+	if view = m.render(); !strings.Contains(view, "  Catalog") || !strings.Contains(view, "› Detail") {
+		t.Fatalf("detail panel focus = %q", view)
+	}
+}
+
+func TestModelKeepsCatalogPanelVisibleDuringCreateForm(t *testing.T) {
+	m, _, _ := readyModel(t)
+	m = updateModel(t, m, tea.KeyPressMsg{Text: "a"})
+	view := m.render()
+	if strings.Count(view, "╭") != 2 || !strings.Contains(view, "  Catalog") || !strings.Contains(view, "› Create item") || !strings.Contains(view, "OpenAI personal") {
+		t.Fatalf("create form panel layout = %q", view)
 	}
 }
 

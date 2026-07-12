@@ -111,21 +111,18 @@ func NewModel(service Service, clipboardWriter clipboard.Writer, options Options
 		fieldSelected:   -1,
 		query:           query,
 		labels:          make(map[string]bool),
-		styles:          newWorkspaceStyles(true),
+		styles:          newWorkspaceStyles(),
 		detailViewport:  newDetailViewport(),
 		health:          make(map[string]app.CredentialHealthItem),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.reloadCatalog(), tea.RequestBackgroundColor)
+	return m.reloadCatalog()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.BackgroundColorMsg:
-		m.styles = newWorkspaceStyles(msg.IsDark())
-		return m, nil
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		if m.tooSmall() {
@@ -322,32 +319,27 @@ func (m Model) render() string {
 }
 
 func (m Model) renderWorkspace() string {
-	header := m.styles.header.Render(fmt.Sprintf("Shelf  ·  Catalog    %d items  ·  template: %s  ·  labels: %s  ·  health: %s", len(m.filtered), displayTemplate(m.template), displayLabels(m.labels), m.healthSummary()))
-	leftWidth := max(34, m.width*36/100)
-	rightWidth := max(50, m.width-leftWidth-3)
-	left := m.renderCatalog(leftWidth)
-	right := m.renderRight(rightWidth)
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, "   ", right)
-	footer := "Tab pane  a add  e edit  c copy  d delete  / search  f filters  r reload  ? help  q quit"
+	header := m.styles.renderHeader(fmt.Sprintf("Shelf  ·  Catalog    %d items  ·  template: %s  ·  labels: %s  ·  health: %s", len(m.filtered), displayTemplate(m.template), displayLabels(m.labels), m.healthSummary()), m.width)
+	leftWidth, rightWidth := workspacePanelWidths(m.width)
+	panelHeight := workspacePanelHeight(m.height, m.status != "")
+	left := m.styles.renderPanel("Catalog", m.renderCatalog(panelContentWidth(leftWidth)), m.catalogPanelActive(), leftWidth, panelHeight)
+	right := m.styles.renderPanel(m.rightPanelTitle(), m.renderRight(panelContentWidth(rightWidth)), m.rightPanelActive(), rightWidth, panelHeight)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right)
+	footer := m.styles.renderFooter("Tab pane  a add  e edit  c copy  d delete  / search  f filters  r reload  ? help  q quit", m.width)
 	if m.status != "" {
-		footer = m.status + "\n" + footer
+		footer = m.styles.renderStatus(m.status, m.width) + "\n" + footer
 	}
-	return header + "\n" + strings.Repeat("─", max(1, m.width)) + "\n" + body + "\n" + strings.Repeat("─", max(1, m.width)) + "\n" + footer + "\n"
+	return header + "\n" + body + "\n" + footer + "\n"
 }
 
 func (m Model) renderCatalog(width int) string {
 	var b strings.Builder
-	title := m.styles.pane.Render("Catalog")
-	if m.pane == paneCatalog {
-		title = m.styles.focus.Render("> Catalog")
-	}
-	b.WriteString(title + "\n\n")
 	if m.screen == screenSearch {
 		b.WriteString(m.query.View() + "\n\n")
 	}
 	if len(m.filtered) == 0 {
 		b.WriteString("No secrets found.\n\nPress a to create an item.")
-		return lipgloss.NewStyle().Width(width).Render(b.String())
+		return b.String()
 	}
 	for i, item := range m.filtered {
 		cursor := " "
@@ -364,7 +356,7 @@ func (m Model) renderCatalog(width int) string {
 		row := fmt.Sprintf("%s %-20s %-16s %s", cursor, truncate(item.Title, 20), truncate(item.Template, 16), state)
 		b.WriteString(truncate(row, width) + "\n")
 	}
-	return lipgloss.NewStyle().Width(width).Render(b.String())
+	return b.String()
 }
 
 func (m Model) renderRight(width int) string {
@@ -379,12 +371,40 @@ func (m Model) renderRight(width int) string {
 	return m.renderDetail(width)
 }
 
-func (m Model) renderDetail(_ int) string {
-	title := m.styles.pane.Render("Detail")
-	if m.pane == paneDetail {
-		title = m.styles.focus.Render("> Detail")
+func (m Model) catalogPanelActive() bool {
+	return m.screen == screenSearch || (m.screen == screenWorkspace && m.pane == paneCatalog)
+}
+
+func (m Model) rightPanelActive() bool {
+	switch m.screen {
+	case screenFilters, screenForm, screenConfirmDelete:
+		return true
+	default:
+		return m.pane == paneDetail
 	}
-	return title + "\n\n" + m.detailViewport.View()
+}
+
+func (m Model) rightPanelTitle() string {
+	switch m.screen {
+	case screenFilters:
+		return "Filters"
+	case screenConfirmDelete:
+		return "Remove item"
+	case screenForm:
+		switch m.form.kind {
+		case formCreate:
+			return "Create item"
+		case formMetadata:
+			return "Edit item"
+		case formField:
+			return "Edit field"
+		}
+	}
+	return "Detail"
+}
+
+func (m Model) renderDetail(_ int) string {
+	return m.detailViewport.View()
 }
 
 func (m Model) renderHelp() string {
@@ -403,9 +423,8 @@ func (m Model) renderHelp() string {
 		"? / esc return\n"
 }
 
-func (m Model) renderFilters(width int) string {
+func (m Model) renderFilters(_ int) string {
 	var b strings.Builder
-	b.WriteString("Filters\n\n")
 	for i, choice := range m.filterChoices {
 		cursor := " "
 		if i == m.filterCursor {
@@ -421,12 +440,11 @@ func (m Model) renderFilters(width int) string {
 		fmt.Fprintf(&b, "%s [%s] %s: %s\n", cursor, selected, choice.kind, choice.value)
 	}
 	b.WriteString("\nspace toggle   enter apply   c clear   esc cancel")
-	return lipgloss.NewStyle().Width(width).Render(b.String())
+	return b.String()
 }
 
-func (m Model) renderDeleteConfirm(width int) string {
-	content := fmt.Sprintf("Remove %q?\n\nid:       %s\ntemplate: %s\n\nThis removes the local item and cannot be undone by Shelf.\n\nenter confirm   esc cancel", m.detail.Title, m.detail.ID, m.detail.Template)
-	return lipgloss.NewStyle().Width(width).Render(content)
+func (m Model) renderDeleteConfirm(_ int) string {
+	return fmt.Sprintf("Remove %q?\n\nid:       %s\ntemplate: %s\n\nThis removes the local item and cannot be undone by Shelf.\n\nenter confirm   esc cancel", m.detail.Title, m.detail.ID, m.detail.Template)
 }
 
 func (m Model) tooSmall() bool {

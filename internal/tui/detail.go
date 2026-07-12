@@ -8,9 +8,10 @@ import (
 )
 
 func (m *Model) configureDetailViewport() {
-	leftWidth := max(34, m.width*36/100)
-	m.detailViewport.SetWidth(max(10, m.width-leftWidth-3))
-	m.detailViewport.SetHeight(max(4, m.height-9))
+	_, rightWidth := workspacePanelWidths(m.width)
+	panelHeight := workspacePanelHeight(m.height, m.status != "")
+	m.detailViewport.SetWidth(panelContentWidth(rightWidth))
+	m.detailViewport.SetHeight(max(4, panelHeight-4))
 	m.detailViewport.SoftWrap = true
 }
 

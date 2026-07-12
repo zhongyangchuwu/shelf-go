@@ -67,20 +67,17 @@ func NewProjectModel(service ProjectService, options Options) ProjectModel {
 		service:        service,
 		options:        options,
 		screen:         projectLoading,
-		styles:         newWorkspaceStyles(true),
+		styles:         newWorkspaceStyles(),
 		candidateQuery: query,
 	}
 }
 
 func (m ProjectModel) Init() tea.Cmd {
-	return tea.Batch(m.loadWorkspace(), tea.RequestBackgroundColor)
+	return m.loadWorkspace()
 }
 
 func (m ProjectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.BackgroundColorMsg:
-		m.styles = newWorkspaceStyles(msg.IsDark())
-		return m, nil
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		if m.projectTooSmall() {

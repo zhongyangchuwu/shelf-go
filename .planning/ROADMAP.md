@@ -96,6 +96,12 @@ This milestone is for local development and personal use. Public repository/rele
 - Replaced built-in env-field assumptions in create summaries with canonical template-role resolution.
 - Removed a package panic/dead setup helper and corrected stale architecture, security, contributor, quickstart, and troubleshooting documentation.
 
+
+## Completed Catppuccin Mocha Panel TUI Refinement
+
+- Reframed secret and project workspaces as persistent two-panel layouts with rounded borders, active-pane markers, and a shared fixed Catppuccin Mocha palette.
+- Preserved value-free rendering, current keymaps, resize behavior, and app/clipboard boundaries.
+
 ## Deferred Beyond the Personal Workflow UX Plan
 
 1. Web manager for item vaults.
@@ -105,4 +111,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-12 after marking the local v0.2.0 milestone*
+*Last updated: 2026-07-13 after Catppuccin Mocha panel refinement*

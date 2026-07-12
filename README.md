@@ -97,6 +97,8 @@ shelf tui
 
 Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input, never reveals a secret value, and shows value-free expiry health where configured; `get`, export, and project run remain CLI-first.
 
+The catalog and right detail/editor remain visible as separate Catppuccin Mocha panels. A blue frame and `›` title marker identify the active pane; focus never depends on color alone.
+
 ## Use secrets in a project
 
 Inside a Git worktree, create a value-free project manifest:
@@ -111,7 +113,7 @@ On a 100×24-or-larger interactive terminal, manage value-free bindings in the o
 shelf project tui
 ```
 
-Use `a` to choose a secret field and env name, `d` to remove a binding after confirmation, and `i` to initialize a missing manifest. The workspace shows binding resolution state and diagnostics without values; `project export` and `project run` stay explicit CLI actions.
+Use `a` to choose a secret field and env name, `d` to remove a binding after confirmation, and `i` to initialize a missing manifest. The workspace uses the same persistent Catppuccin Mocha panel frame and shows binding resolution state and diagnostics without values; `project export` and `project run` stay explicit CLI actions.
 
 Add concrete item-field bindings:
 
