@@ -47,6 +47,26 @@ func TestResolverResolvesItemFieldAndEnvName(t *testing.T) {
 	}
 }
 
+func TestResolverTreatsMissingOptionalEnvMappingAsUnmapped(t *testing.T) {
+	item := validAPICredential()
+	fields := make([]vaultmodel.Field, 0, len(item.Fields)-1)
+	for _, field := range item.Fields {
+		if field.ID != vaultmodel.EnvFieldID("base_url") {
+			fields = append(fields, field)
+		}
+	}
+	item.Fields = fields
+	resolver, err := vaultmodel.NewResolver(vaultmodel.Vault{Version: vaultmodel.Version, Items: []vaultmodel.Item{item}})
+	if err != nil {
+		t.Fatalf("new resolver: %v", err)
+	}
+
+	envName, mapped, err := resolver.EnvName(item, "base_url")
+	if err != nil || mapped || envName != "" {
+		t.Fatalf("missing optional mapping = name %q mapped %t err %v", envName, mapped, err)
+	}
+}
+
 func TestResolverAmbiguityErrorsAreValueFree(t *testing.T) {
 	first := validGenericSecret("first", "First", "DUPLICATE_ENV")
 	first.Aliases = []string{"shared"}

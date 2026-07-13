@@ -126,18 +126,24 @@ func (r Resolver) EnvName(item Item, fieldID string) (string, bool, error) {
 	if _, ok, err := r.registry.FieldTemplate(item.Template, envFieldID); err != nil || !ok {
 		return "", false, err
 	}
-	_, envField, err := r.Field(item, envFieldID)
-	if err != nil || len(envField.Value) == 0 {
-		return "", false, err
+	for _, envField := range item.Fields {
+		if envField.ID != envFieldID {
+			continue
+		}
+		if len(envField.Value) == 0 {
+			return "", false, nil
+		}
+		var value string
+		if err := json.Unmarshal(envField.Value, &value); err != nil {
+			return "", false, err
+		}
+		if value == "" {
+			return "", false, nil
+		}
+		return value, true, nil
 	}
-	var value string
-	if err := json.Unmarshal(envField.Value, &value); err != nil {
-		return "", false, err
-	}
-	if value == "" {
-		return "", false, nil
-	}
-	return value, true, nil
+	return "", false, nil
+
 }
 
 // IsProjectableField reports whether fieldID is an atomic field whose type can
