@@ -347,7 +347,9 @@ func (m Model) renderCatalog(width int) string {
 			cursor = "›"
 		}
 		state := "unset"
-		if item.ValueSet {
+		if item.ProjectableFields > 0 {
+			state = fmt.Sprintf("%d/%d set · %d env", item.SetFields, item.ProjectableFields, item.EnvMappings)
+		} else if item.ValueSet {
 			state = "set"
 		}
 		if health, ok := m.health[item.ID]; ok {
@@ -587,12 +589,14 @@ func healthStatusRank(status app.CredentialHealthStatus) int {
 		return 0
 	case app.CredentialHealthExpiring:
 		return 1
-	case app.CredentialHealthMissing:
+	case app.CredentialHealthUnknown:
 		return 2
-	case app.CredentialHealthMalformed:
+	case app.CredentialHealthInvalid:
 		return 3
-	default:
+	case app.CredentialHealthHealthy:
 		return 4
+	default:
+		return 5
 	}
 }
 
@@ -704,7 +708,7 @@ func (m Model) healthSummary() string {
 		counts[health.Status]++
 	}
 	parts := make([]string, 0, 4)
-	for _, status := range []app.CredentialHealthStatus{app.CredentialHealthExpired, app.CredentialHealthExpiring, app.CredentialHealthMissing, app.CredentialHealthMalformed} {
+	for _, status := range []app.CredentialHealthStatus{app.CredentialHealthExpired, app.CredentialHealthExpiring, app.CredentialHealthUnknown, app.CredentialHealthInvalid} {
 		if count := counts[status]; count > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", count, healthLabel(status)))
 		}
@@ -721,10 +725,12 @@ func healthLabel(status app.CredentialHealthStatus) string {
 		return "expired"
 	case app.CredentialHealthExpiring:
 		return "due"
-	case app.CredentialHealthMissing:
-		return "missing"
-	case app.CredentialHealthMalformed:
+	case app.CredentialHealthUnknown:
+		return "unknown"
+	case app.CredentialHealthInvalid:
 		return "invalid"
+	case app.CredentialHealthPermanent:
+		return "permanent"
 	default:
 		return "healthy"
 	}

@@ -102,6 +102,14 @@ This milestone is for local development and personal use. Public repository/rele
 - Reframed secret and project workspaces as persistent two-panel layouts with rounded borders, active-pane markers, and a shared fixed Catppuccin Mocha palette.
 - Preserved value-free rendering, current keymaps, resize behavior, and app/clipboard boundaries.
 
+## Completed Phase 53
+
+- Replaced V2 field instances with V3 atomic `id`/`value` storage and template-owned field definitions; V2 vaults are rejected without automatic migration.
+- Replaced role metadata with validated `env_<field>` and `validity_<secret-field>` conventions, including field-level lifecycle audit.
+- Replaced `shelf secret export` with `shelf env export`, projecting explicitly mapped secret and public fields.
+- Allowed project binding/export/run for eligible public and secret fields, and grouped structural metadata in value-free TUI detail.
+- Added V3 model, codec, app, CLI, project, TUI, full-suite, temporary-vault, and pseudo-terminal verification; published a manual migration guide.
+
 ## Deferred Beyond the Personal Workflow UX Plan
 
 1. Web manager for item vaults.
@@ -111,4 +119,4 @@ This milestone is for local development and personal use. Public repository/rele
 5. Public repository/release packaging for v1.0.0.
 
 ---
-*Last updated: 2026-07-13 after Catppuccin Mocha panel refinement*
+*Last updated: 2026-07-13 after Item-First Environment Projection V3*

@@ -31,7 +31,6 @@ func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Comm
 	cmd.AddCommand(newSecretCopyCmd(appSvc, clipboardWriter))
 	cmd.AddCommand(newSecretListCmd(appSvc))
 	cmd.AddCommand(newSecretInfoCmd(appSvc))
-	cmd.AddCommand(newSecretExportCmd(appSvc))
 	cmd.AddCommand(newSecretRmCmd(appSvc))
 	cmd.AddCommand(newSecretAuditCmd(appSvc))
 	return cmd
@@ -66,7 +65,7 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	cmd.Flags().BoolVar(&req.Stdin, "stdin", false, "Read primary secret field value from stdin")
 	cmd.Flags().StringVar(&req.Provider, "provider", "", "Provider/source public field")
 	cmd.Flags().StringVar(&req.Website, "website", "", "Website public field")
-	cmd.Flags().StringVar(&req.Expires, "expires", "", "Expiration date public field (YYYY-MM-DD)")
+	cmd.Flags().StringVar(&req.Validity, "validity", "", "Credential validity: unknown, permanent, or YYYY-MM-DD")
 	cmd.Flags().StringArrayVar(&req.Scopes, "scope", nil, "Scope public field; repeat for multiple scopes")
 	_ = cmd.RegisterFlagCompletionFunc("template", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("profile", cobra.NoFileCompletions)
@@ -74,7 +73,7 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("provider", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("website", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("expires", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("validity", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("scope", cobra.NoFileCompletions)
 	return cmd
 }
@@ -206,30 +205,6 @@ func newSecretCopyCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.
 	cmd.Flags().StringVar(&envName, "env", "", "Find the secret field by env-name field value")
 	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
-	return cmd
-}
-
-func newSecretExportCmd(appSvc *app.App) *cobra.Command {
-	var labels []string
-	var format string
-	cmd := &cobra.Command{
-		Use:   "export --label LABEL",
-		Short: "Export secret items by label",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath, vaultPath := runtimePaths(cmd)
-			out, err := appSvc.ExportSecretItems(configPath, vaultPath, app.ExportSecretItemsRequest{Labels: labels, Format: format})
-			if err != nil {
-				return err
-			}
-			fmt.Fprint(cmd.OutOrStdout(), out)
-			return nil
-		},
-	}
-	cmd.Flags().StringArrayVar(&labels, "label", nil, "Label to export; repeat for AND matching")
-	cmd.Flags().StringVar(&format, "format", "shell", "Output format: shell or json")
-	_ = cmd.RegisterFlagCompletionFunc("label", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("format", cobra.FixedCompletions([]string{"shell", "json"}, cobra.ShellCompDirectiveNoFileComp))
 	return cmd
 }
 

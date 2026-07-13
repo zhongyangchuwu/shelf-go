@@ -42,7 +42,7 @@ Shelf is CLI-first. The TUI is an optional interactive front-end over existing w
 shelf setup
 shelf doctor
 shelf tui
-shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
+shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--validity VALUE] [--stdin]
 shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
 shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]
@@ -50,7 +50,7 @@ shelf secret copy <selector> [--field FIELD]
 shelf secret copy --env ENV [--field FIELD]
 shelf secret list [query] [--long]
 shelf secret info <selector>
-shelf secret export --label LABEL [--label LABEL ...] [--format shell|json]
+shelf env export --label LABEL [--label LABEL ...] [--format shell|json]
 shelf secret rm <selector> --yes
 shelf secret audit [--within DAYS] [--format text|json]
 shelf project id
@@ -85,10 +85,10 @@ Dependency direction: `cli -> app/cliui/clipboard/tui`, using Cobra and `golang.
 ## Data Rules
 
 - Secret values enter through stdin only for writes.
-- `secret audit`, status views, and health indicators use public expiry metadata only and must never render secret values.
-- `secret get`, `secret export`, `project export`, and `project run` intentionally materialize values. `secret copy` and TUI copy materialize a value only to the system clipboard and must not print it; TUI must never reveal a secret value.
+- `secret audit`, status views, and health indicators use public `validity_<secret-field>` metadata only and must never render secret values.
+- `secret get`, `env export`, `project export`, and `project run` intentionally materialize values. `secret copy` and TUI copy materialize a value only to the system clipboard and must not print it; TUI must never reveal a secret value.
 - `.shelf.json` stores concrete `item`, `field`, `env`, optional `required`, and optional `title` only.
-- Label-scoped export skips items without an explicit env-name field.
+- Label-scoped env export projects every explicitly mapped eligible field; `env_<field>` mappings may target public or secret `string`, `concealed`, and `url` fields.
 
 ## Style and Verification
 

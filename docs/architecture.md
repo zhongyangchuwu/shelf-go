@@ -36,13 +36,13 @@ config -> yaml
 
 ## Item vault
 
-`internal/vaultmodel` owns domain semantics: vault schema version, items, fields, templates, profiles, public env-name fields, secret sensitivity, validation, indexes, and shared resolution of item selectors, fields, and env names.
+`internal/vaultmodel` owns schema version 3: atomic item fields, template-owned field definitions, `env_<field>` environment mappings, `validity_<secret-field>` lifecycle metadata, validation, indexes, and shared item/field/env resolution.
 
 `internal/vaultjson` owns persistence mechanics for the configured JSON file: strict decode, validated encode/save, atomic writes, and backup behavior. The JSON file is plaintext and must be protected externally.
 
 ## CLI workflows
 
-`internal/cli` parses command arguments, routes human output through `internal/cliui`, and delegates the explicit `secret copy` side effect to `internal/clipboard`. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`. `shelf secret audit` derives value-free credential health only from public expiry metadata.
+`internal/cli` parses command arguments, routes human output through `internal/cliui`, and delegates the explicit `secret copy` side effect to `internal/clipboard`. Reusable behavior belongs in `internal/app`, `internal/project`, `internal/vaultmodel`, or `internal/vaultjson`. `shelf env export` materializes explicitly mapped fields; `shelf secret audit` derives value-free field health only from public lifecycle metadata.
 
 Active command groups:
 
@@ -50,6 +50,7 @@ Active command groups:
 - `doctor`
 - `tui`
 - `secret`
+- `env`
 - `project`
 - `completion`
 

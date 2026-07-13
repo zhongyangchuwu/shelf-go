@@ -36,7 +36,7 @@ type createDraft struct {
 	aliases  string
 	provider string
 	website  string
-	expires  string
+	validity string
 	scopes   string
 	secret   string
 }
@@ -76,7 +76,7 @@ func (m Model) startCreateForm() (tea.Model, tea.Cmd) {
 		huh.NewGroup(
 			huh.NewInput().Title("Provider").Value(&draft.provider),
 			huh.NewInput().Title("Website").Value(&draft.website),
-			huh.NewInput().Title("Expiry date (YYYY-MM-DD)").Value(&draft.expires),
+			huh.NewInput().Title("Validity (unknown, permanent, or YYYY-MM-DD)").Value(&draft.validity),
 			huh.NewInput().Title("Scopes (comma separated)").Value(&draft.scopes),
 		).WithHideFunc(func() bool { return draft.kind == "generic" }),
 		huh.NewGroup(
@@ -204,7 +204,7 @@ func createReview(draft *createDraft) string {
 		lines = append(lines,
 			"Provider: "+optionalValue(draft.provider),
 			"Website: "+optionalValue(draft.website),
-			"Expiry date: "+optionalValue(draft.expires),
+			"Validity: "+optionalValue(draft.validity),
 			"Scopes: "+optionalValue(draft.scopes),
 		)
 	}

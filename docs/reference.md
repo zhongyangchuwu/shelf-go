@@ -44,12 +44,12 @@ The catalog, search, filters, detail, help, and confirmation screens are value-f
 Creates an item. Secret values enter through stdin when `--stdin` is set.
 
 ```bash
-shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--stdin]
+shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--validity VALUE] [--stdin]
 ```
 
-On success, prints a metadata summary with title, id, template, and env name. Secret values are not echoed.
+On success, prints a metadata summary with title, id, template, and primary-field env name. Secret values are not echoed.
 
-Useful public-field flags for `api_credential` are `--provider`, `--website`, `--expires`, and repeatable `--scope`.
+Useful public-field flags for `api_credential` are `--provider`, `--website`, `--validity`, and repeatable `--scope`. `--validity` accepts `unknown`, `permanent`, or `YYYY-MM-DD`.
 
 `--template` accepts a vault template ID or alias; built-in aliases are `generic` and `api`.
 
@@ -102,32 +102,31 @@ Prints item metadata as JSON. Public fields are shown. Secret fields show only `
 shelf secret info <selector>
 ```
 
-## `shelf secret export`
+## `shelf env export`
 
-Materializes values for items that have all requested labels.
+Materializes all explicitly mapped fields for items that have all requested labels.
 
 ```bash
-shelf secret export --label LABEL [--label LABEL ...] [--format shell|json]
+shelf env export --label LABEL [--label LABEL ...] [--format shell|json]
 ```
 
 Default format is `shell`:
 
 ```zsh
-source <(shelf secret export --label ai --format shell)
+source <(shelf env export --label ai --format shell)
 ```
 
-Repeated labels use AND matching. Items without an explicit env-name field are skipped. Missing labels, missing secret values for exportable items, and duplicate env names fail with value-free diagnostics.
-
+Repeated labels use AND matching. `env_<field>` maps an eligible `string`, `concealed`, or `url` field to an environment name; mappings project both secret and public values. Unmapped fields are not exported. Missing labels, missing mapped-field values, and duplicate env names fail with value-free diagnostics.
 
 ## `shelf secret audit`
 
-Reports credential expiry health from public expiry metadata without printing secret values.
+Reports lifecycle validity from public `validity_<secret-field>` metadata without printing secret values.
 
 ```bash
 shelf secret audit [--within DAYS] [--format text|json]
 ```
 
-The default horizon is 30 UTC calendar days. `expired` means the date is before today; `due` covers today through the horizon; tracked expiry metadata can also be `missing` or `invalid`. Items without expiry metadata are omitted. Exit status is `3` for expired credentials, `2` for due/missing/invalid credentials, and `0` for healthy/no tracked credentials.
+The default horizon is 30 UTC calendar days. `expired` means the date is before today; `due` covers today through the horizon. Tracked fields can also be `unknown`, `permanent`, `invalid`, or `healthy`; untracked fields are omitted. Exit status is `3` for expired credentials, `2` for due/unknown/invalid fields, and `0` for healthy/permanent or no tracked fields.
 
 ## `shelf secret rm`
 
@@ -161,8 +160,7 @@ Opens the optional, keyboard-first binding workspace for the current Git worktre
 shelf project tui
 ```
 
-The workspace lists value-free bindings and their ready/warn/fail status, including safe missing-value and duplicate-env diagnostics. `a` selects a secret field and env name, `d` removes a binding after confirmation, and `i` initializes a missing manifest after confirmation. It never reads or writes `.shelf.json` directly, reveals values, exports, or runs child processes.
-
+The workspace lists value-free bindings and their ready/warn/fail status, including safe missing-value and duplicate-env diagnostics. `a` selects a projectable field and env name, `d` removes a binding after confirmation, and `i` initializes a missing manifest after confirmation. It never reads or writes `.shelf.json` directly, reveals values, exports, or runs child processes.
 
 ## `shelf project add`
 
@@ -172,7 +170,7 @@ Adds a concrete item-field binding to the project manifest.
 shelf project add <item-id-or-title> [--field FIELD] [--env NAME] [--optional]
 ```
 
-`--field` defaults to the item's primary secret field. `--env` defaults to that field's public env-name field.
+`--field` defaults to the item's primary secret field. Any stored public or secret `string`, `concealed`, or `url` field is eligible. `--env` uses its `env_<field>` mapping when one exists; otherwise it is required.
 
 ## `shelf project rm`
 
@@ -192,13 +190,13 @@ shelf project list
 
 ## `shelf project status`
 
-Checks manifest resolution and applicable credential health without printing secret values. Health uses only public expiry metadata; it does not block export or run.
+Checks manifest resolution and applicable credential health without printing secret values. Health uses only public lifecycle metadata; it does not block export or run.
 
 ```bash
 shelf project status
 ```
 
-Binding rows include `health:<status>` and a public `expires:<YYYY-MM-DD>` value when the bound primary credential field has expiry metadata.
+Binding rows include `health:<status>` and a public `expires:<YYYY-MM-DD>` value when the bound field has date-based validity metadata.
 
 ## `shelf project export`
 

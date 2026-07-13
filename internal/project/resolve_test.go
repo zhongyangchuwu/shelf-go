@@ -175,17 +175,17 @@ func TestResolveBindingsDuplicateEnvIsFail(t *testing.T) {
 	}
 }
 
-func TestResolveBindingsNonSecretFieldIsFail(t *testing.T) {
+func TestResolveBindingsProjectablePublicFieldIsReady(t *testing.T) {
 	v := validVault(t)
 	m := New()
 	m.AddBinding(Binding{Item: "github", Field: "provider", Env: "GITHUB_PROVIDER"})
 
 	entries, diagnostics := ResolveBindings(m, testResolver(t, v))
-	if len(entries) != 0 {
-		t.Fatalf("expected 0 bindings for non-secret field, got %d", len(entries))
+	if len(diagnostics) != 0 {
+		t.Fatalf("public string diagnostics = %+v", diagnostics)
 	}
-	if !hasDiagnostic(diagnostics, Diagnostic{Status: "fail", Path: "github.provider", Message: "field is not secret"}) {
-		t.Fatalf("expected field-not-secret diagnostic: %+v", diagnostics)
+	if len(entries) != 1 || entries[0].Path != "github.provider" || entries[0].EnvName != "GITHUB_PROVIDER" || entries[0].Value != "GitHub" {
+		t.Fatalf("public binding = %+v", entries)
 	}
 }
 
@@ -208,7 +208,7 @@ func TestResolveBindingsAllDiagnosticsAreValueFree(t *testing.T) {
 	m := New()
 	m.AddBinding(Binding{Item: "nonexistent", Field: "credential", Env: "NOPE"})
 	m.AddBinding(Binding{Item: "github", Field: "nonexistent", Env: "NOPE2"})
-	m.AddBinding(Binding{Item: "github", Field: "provider", Env: "PUB"})
+	m.AddBinding(Binding{Item: "github", Field: "scopes", Env: "PUB"})
 
 	_, diagnostics := ResolveBindings(m, testResolver(t, v))
 	for _, d := range diagnostics {
@@ -250,9 +250,10 @@ func validVault(t *testing.T) vaultmodel.Vault {
 				Title:    "GitHub Token",
 				Template: vaultmodel.TemplateAPICredential,
 				Fields: []vaultmodel.Field{
-					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: json.RawMessage(`"ghp_fake_token"`)},
-					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: json.RawMessage(`"GITHUB_TOKEN"`)},
-					{ID: "provider", Label: "Provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeProvider, Value: json.RawMessage(`"GitHub"`)},
+					{ID: "credential", Value: json.RawMessage(`"ghp_fake_token"`)},
+					{ID: vaultmodel.EnvFieldID("credential"), Value: json.RawMessage(`"GITHUB_TOKEN"`)},
+					{ID: vaultmodel.ValidityFieldID("credential"), Value: json.RawMessage(`"permanent"`)},
+					{ID: "provider", Value: json.RawMessage(`"GitHub"`)},
 				},
 			},
 			{
@@ -260,8 +261,9 @@ func validVault(t *testing.T) vaultmodel.Vault {
 				Title:    "OpenAI API Key",
 				Template: vaultmodel.TemplateAPICredential,
 				Fields: []vaultmodel.Field{
-					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: json.RawMessage(`"sk-openai-test"`)},
-					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: json.RawMessage(`"OPENAI_API_KEY"`)},
+					{ID: "credential", Value: json.RawMessage(`"sk-openai-test"`)},
+					{ID: vaultmodel.EnvFieldID("credential"), Value: json.RawMessage(`"OPENAI_API_KEY"`)},
+					{ID: vaultmodel.ValidityFieldID("credential"), Value: json.RawMessage(`"unknown"`)},
 				},
 			},
 		},

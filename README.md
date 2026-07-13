@@ -65,7 +65,7 @@ Update a field from stdin; omit `--field` to update the primary secret field:
 
 ```bash
 printf %s "$NEW_TOKEN" | shelf secret update openai
-printf %s LLM_API_KEY | shelf secret update openai --field credential_env
+printf %s LLM_API_KEY | shelf secret update openai --field env_credential
 ```
 
 Update item identity, organization, and public metadata without editing vault JSON:
@@ -79,13 +79,13 @@ shelf secret update openai-personal --field website --clear-field
 
 `--value` is limited to public fields. If it is omitted for a selected field, Shelf reads stdin; on an interactive terminal it prompts without echoing input. Secret values never enter argv.
 
-Load a label group into the current shell without storing values in shell config:
+Load all explicitly mapped fields in a label group into the current shell without storing values in shell config:
 
 ```bash
-source <(shelf secret export --label ai --format shell)
+source <(shelf env export --label ai --format shell)
 ```
 
-Repeated labels use AND matching. Items without an explicit env-name field are skipped.
+Repeated labels use AND matching. `env_<field>` maps that field to a default environment name; mapped secret and public `string`, `concealed`, and `url` fields are exported. Unmapped fields remain metadata.
 
 ## Interactive secret workspace
 
@@ -95,7 +95,7 @@ On a 100×24-or-larger interactive terminal, open the optional full-screen catal
 shelf tui
 ```
 
-Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input, never reveals a secret value, and shows value-free expiry health where configured; `get`, export, and project run remain CLI-first.
+Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input, never reveals a secret value, and shows value-free field lifecycle health where configured; `get`, `env export`, and project run remain CLI-first.
 
 The catalog and right detail/editor remain visible as separate Catppuccin Mocha panels. A blue frame and `›` title marker identify the active pane; focus never depends on color alone.
 
@@ -113,7 +113,7 @@ On a 100×24-or-larger interactive terminal, manage value-free bindings in the o
 shelf project tui
 ```
 
-Use `a` to choose a secret field and env name, `d` to remove a binding after confirmation, and `i` to initialize a missing manifest. The workspace uses the same persistent Catppuccin Mocha panel frame and shows binding resolution state and diagnostics without values; `project export` and `project run` stay explicit CLI actions.
+Use `a` to choose a projectable item field and env name, `d` to remove a binding after confirmation, and `i` to initialize a missing manifest. The workspace uses the same persistent Catppuccin Mocha panel frame and shows binding resolution state and diagnostics without values; `project export` and `project run` stay explicit CLI actions.
 
 Add concrete item-field bindings:
 
@@ -129,7 +129,7 @@ shelf project export > .env.local
 source .env.local
 ```
 
-Run a child command with project secrets injected:
+Run a child command with project fields injected:
 
 ```bash
 shelf project run -- npm run dev
@@ -145,13 +145,13 @@ shelf project run --dry-run -- npm run dev
 
 ## Credential health
 
-Audit expiry metadata without materializing values:
+Audit lifecycle validity without materializing values:
 
 ```bash
 shelf secret audit --within 30
 ```
 
-Tracked credentials report `expired`, `due`, `missing`, `invalid`, or `healthy` status. The command exits `3` for expired credentials, `2` for warnings, and `0` when all tracked credentials are healthy. Use `--format json` for value-free script output.
+Tracked fields report `expired`, `due`, `unknown`, `invalid`, `permanent`, or `healthy` status. The command exits `3` for expired credentials, `2` for warnings, and `0` when all tracked fields are healthy or permanent. Use `--format json` for value-free script output.
 
 ## Health check
 
@@ -164,6 +164,6 @@ shelf doctor
 ## Current non-goals
 
 - Built-in age encryption. Use chezmoi or another external tool for encrypted sync.
-- v1 vault compatibility or automated migration.
+- v1/v2 vault compatibility or automatic migration. See the [manual V3 migration guide](docs/v3-migration.md).
 - Web manager. Both secret and project binding TUI workspaces are available; browser and hosted interfaces remain deferred.
 - Team sharing, hosted sync, browser autofill, or daemon-based unlock flows.

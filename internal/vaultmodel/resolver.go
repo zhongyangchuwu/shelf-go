@@ -12,6 +12,16 @@ type Resolver struct {
 	index    Index
 }
 
+// ResolvedField combines an atomic item value with the immutable field schema
+// from its owning template.
+type ResolvedField struct {
+	ID          string
+	Label       string
+	Type        FieldType
+	Sensitivity Sensitivity
+	Value       json.RawMessage
+}
+
 func NewResolver(vault Vault) (Resolver, error) {
 	registry := NewRegistryWithDefinitions(vault.Templates, vault.Profiles)
 	if err := ValidateWithRegistry(vault, registry); err != nil {
@@ -80,22 +90,29 @@ func (r Resolver) ResolveEnv(name string) (FieldRef, error) {
 	return refs[0], nil
 }
 
-func (r Resolver) Field(item Item, fieldID string) (int, Field, error) {
+func (r Resolver) Field(item Item, fieldID string) (int, ResolvedField, error) {
+	definition, ok, err := r.registry.FieldTemplate(item.Template, fieldID)
+	if err != nil {
+		return 0, ResolvedField{}, err
+	}
+	if !ok {
+		return 0, ResolvedField{}, fmt.Errorf("field not found: %s", fieldID)
+	}
 	for i, field := range item.Fields {
 		if field.ID == fieldID {
-			return i, field, nil
+			return i, resolvedField(definition, field), nil
 		}
 	}
-	return 0, Field{}, fmt.Errorf("field not found: %s", fieldID)
+	return 0, ResolvedField{}, fmt.Errorf("field not found: %s", fieldID)
 }
 
-func (r Resolver) DefaultField(item Item, fieldID string) (int, Field, error) {
+func (r Resolver) DefaultField(item Item, fieldID string) (int, ResolvedField, error) {
 	if fieldID != "" {
 		return r.Field(item, fieldID)
 	}
 	primary, err := r.PrimarySecretField(item)
 	if err != nil {
-		return 0, Field{}, err
+		return 0, ResolvedField{}, err
 	}
 	return r.Field(item, primary.ID)
 }
@@ -105,16 +122,16 @@ func (r Resolver) PrimarySecretField(item Item) (FieldTemplate, error) {
 }
 
 func (r Resolver) EnvName(item Item, fieldID string) (string, bool, error) {
-	templateField, ok, err := r.registry.EnvNameField(item.Template, fieldID)
-	if err != nil || !ok {
+	envFieldID := EnvFieldID(fieldID)
+	if _, ok, err := r.registry.FieldTemplate(item.Template, envFieldID); err != nil || !ok {
 		return "", false, err
 	}
-	_, field, err := r.Field(item, templateField.ID)
-	if err != nil || len(field.Value) == 0 {
-		return "", false, nil
+	_, envField, err := r.Field(item, envFieldID)
+	if err != nil || len(envField.Value) == 0 {
+		return "", false, err
 	}
 	var value string
-	if err := json.Unmarshal(field.Value, &value); err != nil {
+	if err := json.Unmarshal(envField.Value, &value); err != nil {
 		return "", false, err
 	}
 	if value == "" {
@@ -123,11 +140,23 @@ func (r Resolver) EnvName(item Item, fieldID string) (string, bool, error) {
 	return value, true, nil
 }
 
+// IsProjectableField reports whether fieldID is an atomic field whose type can
+// be represented in an environment variable. Item default env mappings are
+// optional because project bindings name their target environment explicitly.
+func (r Resolver) IsProjectableField(item Item, fieldID string) bool {
+	definition, ok, err := r.registry.FieldTemplate(item.Template, fieldID)
+	return err == nil && ok && !IsStructuralFieldID(fieldID) && IsProjectableType(definition.Type)
+}
+
 func (r Resolver) SecretSelectors() []string {
 	selectors := make([]string, 0)
 	for _, item := range r.vault.Items {
-		for _, field := range item.Fields {
-			if field.Sensitivity == SensitivitySecret {
+		tmpl, ok := r.registry.Template(item.Template)
+		if !ok {
+			continue
+		}
+		for _, field := range tmpl.Fields {
+			if field.Sensitivity == SensitivitySecret && !IsStructuralFieldID(field.ID) {
 				selectors = append(selectors, item.ID+"."+field.ID)
 			}
 		}
@@ -144,6 +173,10 @@ func (r Resolver) ambiguousItemError(selector string) error {
 		}
 	}
 	return fmt.Errorf("%s", b.String())
+}
+
+func resolvedField(definition FieldTemplate, field Field) ResolvedField {
+	return ResolvedField{ID: field.ID, Label: definition.Label, Type: definition.Type, Sensitivity: definition.Sensitivity, Value: field.Value}
 }
 
 func hasString(values []string, want string) bool {

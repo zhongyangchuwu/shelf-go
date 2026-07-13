@@ -31,7 +31,7 @@ type CreateSecretRequest struct {
 	In       io.Reader
 	Provider string
 	Website  string
-	Expires  string
+	Validity string
 	Scopes   []string
 }
 
@@ -62,7 +62,7 @@ type ListSecretItemsRequest struct {
 	Long  bool
 }
 
-type ExportSecretItemsRequest struct {
+type ExportEnvironmentRequest struct {
 	Labels []string
 	Format string
 }
@@ -76,13 +76,16 @@ type SecretItemSummary struct {
 }
 
 type SecretCatalogItem struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
-	Template string   `json:"template"`
-	Env      string   `json:"env,omitempty"`
-	Labels   []string `json:"labels,omitempty"`
-	Aliases  []string `json:"aliases,omitempty"`
-	ValueSet bool     `json:"value_set"`
+	ID                string   `json:"id"`
+	Title             string   `json:"title"`
+	Template          string   `json:"template"`
+	Env               string   `json:"env,omitempty"`
+	Labels            []string `json:"labels,omitempty"`
+	Aliases           []string `json:"aliases,omitempty"`
+	ValueSet          bool     `json:"value_set"`
+	ProjectableFields int      `json:"projectable_fields"`
+	SetFields         int      `json:"set_fields"`
+	EnvMappings       int      `json:"env_mappings"`
 }
 
 type SecretFieldInfo struct {
@@ -243,7 +246,7 @@ func (a *App) GetSecretField(configPathFlag, vaultPathFlag string, req GetSecret
 	}
 	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
 	var item vaultmodel.Item
-	var field vaultmodel.Field
+	var field vaultmodel.ResolvedField
 	if req.Env != "" {
 		ref, err := resolver.ResolveEnv(req.Env)
 		if err != nil {
@@ -319,24 +322,39 @@ func (a *App) SecretCatalog(configPathFlag, vaultPathFlag string) ([]SecretCatal
 		if err != nil {
 			return nil, fmt.Errorf("catalog %s: %w", item.Title, err)
 		}
+		projectableFields, setFields, envMappings := 0, 0, 0
+		for _, storedField := range item.Fields {
+			if !resolver.IsProjectableField(item, storedField.ID) {
+				continue
+			}
+			projectableFields++
+			_, projected, err := resolver.Field(item, storedField.ID)
+			if err != nil {
+				return nil, fmt.Errorf("catalog %s field %s: %w", item.Title, storedField.ID, err)
+			}
+			if len(projected.Value) > 0 {
+				setFields++
+			}
+			if _, mapped, err := resolver.EnvName(item, storedField.ID); err != nil {
+				return nil, fmt.Errorf("catalog %s env name: %w", item.Title, err)
+			} else if mapped {
+				envMappings++
+			}
+		}
 		items = append(items, SecretCatalogItem{
-			ID:       item.ID,
-			Title:    item.Title,
-			Template: item.Template,
-			Env:      env,
-			Labels:   append([]string(nil), item.Labels...),
-			Aliases:  append([]string(nil), item.Aliases...),
-			ValueSet: len(field.Value) > 0,
+			ID: item.ID, Title: item.Title, Template: item.Template, Env: env,
+			Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...), ValueSet: len(field.Value) > 0,
+			ProjectableFields: projectableFields, SetFields: setFields, EnvMappings: envMappings,
 		})
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].Title < items[j].Title })
 	return items, nil
 }
 
-func (a *App) ExportSecretItems(configPathFlag, vaultPathFlag string, req ExportSecretItemsRequest) (string, error) {
+func (a *App) ExportEnvironment(configPathFlag, vaultPathFlag string, req ExportEnvironmentRequest) (string, error) {
 	labels := normalizeLabels(req.Labels)
 	if len(labels) == 0 {
-		return "", fmt.Errorf("secret export requires --label")
+		return "", fmt.Errorf("env export requires --label")
 	}
 	vault, err := a.loadVaultForRead(configPathFlag, vaultPathFlag)
 	if err != nil {
@@ -353,7 +371,7 @@ func (a *App) ExportSecretItems(configPathFlag, vaultPathFlag string, req Export
 	case "json":
 		return util.JSONBindings(bindings)
 	default:
-		return "", fmt.Errorf("unsupported export format: %s", req.Format)
+		return "", fmt.Errorf("unsupported env export format: %s", req.Format)
 	}
 }
 
@@ -376,7 +394,11 @@ func (a *App) SecretInfo(configPathFlag, vaultPathFlag, selector string) (Secret
 		return SecretInfo{}, err
 	}
 	info := SecretInfo{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...), PrimaryEnv: primaryEnv}
-	for _, field := range item.Fields {
+	for _, storedField := range item.Fields {
+		_, field, err := resolver.Field(item, storedField.ID)
+		if err != nil {
+			return SecretInfo{}, err
+		}
 		fieldInfo := SecretFieldInfo{ID: field.ID, Type: field.Type, Sensitivity: field.Sensitivity, ValueSet: len(field.Value) > 0}
 		if field.Sensitivity == vaultmodel.SensitivityPublic && len(field.Value) > 0 {
 			fieldInfo.Value, _ = valueForOutput(field)
@@ -460,9 +482,11 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 		item.ID = itemIDFromTitle(req.Title)
 	}
 	for _, templateField := range tmpl.Fields {
-		field := vaultmodel.Field{ID: templateField.ID, Label: templateField.Label, Type: templateField.Type, Sensitivity: templateField.Sensitivity, Purpose: templateField.Purpose}
+		field := vaultmodel.Field{ID: templateField.ID}
 		if value, ok := defaults[templateField.ID]; ok {
 			field.Value = append([]byte(nil), value...)
+		} else if _, validity := vaultmodel.IsValidityFieldID(templateField.ID); validity {
+			field.Value = rawString("unknown")
 		}
 		item.Fields = append(item.Fields, field)
 	}
@@ -471,14 +495,12 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 		if err != nil {
 			return vaultmodel.Item{}, err
 		}
-		envField, ok, err := registry.EnvNameField(tmpl.ID, primary.ID)
-		if err != nil {
+		if _, ok, err := registry.FieldTemplate(tmpl.ID, vaultmodel.EnvFieldID(primary.ID)); err != nil {
 			return vaultmodel.Item{}, err
-		}
-		if !ok {
+		} else if !ok {
 			return vaultmodel.Item{}, fmt.Errorf("template field has no env-name field: %s", primary.ID)
 		}
-		if err := setFieldValueIfPresent(&item, envField.ID, rawString(req.Env)); err != nil {
+		if err := setFieldValueIfPresent(&item, vaultmodel.EnvFieldID(primary.ID), rawString(req.Env)); err != nil {
 			return vaultmodel.Item{}, err
 		}
 	}
@@ -492,9 +514,13 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 			return vaultmodel.Item{}, fmt.Errorf("--website is not supported by template %s: %w", tmpl.ID, err)
 		}
 	}
-	if req.Expires != "" {
-		if err := setFieldValueIfPresent(&item, "expires_at", rawString(req.Expires)); err != nil {
-			return vaultmodel.Item{}, fmt.Errorf("--expires is not supported by template %s: %w", tmpl.ID, err)
+	if req.Validity != "" {
+		primary, err := registry.PrimarySecretField(tmpl.ID)
+		if err != nil {
+			return vaultmodel.Item{}, err
+		}
+		if err := setFieldValueIfPresent(&item, vaultmodel.ValidityFieldID(primary.ID), rawString(req.Validity)); err != nil {
+			return vaultmodel.Item{}, fmt.Errorf("--validity is not supported by template %s: %w", tmpl.ID, err)
 		}
 	}
 	if len(req.Scopes) > 0 {
@@ -692,7 +718,7 @@ func stripFinalNewline(value string) string {
 	return strings.TrimSuffix(value, "\n")
 }
 
-func valueForOutput(field vaultmodel.Field) (string, error) {
+func valueForOutput(field vaultmodel.ResolvedField) (string, error) {
 	if len(field.Value) == 0 {
 		return "", nil
 	}
@@ -742,33 +768,35 @@ func exportBindingsForLabels(vault vaultmodel.Vault, resolver vaultmodel.Resolve
 			continue
 		}
 		matched++
-		primary, err := resolver.PrimarySecretField(item)
-		if err != nil {
-			return nil, err
+		for _, storedField := range item.Fields {
+			if !resolver.IsProjectableField(item, storedField.ID) {
+				continue
+			}
+			envName, ok, err := resolver.EnvName(item, storedField.ID)
+			if err != nil {
+				return nil, fmt.Errorf("read env name for %s.%s: %w", item.Title, storedField.ID, err)
+			}
+			if !ok {
+				continue
+			}
+			_, field, err := resolver.Field(item, storedField.ID)
+			if err != nil {
+				return nil, fmt.Errorf("missing mapped field for %s.%s", item.Title, storedField.ID)
+			}
+			if len(field.Value) == 0 {
+				return nil, fmt.Errorf("missing value for %s.%s", item.Title, storedField.ID)
+			}
+			path := item.ID + "." + storedField.ID
+			if previous, exists := seenEnv[envName]; exists {
+				return nil, fmt.Errorf("duplicate env name %s: %s, %s", envName, previous, path)
+			}
+			value, err := valueForOutput(field)
+			if err != nil {
+				return nil, err
+			}
+			seenEnv[envName] = path
+			bindings = append(bindings, util.Binding{EnvName: envName, Value: value})
 		}
-		envName, ok, err := resolver.EnvName(item, primary.ID)
-		if err != nil {
-			return nil, fmt.Errorf("read env name for %s: %w", item.Title, err)
-		}
-		if !ok {
-			continue
-		}
-		_, field, err := resolver.Field(item, primary.ID)
-		if err != nil {
-			return nil, fmt.Errorf("missing secret field for %s: %s", item.Title, primary.ID)
-		}
-		if len(field.Value) == 0 {
-			return nil, fmt.Errorf("missing value for %s", item.Title)
-		}
-		if previous, exists := seenEnv[envName]; exists {
-			return nil, fmt.Errorf("duplicate env name %s: %s, %s", envName, previous, item.Title)
-		}
-		value, err := valueForOutput(field)
-		if err != nil {
-			return nil, err
-		}
-		seenEnv[envName] = item.Title
-		bindings = append(bindings, util.Binding{EnvName: envName, Value: value})
 	}
 	if matched == 0 {
 		return nil, fmt.Errorf("no items matched labels: %s", strings.Join(labels, ","))

@@ -8,27 +8,33 @@ import (
 func BuiltInTemplates() []Template {
 	return []Template{
 		{
-			ID:          TemplateGenericSecret,
-			Name:        "Generic Secret",
-			Aliases:     []string{"generic"},
-			Description: "A single concealed secret value.",
+			ID:            TemplateGenericSecret,
+			Name:          "Generic Secret",
+			Aliases:       []string{"generic"},
+			Description:   "A single concealed secret value.",
+			PrimarySecret: "value",
 			Fields: []FieldTemplate{
-				{ID: "value", Label: "Value", Type: FieldTypeConcealed, Sensitivity: SensitivitySecret, Purpose: PurposePrimarySecret, Required: true},
-				{ID: "value_env", Label: "Value Env", Type: FieldTypeString, Sensitivity: SensitivityPublic, Purpose: PurposeEnvName, EnvFor: "value"},
+				{ID: "value", Label: "Value", Type: FieldTypeConcealed, Sensitivity: SensitivitySecret, Required: true},
+				{ID: EnvFieldID("value"), Label: "Value Env", Type: FieldTypeString, Sensitivity: SensitivityPublic},
 			},
 		},
 		{
-			ID:          TemplateAPICredential,
-			Name:        "API Credential",
-			Aliases:     []string{"api"},
-			Description: "An API credential with value-free provider, website, expiration, and scope metadata.",
+			ID:            TemplateAPICredential,
+			Name:          "API Credential",
+			Aliases:       []string{"api"},
+			Description:   "A credential with explicit environment projections and lifecycle metadata.",
+			PrimarySecret: "credential",
 			Fields: []FieldTemplate{
-				{ID: "credential", Label: "Credential", Type: FieldTypeConcealed, Sensitivity: SensitivitySecret, Purpose: PurposePrimarySecret, Required: true},
-				{ID: "credential_env", Label: "Credential Env", Type: FieldTypeString, Sensitivity: SensitivityPublic, Purpose: PurposeEnvName, EnvFor: "credential"},
-				{ID: "provider", Label: "Provider", Type: FieldTypeString, Sensitivity: SensitivityPublic, Purpose: PurposeProvider},
-				{ID: "website", Label: "Website", Type: FieldTypeURL, Sensitivity: SensitivityPublic, Purpose: PurposeWebsite},
-				{ID: "expires_at", Label: "Expires", Type: FieldTypeDate, Sensitivity: SensitivityPublic, Purpose: PurposeExpiry},
-				{ID: "scopes", Label: "Scopes", Type: FieldTypeStringList, Sensitivity: SensitivityPublic, Purpose: PurposeScopes},
+				{ID: "credential", Label: "Credential", Type: FieldTypeConcealed, Sensitivity: SensitivitySecret, Required: true},
+				{ID: EnvFieldID("credential"), Label: "Credential Env", Type: FieldTypeString, Sensitivity: SensitivityPublic},
+				{ID: ValidityFieldID("credential"), Label: "Credential Validity", Type: FieldTypeString, Sensitivity: SensitivityPublic, Required: true},
+				{ID: "base_url", Label: "Base URL", Type: FieldTypeURL, Sensitivity: SensitivityPublic},
+				{ID: EnvFieldID("base_url"), Label: "Base URL Env", Type: FieldTypeString, Sensitivity: SensitivityPublic},
+				{ID: "client_id", Label: "Client ID", Type: FieldTypeString, Sensitivity: SensitivityPublic},
+				{ID: EnvFieldID("client_id"), Label: "Client ID Env", Type: FieldTypeString, Sensitivity: SensitivityPublic},
+				{ID: "provider", Label: "Provider", Type: FieldTypeString, Sensitivity: SensitivityPublic},
+				{ID: "website", Label: "Website", Type: FieldTypeURL, Sensitivity: SensitivityPublic},
+				{ID: "scopes", Label: "Scopes", Type: FieldTypeStringList, Sensitivity: SensitivityPublic},
 			},
 		},
 	}
@@ -42,9 +48,9 @@ func BuiltInProfiles() []Profile {
 			Aliases:  []string{"openai"},
 			Template: TemplateAPICredential,
 			Defaults: map[string]json.RawMessage{
-				"provider":       json.RawMessage(`"OpenAI"`),
-				"website":        json.RawMessage(`"https://platform.openai.com"`),
-				"credential_env": json.RawMessage(`"OPENAI_API_KEY"`),
+				"provider":               json.RawMessage(`"OpenAI"`),
+				"website":                json.RawMessage(`"https://platform.openai.com"`),
+				EnvFieldID("credential"): json.RawMessage(`"OPENAI_API_KEY"`),
 			},
 		},
 	}
@@ -120,32 +126,33 @@ func (r Registry) Profile(id string) (Profile, bool) {
 	return Profile{}, false
 }
 
+func (r Registry) FieldTemplate(templateID, fieldID string) (FieldTemplate, bool, error) {
+	tmpl, ok := r.Template(templateID)
+	if !ok {
+		return FieldTemplate{}, false, fmt.Errorf("template not found: %s", templateID)
+	}
+	for _, field := range tmpl.Fields {
+		if field.ID == fieldID {
+			return field, true, nil
+		}
+	}
+	return FieldTemplate{}, false, nil
+}
+
 // PrimarySecretField returns the template's primary secret field.
 func (r Registry) PrimarySecretField(templateID string) (FieldTemplate, error) {
 	tmpl, ok := r.Template(templateID)
 	if !ok {
 		return FieldTemplate{}, fmt.Errorf("template not found: %s", templateID)
 	}
-	for _, field := range tmpl.Fields {
-		if field.Purpose == PurposePrimarySecret {
-			return field, nil
-		}
+	field, ok, err := r.FieldTemplate(tmpl.ID, tmpl.PrimarySecret)
+	if err != nil {
+		return FieldTemplate{}, err
 	}
-	return FieldTemplate{}, fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
-}
-
-// EnvNameField returns the template's env-name field for a secret field.
-func (r Registry) EnvNameField(templateID, secretFieldID string) (FieldTemplate, bool, error) {
-	tmpl, ok := r.Template(templateID)
 	if !ok {
-		return FieldTemplate{}, false, fmt.Errorf("template not found: %s", templateID)
+		return FieldTemplate{}, fmt.Errorf("template has no primary secret field: %s", tmpl.ID)
 	}
-	for _, field := range tmpl.Fields {
-		if field.Purpose == PurposeEnvName && field.EnvFor == secretFieldID {
-			return field, true, nil
-		}
-	}
-	return FieldTemplate{}, false, nil
+	return field, nil
 }
 
 func (r Registry) RequiredFields(id string) ([]FieldTemplate, error) {

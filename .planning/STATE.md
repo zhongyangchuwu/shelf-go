@@ -3,10 +3,10 @@
 ## Current Position
 
 - Version: v0.2.0 local milestone
-- Phase: Catppuccin Mocha Panel TUI
+- Phase: Item-First Environment Projection V3
 - Status: complete
-- Active Artifact: `.planning/phases/052-mocha-panel-tui/VERIFICATION.md`
-- Next Action: Start a new product milestone only after explicit scope selection.
+- Active Artifact: `.planning/phases/053-item-first-environment-projection/VERIFICATION.md`
+- Next Action: Manually migrate the local plaintext vault with `docs/v3-migration.md` when ready; Shelf will not migrate it automatically.
 
 ## Blockers
 
@@ -15,19 +15,13 @@
 ## Recent Evidence
 - The default CLI version is `v0.2.0`; `shelf --version` reported the local milestone without creating a public tag or release.
 
-- Item-vault-only cutover is implemented and committed.
-- Active packages are now CLI/app/cliui/clipboard/config/project/util/vaultjson/vaultmodel.
-- `secret copy` now writes a resolved secret to the system clipboard without printing it; WSL tries `clip.exe` then verified `wl-copy` fallback.
-- `secret export` and `project export` now support only `shell` and `json` output.
-- Transitional implementation `V2` names were removed; persisted schema version fields remain.
-- `vaultmodel.Resolver` now owns shared item selector, field, and env-name resolution.
-- `vaultmodel.Registry` now owns primary-secret and env-name template-role lookup for item creation and resolution.
-- `secret update` atomically changes title, labels, aliases, or a field; secret values remain stdin-only.
-- Phase 48 implemented `shelf tui`: an optional Bubble Tea workspace with safe catalog search/filter/detail views, masked create/edit forms, clipboard copy, app-backed create/update/remove actions, terminal preflight, and a 100×24 resize contract.
-- Phase 49 implemented `shelf project tui`: a value-free current-worktree binding workspace with safe status diagnostics, candidate picker/filter, add/remove actions, missing-manifest initialization confirmation, terminal preflight, and a 100×24 resize contract.
-- Phase 50 implemented `shelf secret audit`: a value-free UTC expiry audit with deterministic health exit codes, secret/project TUI indicators, and project-status annotations; project export/run behavior is unchanged.
-- Phase 51 completed an active-code/documentation debt review: vault backups now repair restrictive permissions, custom template create summaries use canonical env roles, stale TUI/command documentation was corrected, and low-value panic/dead-code paths were removed.
-- Phase 52 refined both workspaces into persistent Catppuccin Mocha two-panel frames: rounded panels, active blue borders and text markers, retained catalog/binding context during right-pane actions, and no theme configuration surface.
+- Phase 53 completed the V3 breaking schema cutover: vault fields persist only `id` and `value`; templates own field shape; schema version is `3`.
+- `env_<field>` maps eligible secret and public `string`, `concealed`, or `url` fields for `shelf env export`; `secret export` is removed with no alias.
+- `validity_<secret-field>` provides field-level lifecycle audit states: unknown, permanent, invalid, expired, expiring, and healthy. Untracked fields are omitted.
+- Project bindings accept the same eligible public and secret field types; manifests stay value-free.
+- Secret and project TUI workspaces remain optional, keyboard-first, and value-free. Secret detail groups structural env/validity metadata under its target field.
+- User-facing docs describe the V3 command contract and `docs/v3-migration.md` provides a value-free manual migration checklist.
+- Phase 53 verification passed: focused V3 package tests, `bash scripts/test.sh`, `go build ./cmd/shelf`, a temporary-vault CLI projection/audit/project-export smoke, and a 120×32 pseudo-terminal secret TUI smoke with secret redaction and alternate-screen restoration.
 - The proposed personal workflow sequence is scriptable item lifecycle → wide-screen secret workspace TUI → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.

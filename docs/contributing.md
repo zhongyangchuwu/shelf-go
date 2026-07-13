@@ -84,7 +84,7 @@ internal/util/       atomic write and env/shell/JSON binding formatting
 - Return errors from package code instead of logging or exiting.
 - Use `cmd.OutOrStdout()` and `cmd.OutOrStderr()` in Cobra commands.
 - Use `internal/cliui` for human-facing command output.
-- Avoid printing secret values except in explicit value-producing commands: `secret get`, `secret export`, `project export`, and `project run`. `secret copy` writes only to the clipboard and confirms without printing the value.
+- Avoid printing secret values except in explicit value-producing commands: `secret get`, `env export`, `project export`, and `project run`. `secret copy` writes only to the clipboard and confirms without printing the value.
 
 ## Testing style
 

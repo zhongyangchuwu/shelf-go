@@ -75,16 +75,14 @@ func (a *App) ProjectStatus(configPathFlag, vaultPathFlag string, parentEnv []st
 	if err != nil {
 		return out.String(), err
 	}
-	healthByItem := credentialHealthByItem(healthReport)
+	healthByPath := credentialHealthByPath(healthReport)
 	writeProjectDiagnostics(&out, diagnostics)
 	for _, entry := range resolvedEntries {
 		fmt.Fprintf(&out, "ok   %s -> %s", entry.Path, entry.EnvName)
-		if itemID, fieldID, ok := strings.Cut(entry.Path, "."); ok {
-			if health, exists := healthByItem[itemID]; exists && health.Field == fieldID {
-				fmt.Fprintf(&out, " health:%s", health.Status)
-				if health.Expires != "" {
-					fmt.Fprintf(&out, " expires:%s", health.Expires)
-				}
+		if health, exists := healthByPath[entry.Path]; exists {
+			fmt.Fprintf(&out, " health:%s", health.Status)
+			if health.Expires != "" {
+				fmt.Fprintf(&out, " expires:%s", health.Expires)
 			}
 		}
 		fmt.Fprintln(&out)
@@ -280,12 +278,12 @@ func buildProjectBinding(resolver vaultmodel.Resolver, req ProjectAddRequest) (p
 		}
 		fieldID = primary.ID
 	}
-	_, field, err := resolver.Field(item, fieldID)
+	_, _, err = resolver.Field(item, fieldID)
 	if err != nil {
 		return project.Binding{}, fmt.Errorf("field not found: %s.%s", item.ID, fieldID)
 	}
-	if field.Sensitivity != vaultmodel.SensitivitySecret {
-		return project.Binding{}, fmt.Errorf("field is not secret: %s.%s", item.ID, fieldID)
+	if !resolver.IsProjectableField(item, fieldID) {
+		return project.Binding{}, fmt.Errorf("field is not environment-projectable: %s.%s", item.ID, fieldID)
 	}
 	envName := req.Env
 	if envName == "" {

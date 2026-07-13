@@ -91,7 +91,7 @@ func auditHealthLabel(status app.CredentialHealthStatus) string {
 	switch status {
 	case app.CredentialHealthExpiring:
 		return "due"
-	case app.CredentialHealthMalformed:
+	case app.CredentialHealthInvalid:
 		return "invalid"
 	default:
 		return string(status)

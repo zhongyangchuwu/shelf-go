@@ -23,7 +23,7 @@ func (m Model) submitForm() (tea.Model, tea.Cmd) {
 				Aliases:  splitTokens(draft.aliases),
 				Provider: draft.provider,
 				Website:  draft.website,
-				Expires:  draft.expires,
+				Validity: draft.validity,
 				Scopes:   splitTokens(draft.scopes),
 				Stdin:    true,
 				In:       strings.NewReader(draft.secret),

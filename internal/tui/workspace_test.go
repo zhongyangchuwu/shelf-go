@@ -226,3 +226,27 @@ func TestModelRendersValueFreeCredentialHealth(t *testing.T) {
 		t.Fatalf("health unavailable view = %q", view)
 	}
 }
+
+func TestModelGroupsStructuralFieldsWithTheirTarget(t *testing.T) {
+	m, _, _ := readyModel(t)
+	m.pane = paneDetail
+	m.fieldSelected = 1
+	m.detail.Fields = []app.SecretFieldInfo{
+		{ID: "credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, ValueSet: true},
+		{ID: vaultmodel.EnvFieldID("credential"), Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: "SERVICE_TOKEN", ValueSet: true},
+		{ID: vaultmodel.ValidityFieldID("credential"), Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: "permanent", ValueSet: true},
+		{ID: "provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: "Service", ValueSet: true},
+	}
+
+	content := m.detailContent()
+	credential := strings.Index(content, "credential")
+	env := strings.Index(content, "env:")
+	validity := strings.Index(content, "validity:")
+	provider := strings.Index(content, "provider")
+	if credential < 0 || env < credential || validity < env || provider < validity {
+		t.Fatalf("structural grouping = %q", content)
+	}
+	if !strings.Contains(content, "›   env:") || strings.Contains(content, fakeSecret) {
+		t.Fatalf("grouped detail should retain selection and redact secrets: %q", content)
+	}
+}

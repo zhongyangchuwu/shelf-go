@@ -37,18 +37,18 @@ shelf secret info <selector>
 
 Selectors can be item ID, title, or alias.
 
-## `secret export --label` exports fewer values than expected
+## `env export --label` exports fewer fields than expected
 
-Items without an explicit env-name field are skipped. Check metadata:
+Only fields with a non-empty `env_<field>` mapping are exported. Check the item metadata:
 
 ```bash
 shelf secret info <selector>
 ```
 
-Set an env-name field when needed:
+Set a mapping when needed:
 
 ```bash
-printf %s OPENAI_API_KEY | shelf secret update openai --field credential_env
+printf %s OPENAI_API_KEY | shelf secret update openai --field env_credential
 ```
 
 ## Project manifest missing
@@ -71,19 +71,19 @@ Common causes:
 
 - missing item;
 - missing field;
-- missing secret value;
+- missing mapped field value;
 - duplicate env name;
-- binding points at a public field instead of a secret field.
+- binding points at a non-projectable field type (lists, dates, or JSON).
 
 ## Credential audit reports warnings or expired credentials
 
-Run the value-free audit to inspect public expiry metadata:
+Run the value-free audit to inspect public lifecycle metadata:
 
 ```bash
 shelf secret audit --within 30
 ```
 
-Exit `3` means at least one credential is expired. Exit `2` means a credential is due within the horizon, has no expiry date, or has invalid expiry metadata. The audit never prints secret values and does not block `project export` or `project run`.
+Exit `3` means at least one tracked field is expired. Exit `2` means a tracked field is due within the horizon, unknown, or invalid. `permanent` and healthy values exit `0`. The audit never prints secret values and does not block `project export` or `project run`.
 
 ## Completion not installed
 

@@ -25,6 +25,7 @@ func newRootCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Comman
 	root.AddCommand(newCompletionCmd())
 	root.AddCommand(newSetupCmd(appSvc))
 	root.AddCommand(newSecretCmd(appSvc, clipboardWriter))
+	root.AddCommand(newEnvCmd(appSvc))
 	root.AddCommand(newTUICmd(appSvc, clipboardWriter))
 	root.AddCommand(newDoctorCmd(appSvc))
 	root.AddCommand(newProjectCmd(appSvc))

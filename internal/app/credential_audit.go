@@ -21,8 +21,9 @@ const (
 	CredentialHealthHealthy   CredentialHealthStatus = "healthy"
 	CredentialHealthExpiring  CredentialHealthStatus = "expiring"
 	CredentialHealthExpired   CredentialHealthStatus = "expired"
-	CredentialHealthMissing   CredentialHealthStatus = "missing"
-	CredentialHealthMalformed CredentialHealthStatus = "malformed"
+	CredentialHealthUnknown   CredentialHealthStatus = "unknown"
+	CredentialHealthInvalid   CredentialHealthStatus = "invalid"
+	CredentialHealthPermanent CredentialHealthStatus = "permanent"
 )
 
 type CredentialHealthItem struct {
@@ -60,26 +61,20 @@ func credentialAuditForVault(vault vaultmodel.Vault, withinDays int, now time.Ti
 	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
 	report := CredentialAuditReport{WithinDays: withinDays, Items: make([]CredentialHealthItem, 0)}
 	for _, item := range vault.Items {
-		primary, err := resolver.PrimarySecretField(item)
-		if err != nil {
-			continue
-		}
 		template, ok := registry.Template(item.Template)
 		if !ok {
 			continue
 		}
-		for _, expiryTemplate := range template.Fields {
-			if expiryTemplate.Purpose != vaultmodel.PurposeExpiry {
+		for _, definition := range template.Fields {
+			targetID, tracked := vaultmodel.IsValidityFieldID(definition.ID)
+			if !tracked {
 				continue
 			}
-			expiryField := vaultmodel.Field{ID: expiryTemplate.ID, Type: expiryTemplate.Type, Sensitivity: expiryTemplate.Sensitivity, Purpose: expiryTemplate.Purpose}
-			for _, field := range item.Fields {
-				if field.ID == expiryTemplate.ID {
-					expiryField = field
-					break
-				}
+			_, validity, err := resolver.Field(item, definition.ID)
+			if err != nil {
+				continue
 			}
-			report.Items = append(report.Items, auditExpiryField(item, primary.ID, expiryField, today, deadline))
+			report.Items = append(report.Items, auditValidityField(item, targetID, validity.Value, today, deadline))
 		}
 	}
 	sort.Slice(report.Items, func(i, j int) bool {
@@ -98,27 +93,31 @@ func credentialAuditForVault(vault vaultmodel.Vault, withinDays int, now time.Ti
 	return report
 }
 
-func auditExpiryField(item vaultmodel.Item, secretFieldID string, expiryField vaultmodel.Field, today, deadline time.Time) CredentialHealthItem {
+func auditValidityField(item vaultmodel.Item, secretFieldID string, raw json.RawMessage, today, deadline time.Time) CredentialHealthItem {
 	record := CredentialHealthItem{ID: item.ID, Title: item.Title, Field: secretFieldID}
-	if len(expiryField.Value) == 0 {
-		record.Status = CredentialHealthMissing
+	var validity string
+	if err := json.Unmarshal(raw, &validity); err != nil {
+		record.Status = CredentialHealthInvalid
 		return record
 	}
-	var expires string
-	if err := json.Unmarshal(expiryField.Value, &expires); err != nil {
-		record.Status = CredentialHealthMalformed
+	switch validity {
+	case "unknown":
+		record.Status = CredentialHealthUnknown
+		return record
+	case "permanent":
+		record.Status = CredentialHealthPermanent
 		return record
 	}
-	expiry, err := time.Parse(time.DateOnly, expires)
+	expires, err := time.Parse(time.DateOnly, validity)
 	if err != nil {
-		record.Status = CredentialHealthMalformed
+		record.Status = CredentialHealthInvalid
 		return record
 	}
-	record.Expires = expires
+	record.Expires = validity
 	switch {
-	case expiry.Before(today):
+	case expires.Before(today):
 		record.Status = CredentialHealthExpired
-	case !expiry.After(deadline):
+	case !expires.After(deadline):
 		record.Status = CredentialHealthExpiring
 	default:
 		record.Status = CredentialHealthHealthy
@@ -136,6 +135,15 @@ func credentialHealthByItem(report CredentialAuditReport) map[string]CredentialH
 	}
 	return health
 }
+
+func credentialHealthByPath(report CredentialAuditReport) map[string]CredentialHealthItem {
+	health := make(map[string]CredentialHealthItem, len(report.Items))
+	for _, candidate := range report.Items {
+		health[candidate.ID+"."+candidate.Field] = candidate
+	}
+	return health
+}
+
 func (r CredentialAuditReport) HasExpired() bool {
 	for _, item := range r.Items {
 		if item.Status == CredentialHealthExpired {
@@ -147,7 +155,7 @@ func (r CredentialAuditReport) HasExpired() bool {
 
 func (r CredentialAuditReport) HasWarnings() bool {
 	for _, item := range r.Items {
-		if item.Status == CredentialHealthExpiring || item.Status == CredentialHealthMissing || item.Status == CredentialHealthMalformed {
+		if item.Status == CredentialHealthExpiring || item.Status == CredentialHealthUnknown || item.Status == CredentialHealthInvalid {
 			return true
 		}
 	}
@@ -165,11 +173,13 @@ func credentialHealthRank(status CredentialHealthStatus) int {
 		return 0
 	case CredentialHealthExpiring:
 		return 1
-	case CredentialHealthMissing:
+	case CredentialHealthUnknown:
 		return 2
-	case CredentialHealthMalformed:
+	case CredentialHealthInvalid:
 		return 3
-	default:
+	case CredentialHealthHealthy:
 		return 4
+	default:
+		return 5
 	}
 }

@@ -39,6 +39,26 @@ func TestProjectExportMaterializesBoundFields(t *testing.T) {
 	}
 }
 
+func TestProjectExportMaterializesBoundPublicFields(t *testing.T) {
+	dir, configPath := setupProjectTest(t)
+	vaultPath := filepath.Join(dir, "vault.json")
+	manifest := project.New()
+	if err := manifest.AddBinding(project.Binding{Item: "github", Field: "provider", Env: "GITHUB_PROVIDER"}); err != nil {
+		t.Fatalf("add public binding: %v", err)
+	}
+	if err := project.Save(filepath.Join(dir, project.FileName), manifest); err != nil {
+		t.Fatalf("save manifest: %v", err)
+	}
+
+	result, err := testApp().ProjectExport(configPath, vaultPath, "shell")
+	if err != nil {
+		t.Fatalf("ProjectExport public field: %v", err)
+	}
+	if !strings.Contains(result.Output, "export GITHUB_PROVIDER=GitHub") {
+		t.Fatalf("public field export = %q", result.Output)
+	}
+}
+
 func TestProjectExportShellFormat(t *testing.T) {
 	dir, configPath := setupProjectTest(t)
 	vaultPath := filepath.Join(dir, "vault.json")
@@ -173,8 +193,8 @@ func TestProjectStatusReportsDiagnostics(t *testing.T) {
 	if !strings.Contains(out, "GITHUB_TOKEN") {
 		t.Fatalf("expected env name in status output, got:\n%s", out)
 	}
-	if !strings.Contains(out, "health:missing") {
-		t.Fatalf("expected missing credential health in status output, got:\n%s", out)
+	if !strings.Contains(out, "health:permanent") {
+		t.Fatalf("expected permanent credential health in status output, got:\n%s", out)
 	}
 }
 
@@ -210,8 +230,17 @@ func TestProjectWorkspaceIsValueFreeAndProvidesCandidates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProjectBindingCandidates: %v", err)
 	}
-	if len(candidates) != 2 || candidates[0].Field != "credential" || candidates[0].Env == "" {
+	if len(candidates) != 3 || candidates[0].Field != "credential" || candidates[0].Env == "" {
 		t.Fatalf("candidates = %#v", candidates)
+	}
+	foundProvider := false
+	for _, candidate := range candidates {
+		if candidate.Item == "github" && candidate.Field == "provider" && candidate.Env == "" {
+			foundProvider = true
+		}
+	}
+	if !foundProvider {
+		t.Fatalf("missing projectable public candidate: %#v", candidates)
 	}
 	encoded, err := json.Marshal(struct {
 		Workspace  ProjectWorkspace
@@ -366,8 +395,10 @@ func setupProjectTest(t *testing.T) (dir, configPath string) {
 				Title:    "GitHub Token",
 				Template: vaultmodel.TemplateAPICredential,
 				Fields: []vaultmodel.Field{
-					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: json.RawMessage(`"ghp_fake_token"`)},
-					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: json.RawMessage(`"GITHUB_TOKEN"`)},
+					{ID: "credential", Value: json.RawMessage(`"ghp_fake_token"`)},
+					{ID: vaultmodel.EnvFieldID("credential"), Value: json.RawMessage(`"GITHUB_TOKEN"`)},
+					{ID: vaultmodel.ValidityFieldID("credential"), Value: json.RawMessage(`"permanent"`)},
+					{ID: "provider", Value: json.RawMessage(`"GitHub"`)},
 				},
 			},
 			{
@@ -375,8 +406,9 @@ func setupProjectTest(t *testing.T) (dir, configPath string) {
 				Title:    "OpenAI API Key",
 				Template: vaultmodel.TemplateAPICredential,
 				Fields: []vaultmodel.Field{
-					{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: json.RawMessage(`"sk-openai-test"`)},
-					{ID: "credential_env", Label: "Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: json.RawMessage(`"OPENAI_API_KEY"`)},
+					{ID: "credential", Value: json.RawMessage(`"sk-openai-test"`)},
+					{ID: vaultmodel.EnvFieldID("credential"), Value: json.RawMessage(`"OPENAI_API_KEY"`)},
+					{ID: vaultmodel.ValidityFieldID("credential"), Value: json.RawMessage(`"unknown"`)},
 				},
 			},
 		},

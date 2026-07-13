@@ -67,8 +67,9 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Use a shared model resolver | Secret and project workflows must agree on item, field, and env-name semantics. | `vaultmodel.Resolver` is the only active owner of those rules. |
 | Treat `.env` as a projection, not the primary model | A developer should maintain values and context once, then select fields for a project or command. | The vault is item-first; project bindings and exports are value-free runtime projections. |
 | Add TUI after scriptable lifecycle parity | TUI must be an optional front-end, not the only way to edit or a second persistence path. | Phases 48–49 deliver secret and project binding workflows through existing app and clipboard boundaries. |
-| Use expiry metadata as an advisory health signal | Local workflows need timely maintenance signals without hidden runtime enforcement or remote dependencies. | Phase 50 adds value-free audit status; export/run remain unchanged. |
+| Use lifecycle validity as an advisory health signal | Local workflows need timely maintenance signals without hidden runtime enforcement or remote dependencies. | V3 tracks `validity_<secret-field>` values and adds value-free audit status; export/run remain unchanged. |
 | Keep vault backups at the configured restrictive mode | A `.bak` file contains the prior plaintext vault and is equally sensitive. | Atomic backup writes now repair the requested mode even when the backup already exists. |
 | Use a fixed Catppuccin Mocha frame for TUI workspaces | The shared dark palette and visible two-panel frame make catalog/detail context legible without a new theme configuration surface. | Phase 52 applies rounded persistent panels, blue active borders, and text focus markers to secret and project workspaces. |
+| Use V3 prefix conventions for field relationships | Item fields must remain atomic while templates define durable structure. | V3 stores only item field IDs and values; `env_<field>` and `validity_<secret-field>` replace per-field roles and target metadata. |
 
-*Last updated: 2026-07-13 after Catppuccin Mocha panel refinement*
+*Last updated: 2026-07-13 after Item-First Environment Projection V3*

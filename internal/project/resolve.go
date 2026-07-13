@@ -25,8 +25,8 @@ func ResolveBindingStatuses(manifest Manifest, resolver vaultmodel.Resolver) []B
 			statuses = append(statuses, status)
 			continue
 		}
-		if field.Sensitivity != vaultmodel.SensitivitySecret {
-			status.Status, status.Message = "fail", "field is not secret"
+		if !resolver.IsProjectableField(item, binding.Field) {
+			status.Status, status.Message = "fail", "field is not environment-projectable"
 			statuses = append(statuses, status)
 			continue
 		}

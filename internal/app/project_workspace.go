@@ -62,7 +62,7 @@ func (a *App) ProjectWorkspace(configPathFlag, vaultPathFlag string) (ProjectWor
 		return ProjectWorkspace{}, err
 	}
 	resolver := vaultmodel.NewResolverFromValidatedVault(vault)
-	healthByItem := credentialHealthByItem(credentialAuditForVault(vault, DefaultCredentialAuditWithinDays, time.Now()))
+	healthByPath := credentialHealthByPath(credentialAuditForVault(vault, DefaultCredentialAuditWithinDays, time.Now()))
 	statuses := project.ResolveBindingStatuses(manifest, resolver)
 	statusByPath := make(map[string]project.BindingStatus, len(statuses))
 	for _, bindingStatus := range statuses {
@@ -86,7 +86,7 @@ func (a *App) ProjectWorkspace(configPathFlag, vaultPathFlag string) (ProjectWor
 			status.Status = bindingStatus.Status
 			status.Message = bindingStatus.Message
 		}
-		if health, ok := healthByItem[binding.Item]; ok && health.Field == binding.Field {
+		if health, ok := healthByPath[status.Key]; ok {
 			status.Health = health.Status
 			status.Expires = health.Expires
 		}
@@ -104,7 +104,7 @@ func (a *App) ProjectBindingCandidates(configPathFlag, vaultPathFlag string) ([]
 	candidates := make([]ProjectBindingCandidate, 0)
 	for _, item := range vault.Items {
 		for _, field := range item.Fields {
-			if field.Sensitivity != vaultmodel.SensitivitySecret {
+			if !resolver.IsProjectableField(item, field.ID) {
 				continue
 			}
 			env, ok, err := resolver.EnvName(item, field.ID)

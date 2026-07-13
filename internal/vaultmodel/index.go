@@ -14,8 +14,8 @@ type Index struct {
 
 type FieldRef struct {
 	Item     Item
-	Field    Field
-	EnvField Field
+	Field    ResolvedField
+	EnvField ResolvedField
 }
 
 func NewIndex(v Vault) (Index, error) {
@@ -37,10 +37,9 @@ func newIndexWithRegistry(v Vault, registry Registry) Index {
 		idx.itemsByID[item.ID] = item
 		idx.itemsByTitle[item.Title] = append(idx.itemsByTitle[item.Title], item)
 		for _, alias := range item.Aliases {
-			if alias == "" {
-				continue
+			if alias != "" {
+				idx.itemsByAlias[alias] = append(idx.itemsByAlias[alias], item)
 			}
-			idx.itemsByAlias[alias] = append(idx.itemsByAlias[alias], item)
 		}
 		template, _ := registry.Template(item.Template)
 		templateFields := make(map[string]FieldTemplate, len(template.Fields))
@@ -51,17 +50,29 @@ func newIndexWithRegistry(v Vault, registry Registry) Index {
 		for _, field := range item.Fields {
 			fields[field.ID] = field
 		}
-		for _, field := range item.Fields {
-			templateField := templateFields[field.ID]
-			if templateField.Purpose != PurposeEnvName || len(field.Value) == 0 {
+		for _, definition := range template.Fields {
+			targetID, env := IsEnvFieldID(definition.ID)
+			if !env {
+				continue
+			}
+			envField, exists := fields[definition.ID]
+			if !exists || len(envField.Value) == 0 {
 				continue
 			}
 			var envName string
-			if err := json.Unmarshal(field.Value, &envName); err != nil || envName == "" {
+			if err := json.Unmarshal(envField.Value, &envName); err != nil || envName == "" {
 				continue
 			}
-			target := fields[templateField.EnvFor]
-			idx.fieldsByEnv[envName] = append(idx.fieldsByEnv[envName], FieldRef{Item: item, Field: target, EnvField: field})
+			target, exists := fields[targetID]
+			if !exists {
+				continue
+			}
+			targetDefinition := templateFields[targetID]
+			idx.fieldsByEnv[envName] = append(idx.fieldsByEnv[envName], FieldRef{
+				Item:     item,
+				Field:    resolvedField(targetDefinition, target),
+				EnvField: resolvedField(definition, envField),
+			})
 		}
 	}
 	return idx

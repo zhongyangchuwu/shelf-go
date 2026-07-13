@@ -35,13 +35,13 @@ func TestJSONCodecRoundTripsVaultOrderAndMetadata(t *testing.T) {
 	if fields[0].ID != "credential" || fields[5].ID != "scopes" {
 		t.Fatalf("field order changed: %+v", fields)
 	}
-	// Env name is stored as the value of the credential_env field.
+	// env_credential stores the credential's projected environment name.
 	var envName string
 	if err := json.Unmarshal(fields[1].Value, &envName); err != nil {
-		t.Fatalf("unmarshal credential_env value: %v", err)
+		t.Fatalf("unmarshal env_credential value: %v", err)
 	}
 	if envName != "OPENAI_API_KEY" {
-		t.Fatalf("credential_env value = %q, want OPENAI_API_KEY", envName)
+		t.Fatalf("env_credential value = %q, want OPENAI_API_KEY", envName)
 	}
 	if decoded.Items[0].Aliases[0] != "app:token" {
 		t.Fatalf("items[0].aliases[0] = %q, want app:token", decoded.Items[0].Aliases[0])
@@ -69,76 +69,19 @@ func TestJSONCodecRejectsInvalidInput(t *testing.T) {
 		content string
 		wantErr string
 	}{
-		{
-			name:    "unknown top level field",
-			content: `{"version":2,"items":[],"extra":true}`,
-			wantErr: "unknown field",
-		},
-		{
-			name:    "unknown nested item field",
-			content: `{"version":2,"items":[{"id":"item","title":"Title","template":"generic_secret","fields":[{"id":"value","label":"Value","type":"concealed","sensitivity":"secret","purpose":"primary_secret","value":"fake"}],"extra":true}]}`,
-			wantErr: "unknown field",
-		},
-		{
-			name:    "trailing json",
-			content: `{"version":2,"items":[]} {}`,
-			wantErr: "trailing",
-		},
-		{
-			name:    "unsupported version",
-			content: `{"version":3,"items":[]}`,
-			wantErr: "unsupported vault version",
-		},
-		{
-			name:    "invalid model data",
-			content: `{"version":2,"items":[{"id":"","title":"Title","template":"generic_secret","fields":[]}]}`,
-			wantErr: "id is empty",
-		},
-		{
-			name:    "unsupported version zero",
-			content: `{"version":0,"items":[]}`,
-			wantErr: "unsupported vault version",
-		},
-		{
-			name:    "unsupported version negative",
-			content: `{"version":-1,"items":[]}`,
-			wantErr: "unsupported vault version",
-		},
-		{
-			name:    "unsupported version future",
-			content: `{"version":42,"items":[]}`,
-			wantErr: "unsupported vault version",
-		},
-		{
-			name:    "invalid model: empty title",
-			content: `{"version":2,"items":[{"id":"x","title":"","template":"generic_secret","fields":[{"id":"value","label":"Value","type":"concealed","sensitivity":"secret","purpose":"primary_secret","value":"s"}]}]}`,
-			wantErr: "title is empty",
-		},
-		{
-			name:    "invalid model: unknown template",
-			content: `{"version":2,"items":[{"id":"x","title":"X","template":"bogus_template","fields":[]}]}`,
-			wantErr: "template unknown",
-		},
-		{
-			name:    "invalid model: missing required field",
-			content: `{"version":2,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[]}]}`,
-			wantErr: "missing required field",
-		},
-		{
-			name:    "invalid model: wrong field type",
-			content: `{"version":2,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","type":"url","sensitivity":"secret","purpose":"primary_secret","value":"s"}]}]}`,
-			wantErr: "type",
-		},
-		{
-			name:    "invalid model: wrong field sensitivity",
-			content: `{"version":2,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","type":"concealed","sensitivity":"public","purpose":"primary_secret","value":"s"}]}]}`,
-			wantErr: "sensitivity",
-		},
-		{
-			name:    "invalid model: bad field value type",
-			content: `{"version":2,"items":[{"id":"x","title":"X","template":"api_credential","fields":[{"id":"credential","label":"Cred","type":"concealed","sensitivity":"secret","purpose":"primary_secret","value":"x"},{"id":"scopes","label":"Scopes","type":"string_list","sensitivity":"public","purpose":"scopes","value":"not_an_array"}]}]}`,
-			wantErr: "value must be string array",
-		},
+		{name: "unknown top level field", content: `{"version":3,"items":[],"extra":true}`, wantErr: "unknown field"},
+		{name: "unknown nested item field", content: `{"version":3,"items":[{"id":"item","title":"Title","template":"generic_secret","fields":[{"id":"value","value":"fake"}],"extra":true}]}`, wantErr: "unknown field"},
+		{name: "trailing json", content: `{"version":3,"items":[]} {}`, wantErr: "trailing"},
+		{name: "V2 version", content: `{"version":2,"items":[]}`, wantErr: "unsupported vault version"},
+		{name: "invalid model data", content: `{"version":3,"items":[{"id":"","title":"Title","template":"generic_secret","fields":[]}]}`, wantErr: "id is empty"},
+		{name: "unsupported version zero", content: `{"version":0,"items":[]}`, wantErr: "unsupported vault version"},
+		{name: "unsupported version negative", content: `{"version":-1,"items":[]}`, wantErr: "unsupported vault version"},
+		{name: "unsupported version future", content: `{"version":42,"items":[]}`, wantErr: "unsupported vault version"},
+		{name: "invalid model empty title", content: `{"version":3,"items":[{"id":"x","title":"","template":"generic_secret","fields":[{"id":"value","value":"s"}]}]}`, wantErr: "title is empty"},
+		{name: "invalid model unknown template", content: `{"version":3,"items":[{"id":"x","title":"X","template":"bogus_template","fields":[]}]}`, wantErr: "template unknown"},
+		{name: "invalid model missing required field", content: `{"version":3,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[]}]}`, wantErr: "missing required field"},
+		{name: "stale V2 field metadata", content: `{"version":3,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","value":"s"}]}]}`, wantErr: "unknown field"},
+		{name: "invalid model bad field value type", content: `{"version":3,"items":[{"id":"x","title":"X","template":"api_credential","fields":[{"id":"credential","value":"x"},{"id":"validity_credential","value":"unknown"},{"id":"scopes","value":"not_an_array"}]}]}`, wantErr: "value must be string array"},
 	}
 	codec := JSONCodec{}
 	for _, tt := range tests {
@@ -244,44 +187,22 @@ func TestRepositorySaveRejectsInvalidVaultWithoutReplacingTarget(t *testing.T) {
 func validVault() vaultmodel.Vault {
 	return vaultmodel.Vault{Version: vaultmodel.CurrentVersion, Items: []vaultmodel.Item{
 		{
-			ID:       "item_app",
-			Title:    "Local app token",
-			Template: vaultmodel.TemplateGenericSecret,
-			Aliases:  []string{"app:token"},
+			ID: "item_app", Title: "Local app token", Template: vaultmodel.TemplateGenericSecret, Aliases: []string{"app:token"},
 			Fields: []vaultmodel.Field{
-				{
-					ID:          "value",
-					Label:       "Value",
-					Type:        vaultmodel.FieldTypeConcealed,
-					Sensitivity: vaultmodel.SensitivitySecret,
-					Purpose:     vaultmodel.PurposePrimarySecret,
-					Value:       []byte(`"fake-app-token"`),
-				},
-				{
-					ID:          "value_env",
-					Label:       "Value Env",
-					Type:        vaultmodel.FieldTypeString,
-					Sensitivity: vaultmodel.SensitivityPublic,
-					Purpose:     vaultmodel.PurposeEnvName,
-					Value:       []byte(`"APP_TOKEN"`),
-				},
+				{ID: "value", Value: []byte(`"fake-app-token"`)},
+				{ID: vaultmodel.EnvFieldID("value"), Value: []byte(`"APP_TOKEN"`)},
 			},
 		},
 		{
-			ID:        "item_openai",
-			Title:     "OpenAI personal API key",
-			Template:  vaultmodel.TemplateAPICredential,
-			Labels:    []string{"ai", "personal"},
-			Notes:     "rotated quarterly",
-			CreatedAt: "2026-01-15T00:00:00Z",
-			UpdatedAt: "2026-06-20T00:00:00Z",
+			ID: "item_openai", Title: "OpenAI personal API key", Template: vaultmodel.TemplateAPICredential,
+			Labels: []string{"ai", "personal"}, Notes: "rotated quarterly", CreatedAt: "2026-01-15T00:00:00Z", UpdatedAt: "2026-06-20T00:00:00Z",
 			Fields: []vaultmodel.Field{
-				{ID: "credential", Label: "Credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: []byte(`"fake-openai-key"`)},
-				{ID: "credential_env", Label: "Credential Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: []byte(`"OPENAI_API_KEY"`)},
-				{ID: "provider", Label: "Provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: "provider/source", Value: []byte(`"openai"`)},
-				{ID: "website", Label: "Website", Type: vaultmodel.FieldTypeURL, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeWebsite, Value: []byte(`"https://platform.openai.com/api-keys"`)},
-				{ID: "expires_at", Label: "Expires", Type: vaultmodel.FieldTypeDate, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeExpiry, Value: []byte(`"2026-12-31"`)},
-				{ID: "scopes", Label: "Scopes", Type: vaultmodel.FieldTypeStringList, Sensitivity: vaultmodel.SensitivityPublic, Purpose: "scopes", Value: []byte(`["responses","embeddings"]`)},
+				{ID: "credential", Value: []byte(`"fake-openai-key"`)},
+				{ID: vaultmodel.EnvFieldID("credential"), Value: []byte(`"OPENAI_API_KEY"`)},
+				{ID: vaultmodel.ValidityFieldID("credential"), Value: []byte(`"2026-12-31"`)},
+				{ID: "provider", Value: []byte(`"openai"`)},
+				{ID: "website", Value: []byte(`"https://platform.openai.com/api-keys"`)},
+				{ID: "scopes", Value: []byte(`["responses","embeddings"]`)},
 			},
 		},
 	}}
@@ -308,7 +229,7 @@ func TestJSONCodecRoundTripsMinimalVault(t *testing.T) {
 
 func TestJSONCodecRejectsUnknownFieldOnFieldObject(t *testing.T) {
 	codec := JSONCodec{}
-	content := `{"version":2,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","type":"concealed","sensitivity":"secret","purpose":"primary_secret","value":"s","unknown_field":true}]}]}`
+	content := `{"version":3,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","value":"s","unknown_field":true}]}]}`
 	if _, err := codec.Decode([]byte(content)); err == nil {
 		t.Fatal("expected error for unknown field on field, got nil")
 	}
@@ -325,29 +246,29 @@ func TestJSONCodecRoundTripsEnvNameValuesPreserved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	// item 0: generic_secret — value_env holds the env name
+	// item 0: generic_secret — env_value holds the environment name.
 	item0 := decoded.Items[0]
 	if len(item0.Fields) != 2 {
 		t.Fatalf("items[0] fields = %d, want 2", len(item0.Fields))
 	}
 	var envName string
 	if err := json.Unmarshal(item0.Fields[1].Value, &envName); err != nil {
-		t.Fatalf("unmarshal value_env: %v", err)
+		t.Fatalf("unmarshal env_value: %v", err)
 	}
 	if envName != "APP_TOKEN" {
-		t.Errorf("value_env = %q, want APP_TOKEN", envName)
+		t.Errorf("env_value = %q, want APP_TOKEN", envName)
 	}
 
-	// item 1: api_credential — credential_env holds the env name
+	// item 1: api_credential — env_credential holds the environment name.
 	item1 := decoded.Items[1]
 	if len(item1.Fields) != 6 {
 		t.Fatalf("items[1] fields = %d, want 6", len(item1.Fields))
 	}
 	if err := json.Unmarshal(item1.Fields[1].Value, &envName); err != nil {
-		t.Fatalf("unmarshal credential_env: %v", err)
+		t.Fatalf("unmarshal env_credential: %v", err)
 	}
 	if envName != "OPENAI_API_KEY" {
-		t.Errorf("credential_env = %q, want OPENAI_API_KEY", envName)
+		t.Errorf("env_credential = %q, want OPENAI_API_KEY", envName)
 	}
 }
 
@@ -364,14 +285,14 @@ func TestJSONCodecRoundTripsFieldValuesPreserved(t *testing.T) {
 	}
 	item1 := decoded.Items[1]
 	var provider string
-	if err := json.Unmarshal(item1.Fields[2].Value, &provider); err != nil {
+	if err := json.Unmarshal(item1.Fields[3].Value, &provider); err != nil {
 		t.Fatalf("unmarshal provider value: %v", err)
 	}
 	if provider != "openai" {
 		t.Errorf("provider = %q, want openai", provider)
 	}
 	var website string
-	if err := json.Unmarshal(item1.Fields[3].Value, &website); err != nil {
+	if err := json.Unmarshal(item1.Fields[4].Value, &website); err != nil {
 		t.Fatalf("unmarshal website value: %v", err)
 	}
 	if website != "https://platform.openai.com/api-keys" {
@@ -391,7 +312,7 @@ func TestJSONCodecEncodeRejectsInvalidVault(t *testing.T) {
 
 func TestJSONCodecDecodeRejectsTrailingJSON(t *testing.T) {
 	codec := JSONCodec{}
-	content := `{"version":2,"items":[]} trailing`
+	content := `{"version":3,"items":[]} trailing`
 	if _, err := codec.Decode([]byte(content)); err == nil {
 		t.Fatal("expected error for trailing content, got nil")
 	}
@@ -399,7 +320,7 @@ func TestJSONCodecDecodeRejectsTrailingJSON(t *testing.T) {
 
 func TestJSONCodecDecodeRejectsMultipleValues(t *testing.T) {
 	codec := JSONCodec{}
-	content := `{"version":2,"items":[]}{"version":2,"items":[]}`
+	content := `{"version":3,"items":[]}{"version":3,"items":[]}`
 	if _, err := codec.Decode([]byte(content)); err == nil {
 		t.Fatal("expected error for multiple JSON values, got nil")
 	}
@@ -416,9 +337,9 @@ func TestJSONCodecRoundTripsTemplateFieldOrderStrict(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	// api_credential field order must be: credential, credential_env, provider, website, expires_at, scopes
+	// api_credential field order must persist as written.
 	item1 := decoded.Items[1]
-	expected := []string{"credential", "credential_env", "provider", "website", "expires_at", "scopes"}
+	expected := []string{"credential", "env_credential", "validity_credential", "provider", "website", "scopes"}
 	for i, f := range item1.Fields {
 		if f.ID != expected[i] {
 			t.Errorf("field[%d].id = %q, want %q", i, f.ID, expected[i])

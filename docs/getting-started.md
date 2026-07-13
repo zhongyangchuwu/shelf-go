@@ -31,13 +31,13 @@ shelf secret get openai
 printf %s "$NEW_OPENAI_API_KEY" | shelf secret update openai
 ```
 
-## 4. Export label groups for shell startup
+## 4. Export a label group for shell startup
 
 ```zsh
-source <(shelf secret export --label ai --format shell)
+source <(shelf env export --label ai --format shell)
 ```
 
-This materializes values at shell startup but keeps values out of `.zshrc`.
+This materializes each explicitly mapped field at shell startup but keeps values out of `.zshrc`.
 
 ## 5. Bind a project
 
@@ -61,10 +61,10 @@ Preview env names without values:
 shelf project run --dry-run -- npm run dev
 ```
 
-## 6. Audit credential expiry metadata
+## 6. Audit credential lifecycle validity
 
 ```bash
 shelf secret audit --within 30
 ```
 
-The audit is value-free: exit `3` means expired credentials, `2` means due, missing, or invalid expiry metadata, and `0` means healthy or no tracked expiry metadata.
+The audit is value-free: exit `3` means expired, `2` means due, unknown, or invalid validity, and `0` means healthy, permanent, or no tracked fields.

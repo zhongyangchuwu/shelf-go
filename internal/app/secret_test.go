@@ -141,11 +141,10 @@ func TestCreateSecretCustomTemplate(t *testing.T) {
 	vaultPath := filepath.Join(t.TempDir(), "vault.json")
 	configPath := writeConfig(t, vaultPath)
 	custom := vaultmodel.Template{
-		ID:   "service_token",
-		Name: "Service Token",
+		ID: "service_token", Name: "Service Token", PrimarySecret: "token",
 		Fields: []vaultmodel.FieldTemplate{
-			{ID: "token", Label: "Token", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Required: true},
-			{ID: "token_env", Label: "Token Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, EnvFor: "token"},
+			{ID: "token", Label: "Token", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Required: true},
+			{ID: vaultmodel.EnvFieldID("token"), Label: "Token Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic},
 		},
 	}
 	repo := vaultjson.NewRepository(vaultPath)
@@ -172,7 +171,7 @@ func TestCreateSecretCustomTemplate(t *testing.T) {
 		t.Fatalf("primary env = %q, want SERVICE_TOKEN", info.PrimaryEnv)
 	}
 	for _, field := range info.Fields {
-		if field.ID == "token_env" && field.Value == "SERVICE_TOKEN" {
+		if field.ID == vaultmodel.EnvFieldID("token") && field.Value == "SERVICE_TOKEN" {
 			return
 		}
 	}
@@ -248,7 +247,7 @@ func TestCreateSecretAcceptsAPIMetadataFlags(t *testing.T) {
 		Template: vaultmodel.TemplateAPICredential,
 		Provider: "Example",
 		Website:  "https://example.test",
-		Expires:  "2026-12-31",
+		Validity: "2026-12-31",
 		Scopes:   []string{"read", "write"},
 		Stdin:    true,
 		In:       strings.NewReader("fake-secret"),
@@ -260,7 +259,7 @@ func TestCreateSecretAcceptsAPIMetadataFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SecretInfo: %v", err)
 	}
-	want := map[string]string{"provider": "Example", "website": "https://example.test", "expires_at": "2026-12-31"}
+	want := map[string]string{"provider": "Example", "website": "https://example.test", vaultmodel.ValidityFieldID("credential"): "2026-12-31"}
 	for _, field := range info.Fields {
 		if want[field.ID] != "" && field.Value != want[field.ID] {
 			t.Fatalf("%s = %q, want %q", field.ID, field.Value, want[field.ID])
@@ -288,7 +287,7 @@ func TestUpdateSecretReadsFieldInput(t *testing.T) {
 	}
 	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
 		Selector:  "test-update",
-		Field:     "value_env",
+		Field:     vaultmodel.EnvFieldID("value"),
 		ReadField: true,
 		In:        strings.NewReader("APP_TOKEN_RENAMED"),
 	}); err != nil {
@@ -403,9 +402,9 @@ func TestUpdateSecretClearAndFailureAreAtomicAndValueFree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read vault before invalid update: %v", err)
 	}
-	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", Field: "expires_at", Values: []string{"not-a-date"}, FieldValueSet: true})
-	if err == nil || !strings.Contains(err.Error(), "invalid date") {
-		t.Fatalf("invalid public update error = %v", err)
+	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", Field: vaultmodel.ValidityFieldID("credential"), Values: []string{"not-a-date"}, FieldValueSet: true})
+	if err == nil || !strings.Contains(err.Error(), "unknown, permanent, or YYYY-MM-DD") {
+		t.Fatalf("invalid validity update error = %v", err)
 	}
 	after, err := os.ReadFile(vaultPath)
 	if err != nil {
@@ -615,18 +614,18 @@ func TestSecretInfo_ValueFree(t *testing.T) {
 			t.Fatalf("info leaked secret field value: %s", f.Value)
 		}
 	}
-	// value_env is public and should appear when set
+	// env_value is public and should appear when set.
 	foundEnv := false
 	for _, f := range info.Fields {
-		if f.ID == "value_env" {
+		if f.ID == vaultmodel.EnvFieldID("value") {
 			foundEnv = true
 			if f.Value != "INFO_TOKEN" {
-				t.Fatalf("value_env = %q, want INFO_TOKEN", f.Value)
+				t.Fatalf("env_value = %q, want INFO_TOKEN", f.Value)
 			}
 		}
 	}
 	if !foundEnv {
-		t.Fatal("missing value_env field in info")
+		t.Fatal("missing env_value field in info")
 	}
 }
 
@@ -695,26 +694,26 @@ func TestSecretInfoAndListNonExistent(t *testing.T) {
 	}
 }
 
-// --- item label-scoped secret export tests ---
+// --- item label-scoped environment projection tests ---
 
-func TestExportSecretItems_NoLabels(t *testing.T) {
-	_, err := testApp().ExportSecretItems("", "", ExportSecretItemsRequest{Labels: nil, Format: "shell"})
+func TestEnvExport_NoLabels(t *testing.T) {
+	_, err := testApp().ExportEnvironment("", "", ExportEnvironmentRequest{Labels: nil, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "requires --label") {
 		t.Fatalf("expected --label required error, got: %v", err)
 	}
-	_, err = testApp().ExportSecretItems("", "", ExportSecretItemsRequest{Labels: []string{}, Format: "shell"})
+	_, err = testApp().ExportEnvironment("", "", ExportEnvironmentRequest{Labels: []string{}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "requires --label") {
 		t.Fatalf("expected --label required error on empty, got: %v", err)
 	}
 }
 
-func TestExportSecretItems_BySingleLabel(t *testing.T) {
+func TestEnvExport_BySingleLabel(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_db", "DB Credentials", "DATABASE_URL", "postgres://localhost", []string{"db", "prod"}),
 		genericSecretItem("item_cache", "Cache Key", "REDIS_URL", "redis://localhost", []string{"cache", "prod"}),
 		genericSecretItem("item_local", "Local Config", "LOCAL_VAR", "local-value", []string{"local"}),
 	})
-	out, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export by label: %v", err)
 	}
@@ -729,13 +728,42 @@ func TestExportSecretItems_BySingleLabel(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_RepeatedLabelsUseAND(t *testing.T) {
+func TestExportEnvironmentProjectsMappedSecretAndPublicFields(t *testing.T) {
+	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{{
+		ID: "item_service", Title: "Service", Template: vaultmodel.TemplateAPICredential, Labels: []string{"prod"},
+		Fields: []vaultmodel.Field{
+			{ID: "credential", Value: rawJSON("fake-service-token")},
+			{ID: vaultmodel.EnvFieldID("credential"), Value: rawJSON("SERVICE_TOKEN")},
+			{ID: vaultmodel.ValidityFieldID("credential"), Value: rawJSON("permanent")},
+			{ID: "base_url", Value: rawJSON("https://service.example.test")},
+			{ID: vaultmodel.EnvFieldID("base_url"), Value: rawJSON("SERVICE_BASE_URL")},
+			{ID: "client_id", Value: rawJSON("service-client")},
+			{ID: vaultmodel.EnvFieldID("client_id"), Value: rawJSON("SERVICE_CLIENT_ID")},
+		},
+	}})
+
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"prod"}, Format: "json"})
+	if err != nil {
+		t.Fatalf("ExportEnvironment: %v", err)
+	}
+	for _, want := range []string{
+		`"SERVICE_BASE_URL": "https://service.example.test"`,
+		`"SERVICE_CLIENT_ID": "service-client"`,
+		`"SERVICE_TOKEN": "fake-service-token"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("environment projection missing %s:\n%s", want, out)
+		}
+	}
+}
+
+func TestEnvExport_RepeatedLabelsUseAND(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "value-a", []string{"db", "prod"}),
 		genericSecretItem("item_b", "Item B", "B_VAR", "value-b", []string{"db", "staging"}),
 		genericSecretItem("item_c", "Item C", "C_VAR", "value-c", []string{"prod"}),
 	})
-	out, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"db", "prod"}, Format: "shell"})
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"db", "prod"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export by AND labels: %v", err)
 	}
@@ -750,22 +778,22 @@ func TestExportSecretItems_RepeatedLabelsUseAND(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_NoMatchingLabels(t *testing.T) {
+func TestEnvExport_NoMatchingLabels(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "value-a", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"nonexistent"}, Format: "shell"})
+	_, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"nonexistent"}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "no items matched") {
 		t.Fatalf("expected no-match error, got: %v", err)
 	}
 }
 
-func TestExportSecretItems_SkipsMissingEnvName(t *testing.T) {
+func TestEnvExport_SkipsUnmappedFields(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "", "value-a", []string{"prod"}),
 		genericSecretItem("item_b", "Item B", "B_VAR", "value-b", []string{"prod"}),
 	})
-	out, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export with missing env item: %v", err)
 	}
@@ -777,22 +805,22 @@ func TestExportSecretItems_SkipsMissingEnvName(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_MissingValue(t *testing.T) {
+func TestEnvExport_MissingValue(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		emptyValueSecretItem("item_a", "Item A", "A_VAR", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
+	_, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "missing value") {
 		t.Fatalf("expected missing value error, got: %v", err)
 	}
 }
 
-func TestExportSecretItems_DuplicateEnvName(t *testing.T) {
+func TestEnvExport_DuplicateEnvName(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "DUPE_VAR", "value-a", []string{"prod"}),
 		genericSecretItem("item_b", "Item B", "DUPE_VAR", "value-b", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"prod"}, Format: "shell"})
+	_, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"prod"}, Format: "shell"})
 	if err == nil || !strings.Contains(err.Error(), "duplicate env name") {
 		t.Fatalf("expected duplicate env error, got: %v", err)
 	}
@@ -801,13 +829,13 @@ func TestExportSecretItems_DuplicateEnvName(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_SortsByEnvName(t *testing.T) {
+func TestEnvExport_SortsByEnvName(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_z", "Z Item", "ZZZ_VAR", "zzz-value", []string{"all"}),
 		genericSecretItem("item_a", "A Item", "AAA_VAR", "aaa-value", []string{"all"}),
 		genericSecretItem("item_m", "M Item", "MMM_VAR", "mmm-value", []string{"all"}),
 	})
-	out, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"all"}, Format: "shell"})
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"all"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export: %v", err)
 	}
@@ -826,15 +854,12 @@ func TestExportSecretItems_SortsByEnvName(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_ShellFormat(t *testing.T) {
+func TestEnvExport_ShellFormat(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "simple", []string{"all"}),
 		genericSecretItem("item_b", "Item B", "B_VAR", "has spaces and $pecial", []string{"all"}),
 	})
-	out, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"all"},
-		Format: "shell",
-	})
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"all"}, Format: "shell"})
 	if err != nil {
 		t.Fatalf("export shell: %v", err)
 	}
@@ -846,15 +871,12 @@ func TestExportSecretItems_ShellFormat(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_JSONFormat(t *testing.T) {
+func TestEnvExport_JSONFormat(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "alpha", []string{"all"}),
 		genericSecretItem("item_b", "Item B", "B_VAR", "beta", []string{"all"}),
 	})
-	out, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"all"},
-		Format: "json",
-	})
+	out, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"all"}, Format: "json"})
 	if err != nil {
 		t.Fatalf("export json: %v", err)
 	}
@@ -866,24 +888,21 @@ func TestExportSecretItems_JSONFormat(t *testing.T) {
 	}
 }
 
-func TestExportSecretItems_UnsupportedFormat(t *testing.T) {
+func TestEnvExport_UnsupportedFormat(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "value-a", []string{"all"}),
 	})
-	_, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{
-		Labels: []string{"all"},
-		Format: "toml",
-	})
-	if err == nil || !strings.Contains(err.Error(), "unsupported export format") {
+	_, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"all"}, Format: "toml"})
+	if err == nil || !strings.Contains(err.Error(), "unsupported env export format") {
 		t.Fatalf("expected unsupported format error, got: %v", err)
 	}
 }
 
-func TestExportSecretItems_ValueFreeDiagnostics(t *testing.T) {
+func TestEnvExport_ValueFreeDiagnostics(t *testing.T) {
 	vaultPath, configPath := writeVaultWithItems(t, []vaultmodel.Item{
 		genericSecretItem("item_a", "Item A", "A_VAR", "actual-secret-value", []string{"prod"}),
 	})
-	_, err := testApp().ExportSecretItems(configPath, vaultPath, ExportSecretItemsRequest{Labels: []string{"nonexistent"}, Format: "shell"})
+	_, err := testApp().ExportEnvironment(configPath, vaultPath, ExportEnvironmentRequest{Labels: []string{"nonexistent"}, Format: "shell"})
 	if err != nil && (strings.Contains(err.Error(), "actual-secret-value") || strings.Contains(err.Error(), "sk-")) {
 		t.Fatalf("error leaked secret value: %v", err)
 	}
@@ -893,26 +912,20 @@ func TestExportSecretItems_ValueFreeDiagnostics(t *testing.T) {
 
 func genericSecretItem(id, title, envName, value string, labels []string) vaultmodel.Item {
 	return vaultmodel.Item{
-		ID:       id,
-		Title:    title,
-		Template: vaultmodel.TemplateGenericSecret,
-		Labels:   labels,
+		ID: id, Title: title, Template: vaultmodel.TemplateGenericSecret, Labels: labels,
 		Fields: []vaultmodel.Field{
-			{ID: "value", Label: "Value", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret, Value: rawJSON(value)},
-			{ID: "value_env", Label: "Value Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: rawJSON(envName)},
+			{ID: "value", Value: rawJSON(value)},
+			{ID: vaultmodel.EnvFieldID("value"), Value: rawJSON(envName)},
 		},
 	}
 }
 
 func emptyValueSecretItem(id, title, envName string, labels []string) vaultmodel.Item {
 	return vaultmodel.Item{
-		ID:       id,
-		Title:    title,
-		Template: vaultmodel.TemplateGenericSecret,
-		Labels:   labels,
+		ID: id, Title: title, Template: vaultmodel.TemplateGenericSecret, Labels: labels,
 		Fields: []vaultmodel.Field{
-			{ID: "value", Label: "Value", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, Purpose: vaultmodel.PurposePrimarySecret},
-			{ID: "value_env", Label: "Value Env", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Purpose: vaultmodel.PurposeEnvName, Value: rawJSON(envName)},
+			{ID: "value"},
+			{ID: vaultmodel.EnvFieldID("value"), Value: rawJSON(envName)},
 		},
 	}
 }
