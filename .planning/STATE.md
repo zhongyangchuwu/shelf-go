@@ -6,7 +6,7 @@
 - Phase: Item-First Environment Projection V3
 - Status: complete
 - Active Artifact: `.planning/phases/053-item-first-environment-projection/VERIFICATION.md`
-- Next Action: Manually migrate the local plaintext vault with `docs/v3-migration.md` when ready; Shelf will not migrate it automatically.
+- Next Action: Continue using the active V3 vault; if an external encrypted source is authoritative, apply the same manual migration there before its next sync.
 
 ## Blockers
 
@@ -22,6 +22,7 @@
 - Secret and project TUI workspaces remain optional, keyboard-first, and value-free. Secret detail groups structural env/validity metadata under its target field.
 - User-facing docs describe the V3 command contract and `docs/v3-migration.md` provides a value-free manual migration checklist.
 - Phase 53 verification passed: focused V3 package tests, `bash scripts/test.sh`, `go build ./cmd/shelf`, a temporary-vault CLI projection/audit/project-export smoke, and a 120×32 pseudo-terminal secret TUI smoke with secret redaction and alternate-screen restoration.
+- The active local plaintext vault was manually migrated from V2 to V3: 16 generic-secret items changed `value_env` to `env_value`, with atomic fields only. Exact V2 backup: `/home/han/.local/share/shelf/backups/pre-v3-migration-20260714-024329/vault.json` (`0600`). Active `doctor`, `secret list --long`, audit, info, and both label projection groups passed; one group intentionally projected no mapped fields.
 - The proposed personal workflow sequence is scriptable item lifecycle → wide-screen secret workspace TUI → project binding TUI → credential health audit.
 - TUI remains optional and keyboard-first; it must never display secret values and must reuse application workflows.
 - Named dev/staging/prod environments are not planned for the personal-use path.
@@ -36,4 +37,4 @@
 
 ## Updated
 
-- 2026-07-12
+- 2026-07-13
