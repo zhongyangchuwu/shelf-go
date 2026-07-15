@@ -79,6 +79,8 @@ shelf secret update "OpenAI personal" --field website --clear-field
 
 `--value` is limited to public fields. If it is omitted for a selected field, Shelf reads stdin; on an interactive terminal it prompts without echoing input. Secret values never enter argv.
 
+`description` is public metadata shown by `secret info` and the TUI. Use it for context only; never put a secret value in it.
+
 Load all explicitly mapped fields in a label group into the current shell without storing values in shell config:
 
 ```bash

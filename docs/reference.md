@@ -49,6 +49,8 @@ shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] 
 
 On success, prints a metadata summary with title, id, template, and primary-field env name. Secret values are not echoed.
 
+`--description` is public metadata. It is returned by `secret info` and shown by the TUI; never store a secret value there.
+
 Useful public-field flags for `api_credential` are `--provider`, `--website`, `--validity`, and repeatable `--scope`. `--validity` accepts `unknown`, `permanent`, or `YYYY-MM-DD`.
 
 `--template` accepts a vault template ID or alias; built-in aliases are `generic` and `api`.
