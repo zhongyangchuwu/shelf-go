@@ -101,7 +101,7 @@ type filterChoice struct {
 func NewModel(service Service, clipboardWriter clipboard.Writer, options Options) Model {
 	query := textinput.New()
 	query.Prompt = "/ "
-	query.Placeholder = "Search title, id, template, label, or alias"
+	query.Placeholder = "Search title, id, description, template, or label"
 	return Model{
 		service:         service,
 		clipboardWriter: clipboardWriter,
@@ -341,24 +341,28 @@ func (m Model) renderCatalog(width int) string {
 		b.WriteString("No secrets found.\n\nPress a to create an item.")
 		return b.String()
 	}
+	titleWidth := max(1, width-4)
 	for i, item := range m.filtered {
 		cursor := " "
 		if i == m.selected {
 			cursor = "›"
 		}
-		state := "unset"
-		if item.ProjectableFields > 0 {
-			state = fmt.Sprintf("%d/%d set · %d env", item.SetFields, item.ProjectableFields, item.EnvMappings)
-		} else if item.ValueSet {
-			state = "set"
-		}
-		if health, ok := m.health[item.ID]; ok {
-			state += " · " + healthLabel(health.Status)
-		}
-		row := fmt.Sprintf("%s %-20s %-16s %s", cursor, truncate(item.Title, 20), truncate(item.Template, 16), state)
-		b.WriteString(truncate(row, width) + "\n")
+		fmt.Fprintf(&b, "%s %-*s %s\n", cursor, titleWidth, truncate(item.Title, titleWidth), m.styles.renderCatalogStatus(m.catalogStatus(item)))
 	}
 	return b.String()
+}
+
+func (m Model) catalogStatus(item app.SecretCatalogItem) string {
+	if !item.ValueSet {
+		return "missing"
+	}
+	if m.healthUnavailable {
+		return "unavailable"
+	}
+	if health, ok := m.health[item.ID]; ok && health.Status != app.CredentialHealthHealthy && health.Status != app.CredentialHealthPermanent {
+		return "attention"
+	}
+	return "healthy"
 }
 
 func (m Model) renderRight(width int) string {
@@ -396,10 +400,8 @@ func (m Model) rightPanelTitle() string {
 		switch m.form.kind {
 		case formCreate:
 			return "Create item"
-		case formMetadata:
+		case formEdit:
 			return "Edit item"
-		case formField:
-			return "Edit field"
 		}
 	}
 	return "Detail"
@@ -416,7 +418,7 @@ func (m Model) renderHelp() string {
 		"/              search safe catalog metadata\n" +
 		"f              filter template and labels\n" +
 		"a              create item\n" +
-		"e              edit item or selected field\n" +
+		"e              edit selected item\n" +
 		"c              copy selected/default field\n" +
 		"d              delete selected item after confirmation\n" +
 		"r              reload\n" +
@@ -644,7 +646,7 @@ func matchesCatalogQuery(item app.SecretCatalogItem, query string) bool {
 	if query == "" {
 		return true
 	}
-	for _, value := range append([]string{item.ID, item.Title, item.Template}, append(item.Labels, item.Aliases...)...) {
+	for _, value := range append([]string{item.ID, item.Title, item.Template, item.Description}, item.Labels...) {
 		if strings.Contains(strings.ToLower(value), query) {
 			return true
 		}

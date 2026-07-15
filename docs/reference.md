@@ -35,7 +35,7 @@ Opens the optional, keyboard-first secret workspace. It requires interactive std
 shelf tui
 ```
 
-The catalog, search, filters, detail, help, and confirmation screens are value-free. `a`, `e`, `c`, and `d` create, update, copy, and delete through the existing app and clipboard workflows. Secret-field form input is masked; the workspace has no reveal action. `secret get`, exports, and project execution remain CLI commands.
+The catalog, search, filters, detail, help, and confirmation screens are value-free. `a`, `e`, `c`, and `d` create, update, copy, and delete through the existing app and clipboard workflows. Create and Edit are single scrollable forms; the create form distinguishes item kind from optional provider presets, and secrets are masked without a reveal action. `secret get`, exports, and project execution remain CLI commands.
 
 
 
@@ -44,7 +44,7 @@ The catalog, search, filters, detail, help, and confirmation screens are value-f
 Creates an item. Secret values enter through stdin when `--stdin` is set.
 
 ```bash
-shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--validity VALUE] [--stdin]
+shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--description TEXT] [--env NAME] [--validity VALUE] [--stdin]
 ```
 
 On success, prints a metadata summary with title, id, template, and primary-field env name. Secret values are not echoed.
@@ -55,10 +55,10 @@ Useful public-field flags for `api_credential` are `--provider`, `--website`, `-
 
 ## `shelf secret update`
 
-Updates an item's title, labels, aliases, or a selected field without editing vault JSON. Without metadata flags or `--field`, it updates the template primary secret field.
+Updates an item's title, description, labels, or a selected field without editing vault JSON. Without metadata flags or `--field`, it updates the template primary secret field.
 
 ```bash
-shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
+shelf secret update <selector> [--title TITLE] [--description TEXT] [--add-label LABEL] [--remove-label LABEL] [--field FIELD] [--value VALUE ... | --clear-field]
 ```
 
 Use repeatable `--value` only for a public field; it supports string-list fields. Without `--value`, Shelf reads the selected field from stdin. An interactive terminal displays a corresponding no-echo prompt. Secret values never enter argv. `--clear-field` clears a public field.

@@ -6,19 +6,27 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/zhongyangchuwu/shelf-go/internal/app"
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
-func TestCreateActionPassesMetadataAndDropsSecretDraft(t *testing.T) {
+func TestCreateActionBuildsAPIRequestAndDropsSecretDraft(t *testing.T) {
 	m, service, _ := readyModel(t)
-	secretDraft := fakeSecret
-	m.form = formState{kind: formCreate, create: &createDraft{
-		kind: "api", title: "New API", id: "item_new_api", env: "NEW_API_KEY",
-		labels: "api, work", aliases: "new-api", provider: "Example", scopes: "read, write", secret: secretDraft,
-	}}
+	editor := newCreateEditor(app.DefaultSecretCreateOptions())
+	editor.template = vaultmodel.TemplateAPICredential
+	editor.profile = vaultmodel.ProfileOpenAI
+	editor.rebuildCreateFields("")
+	setEditorValue(t, editor, "title", "New API")
+	setEditorValue(t, editor, "description", "Development credential")
+	setEditorValue(t, editor, "labels", "api, work")
+	setEditorValue(t, editor, "field:credential", fakeSecret)
+	setEditorValue(t, editor, "field:env_credential", "NEW_API_KEY")
+	setEditorValue(t, editor, "field:base_url", "https://api.example.test")
+	m.form = formState{kind: formCreate, editor: editor}
+
 	updated, cmd := m.submitForm()
 	m = updated.(Model)
-	if m.form.create.secret != "" {
+	if editor.value("field:credential") != "" {
 		t.Fatal("create form retained the secret draft after submission")
 	}
 	message := cmd()
@@ -30,7 +38,7 @@ func TestCreateActionPassesMetadataAndDropsSecretDraft(t *testing.T) {
 		t.Fatalf("create calls = %d, want 1", len(service.created))
 	}
 	request := service.created[0]
-	if request.Template != vaultmodel.TemplateAPICredential || strings.Join(request.Labels, ",") != "api,work" || strings.Join(request.Aliases, ",") != "new-api" {
+	if request.Template != vaultmodel.TemplateAPICredential || request.Profile != vaultmodel.ProfileOpenAI || request.Description != "Development credential" || strings.Join(request.Labels, ",") != "api,work" || request.Env != "NEW_API_KEY" || request.BaseURL != "https://api.example.test" {
 		t.Fatalf("create request = %#v", request)
 	}
 	if got := m.render(); strings.Contains(got, fakeSecret) {
@@ -38,30 +46,38 @@ func TestCreateActionPassesMetadataAndDropsSecretDraft(t *testing.T) {
 	}
 }
 
-func TestFieldUpdateAndDeleteUseAppWorkflows(t *testing.T) {
+func TestUnifiedEditActionBuildsAtomicFieldUpdates(t *testing.T) {
 	m, service, _ := readyModel(t)
-	m.pane = paneDetail
-	m.fieldSelected = 1
-	m.form = formState{kind: formField, field: &fieldDraft{id: "provider", fieldType: "string", sensitivity: "public", value: "Example"}}
-	_, cmd := m.submitForm()
-	if result := cmd().(actionDoneMsg); result.err != nil || !result.refresh {
-		t.Fatalf("field update result = %#v", result)
-	}
-	if len(service.updated) != 1 || !service.updated[0].ReadField || service.updated[0].Field != "provider" {
-		t.Fatalf("update requests = %#v", service.updated)
-	}
-
-	m.screen = screenConfirmDelete
-	updated, cmd := m.handleDeleteConfirm("enter")
+	updated, _ := m.startEditForm()
 	m = updated.(Model)
-	if m.screen != screenLoading {
-		t.Fatalf("delete screen = %v, want loading", m.screen)
+	setEditorValue(t, m.form.editor, "title", "OpenAI work")
+	setEditorValue(t, m.form.editor, "description", "Work account")
+	setEditorValue(t, m.form.editor, "labels", "ai, work")
+	setEditorValue(t, m.form.editor, "field:credential", fakeSecret)
+	setEditorValue(t, m.form.editor, "field:provider", "OpenAI work")
+
+	updated, cmd := m.submitForm()
+	m = updated.(Model)
+	if m.form.editor.value("field:credential") != "" {
+		t.Fatal("edit form retained the secret draft after submission")
 	}
-	if result := cmd().(actionDoneMsg); result.err != nil || !result.refresh {
-		t.Fatalf("delete result = %#v", result)
+	result := cmd().(actionDoneMsg)
+	if result.err != nil || !result.refresh {
+		t.Fatalf("update result = %#v", result)
 	}
-	if got, want := service.removed, []string{"item_openai"}; fmt.Sprint(got) != fmt.Sprint(want) {
-		t.Fatalf("remove selectors = %#v, want %#v", got, want)
+	if len(service.updated) != 1 {
+		t.Fatalf("update calls = %#v", service.updated)
+	}
+	request := service.updated[0]
+	if !request.TitleSet || request.Title != "OpenAI work" || !request.DescriptionSet || request.Description != "Work account" || strings.Join(request.AddLabels, ",") != "work" || len(request.FieldUpdates) != 2 {
+		t.Fatalf("update request = %#v", request)
+	}
+	updates := map[string]bool{}
+	for _, update := range request.FieldUpdates {
+		updates[update.Field] = update.ReadField || update.FieldValueSet
+	}
+	if !updates["credential"] || !updates["provider"] {
+		t.Fatalf("field updates = %#v", request.FieldUpdates)
 	}
 }
 
@@ -93,13 +109,12 @@ func TestCopyAndErrorViewsNeverRenderSecretValues(t *testing.T) {
 	}
 }
 
-func TestSecretFieldEditorIsMaskedAndNeverPrefilled(t *testing.T) {
+func TestUnifiedEditFormMasksSecretsAndCancels(t *testing.T) {
 	m, _, _ := readyModel(t)
-	secretField := m.detail.Fields[0]
-	updated, _ := m.startFieldForm(secretField)
+	updated, _ := m.startEditForm()
 	m = updated.(Model)
-	if m.form.field.value != "" {
-		t.Fatalf("secret editor value = %q, want empty", m.form.field.value)
+	if m.form.editor.value("field:credential") != "" {
+		t.Fatalf("secret editor value = %q, want empty", m.form.editor.value("field:credential"))
 	}
 	if got := m.renderForm(80); strings.Contains(got, fakeSecret) {
 		t.Fatalf("secret editor view exposed secret: %q", got)
@@ -108,4 +123,52 @@ func TestSecretFieldEditorIsMaskedAndNeverPrefilled(t *testing.T) {
 	if m.screen != screenWorkspace || m.form.kind != formNone {
 		t.Fatalf("cancelled form state = screen %v form %v", m.screen, m.form.kind)
 	}
+}
+
+func TestDeleteUsesAppWorkflow(t *testing.T) {
+	m, service, _ := readyModel(t)
+	m.screen = screenConfirmDelete
+	updated, cmd := m.handleDeleteConfirm("enter")
+	m = updated.(Model)
+	if m.screen != screenLoading {
+		t.Fatalf("delete screen = %v, want loading", m.screen)
+	}
+	if result := cmd().(actionDoneMsg); result.err != nil || !result.refresh {
+		t.Fatalf("delete result = %#v", result)
+	}
+	if got, want := service.removed, []string{"item_openai"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("remove selectors = %#v, want %#v", got, want)
+	}
+}
+
+func TestCreateEditorSeparatesKindFromPreset(t *testing.T) {
+	editor := newCreateEditor(app.DefaultSecretCreateOptions())
+	if editor.template != vaultmodel.TemplateGenericSecret || editor.indexOf("preset") != 0 {
+		t.Fatalf("generic editor = template %q fields %#v", editor.template, editor.fields)
+	}
+	if _, submit := editor.update(tea.KeyPressMsg{Code: tea.KeyRight}); submit {
+		t.Fatal("kind selection submitted the editor")
+	}
+	if editor.template != vaultmodel.TemplateAPICredential || editor.indexOf("preset") == 0 {
+		t.Fatalf("API kind did not reveal preset: template %q fields %#v", editor.template, editor.fields)
+	}
+	editor.focus(editor.indexOf("preset"))
+	editor.update(tea.KeyPressMsg{Code: tea.KeyRight})
+	if editor.profile != vaultmodel.ProfileOpenAI {
+		t.Fatalf("preset = %q, want %q", editor.profile, vaultmodel.ProfileOpenAI)
+	}
+	if got := editor.value("field:env_credential"); got != "OPENAI_API_KEY" {
+		t.Fatalf("OpenAI preset env = %q", got)
+	}
+}
+
+func setEditorValue(t *testing.T, editor *itemEditor, id, value string) {
+	t.Helper()
+	for index := range editor.fields {
+		if editor.fields[index].id == id {
+			editor.fields[index].input.SetValue(value)
+			return
+		}
+	}
+	t.Fatalf("editor field %q not found", id)
 }

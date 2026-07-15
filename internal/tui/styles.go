@@ -6,11 +6,14 @@ const (
 	mochaBase     = "#1e1e2e"
 	mochaMantle   = "#181825"
 	mochaSurface1 = "#45475a"
+	mochaOverlay0 = "#6c7086"
 	mochaText     = "#cdd6f4"
 	mochaSubtext1 = "#bac2de"
 	mochaBlue     = "#89b4fa"
 	mochaMauve    = "#cba6f7"
 	mochaGreen    = "#a6e3a1"
+	mochaYellow   = "#f9e2af"
+	mochaRed      = "#f38ba8"
 )
 
 type workspaceStyles struct {
@@ -79,4 +82,19 @@ func workspacePanelHeight(height int, hasStatus bool) int {
 
 func panelContentWidth(outerWidth int) int {
 	return max(1, outerWidth-4)
+}
+
+func (s workspaceStyles) renderCatalogStatus(status string) string {
+	symbol := "●"
+	color := mochaGreen
+	switch status {
+	case "missing":
+		symbol, color = "×", mochaRed
+	case "attention":
+		symbol, color = "!", mochaYellow
+	case "unavailable":
+		symbol, color = "·", mochaOverlay0
+	}
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(symbol)
+
 }

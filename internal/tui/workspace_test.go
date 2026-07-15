@@ -29,6 +29,10 @@ func (s *fakeService) SecretCatalog(_, _ string) ([]app.SecretCatalogItem, error
 	return s.catalog, s.err
 }
 
+func (s *fakeService) SecretCreateOptions() []app.SecretCreateOption {
+	return app.DefaultSecretCreateOptions()
+}
+
 func (s *fakeService) SecretInfo(_, _, selector string) (app.SecretInfo, error) {
 	if s.err != nil {
 		return app.SecretInfo{}, s.err
@@ -75,13 +79,13 @@ func readyModel(t *testing.T) (Model, *fakeService, *fakeClipboard) {
 	t.Helper()
 	service := &fakeService{
 		catalog: []app.SecretCatalogItem{
-			{ID: "item_openai", Title: "OpenAI personal", Template: vaultmodel.TemplateAPICredential, Labels: []string{"ai", "personal"}, Aliases: []string{"openai"}, ValueSet: true},
-			{ID: "item_github", Title: "GitHub work", Template: vaultmodel.TemplateGenericSecret, Labels: []string{"work"}, Aliases: []string{"github"}, ValueSet: true},
+			{ID: "item_openai", Title: "OpenAI personal", Template: vaultmodel.TemplateAPICredential, Labels: []string{"ai", "personal"}, Description: "Personal account", ValueSet: true},
+			{ID: "item_github", Title: "GitHub work", Template: vaultmodel.TemplateGenericSecret, Labels: []string{"work"}, Description: "Work repository", ValueSet: true},
 		},
 		info: map[string]app.SecretInfo{
 			"item_openai": {
 				ID: "item_openai", Title: "OpenAI personal", Template: vaultmodel.TemplateAPICredential,
-				Labels: []string{"ai", "personal"}, Aliases: []string{"openai"},
+				Labels: []string{"ai", "personal"}, Description: "Personal account",
 				Fields: []app.SecretFieldInfo{
 					{ID: "credential", Type: vaultmodel.FieldTypeConcealed, Sensitivity: vaultmodel.SensitivitySecret, ValueSet: true},
 					{ID: "provider", Type: vaultmodel.FieldTypeString, Sensitivity: vaultmodel.SensitivityPublic, Value: "OpenAI", ValueSet: true},
@@ -224,6 +228,27 @@ func TestModelRendersValueFreeCredentialHealth(t *testing.T) {
 	m = updateModel(t, m, healthLoadedMsg{err: fmt.Errorf("failed for %s", fakeSecret)})
 	if view := m.render(); !strings.Contains(view, "health: unavailable") || strings.Contains(view, fakeSecret) {
 		t.Fatalf("health unavailable view = %q", view)
+	}
+}
+
+func TestModelCatalogShowsNamesAndActionSymbols(t *testing.T) {
+	m, _, _ := readyModel(t)
+	m.items = append(m.items, app.SecretCatalogItem{ID: "item_missing", Title: "Missing token", Template: vaultmodel.TemplateGenericSecret})
+	m.applyFilters()
+	view := m.renderCatalog(34)
+	for _, want := range []string{"OpenAI personal", "GitHub work", "Missing token", "!", "●", "×"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("catalog missing %q: %q", want, view)
+		}
+	}
+	for _, unwanted := range []string{"api_credential", "generic_secret", "1/1 set", " env"} {
+		if strings.Contains(view, unwanted) {
+			t.Fatalf("catalog retained obsolete detail %q: %q", unwanted, view)
+		}
+	}
+	m.healthUnavailable = true
+	if view = m.renderCatalog(34); !strings.Contains(view, "·") || !strings.Contains(view, "×") {
+		t.Fatalf("unavailable health symbols = %q", view)
 	}
 }
 

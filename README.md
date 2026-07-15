@@ -71,10 +71,10 @@ printf %s LLM_API_KEY | shelf secret update openai --field env_credential
 Update item identity, organization, and public metadata without editing vault JSON:
 
 ```bash
-shelf secret update openai --title openai-personal --add-label ai --add-alias openai-personal
-shelf secret update openai-personal --field provider --value OpenAI
-shelf secret update openai-personal --field scopes --value responses --value embeddings
-shelf secret update openai-personal --field website --clear-field
+shelf secret update openai --title "OpenAI personal" --description "Personal development account" --add-label ai
+shelf secret update "OpenAI personal" --field provider --value OpenAI
+shelf secret update "OpenAI personal" --field scopes --value responses --value embeddings
+shelf secret update "OpenAI personal" --field website --clear-field
 ```
 
 `--value` is limited to public fields. If it is omitted for a selected field, Shelf reads stdin; on an interactive terminal it prompts without echoing input. Secret values never enter argv.
@@ -95,9 +95,9 @@ On a 100×24-or-larger interactive terminal, open the optional full-screen catal
 shelf tui
 ```
 
-Use `a` to create, `e` to edit the selected item or field, `c` to copy a selected/default field, and `d` to remove an item after confirmation. `/` searches safe catalog metadata; `f` filters by template and labels. The workspace masks secret input, never reveals a secret value, and shows value-free field lifecycle health where configured; `get`, `env export`, and project run remain CLI-first.
+Use `a` to create, `e` to edit the selected item, `c` to copy a selected/default field, and `d` to remove an item after confirmation. Create and Edit use one scrollable form; secret inputs are masked and never prefilled. `/` searches safe catalog metadata; `f` filters by template and labels. The catalog is title-first and uses a colored symbol for missing, attention, healthy, or unavailable state; Detail shows the reason, fields, and environment mappings. `get`, `env export`, and project run remain CLI-first.
 
-The catalog and right detail/editor remain visible as separate Catppuccin Mocha panels. A blue frame and `›` title marker identify the active pane; focus never depends on color alone.
+The catalog and right detail/editor remain visible as separate Catppuccin Mocha panels. A blue frame and `›` title marker identify the active pane; focus and catalog status never depend on color alone.
 
 ## Use secrets in a project
 
@@ -164,6 +164,6 @@ shelf doctor
 ## Current non-goals
 
 - Built-in age encryption. Use chezmoi or another external tool for encrypted sync.
-- v1/v2 vault compatibility or automatic migration. See the [manual V3 migration guide](docs/v3-migration.md).
+- Vault compatibility or automatic migration. See the [manual migration guide](docs/v3-migration.md), including the V3-to-V4 description cutover.
 - Web manager. Both secret and project binding TUI workspaces are available; browser and hosted interfaces remain deferred.
 - Team sharing, hosted sync, browser autofill, or daemon-based unlock flows.

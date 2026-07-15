@@ -11,6 +11,7 @@ import (
 
 type Service interface {
 	SecretCatalog(configPathFlag, vaultPathFlag string) ([]app.SecretCatalogItem, error)
+	SecretCreateOptions() []app.SecretCreateOption
 	SecretInfo(configPathFlag, vaultPathFlag, selector string) (app.SecretInfo, error)
 	CreateSecret(configPathFlag, vaultPathFlag string, req app.CreateSecretRequest) (string, error)
 	UpdateSecret(configPathFlag, vaultPathFlag string, req app.UpdateSecretRequest) error

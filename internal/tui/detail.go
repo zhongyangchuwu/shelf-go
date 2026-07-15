@@ -30,8 +30,8 @@ func (m Model) detailContent() string {
 	if len(m.detail.Labels) > 0 {
 		fmt.Fprintf(&b, "labels:   %s\n", strings.Join(m.detail.Labels, ", "))
 	}
-	if len(m.detail.Aliases) > 0 {
-		fmt.Fprintf(&b, "aliases:  %s\n", strings.Join(m.detail.Aliases, ", "))
+	if m.detail.Description != "" {
+		fmt.Fprintf(&b, "description: %s\n", m.detail.Description)
 	}
 	if health, ok := m.health[m.detail.ID]; ok {
 		fmt.Fprintf(&b, "health:   %s", healthLabel(health.Status))
