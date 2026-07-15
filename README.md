@@ -99,6 +99,8 @@ shelf tui
 
 Use `a` to create, `e` to edit the selected item, `c` to copy a selected/default field, and `d` to remove an item after confirmation. Create and Edit use one scrollable form; secret inputs are masked and never prefilled. `/` searches safe catalog metadata; `f` filters by template and labels. The catalog is title-first and uses a colored symbol for missing, attention, healthy, or unavailable state; Detail shows the reason, fields, and environment mappings. `get`, `env export`, and project run remain CLI-first.
 
+For API credentials, choose lifecycle validity with left/right: `Unknown`, `Permanent`, or `Expires on date`; the date choice exposes a required `YYYY-MM-DD` prompt. Switching an API preset back to `No preset` clears values that still match that preset’s defaults, while values changed away from those defaults remain.
+
 The catalog and right detail/editor remain visible as separate Catppuccin Mocha panels. A blue frame and `›` title marker identify the active pane; focus and catalog status never depend on color alone.
 
 ## Use secrets in a project

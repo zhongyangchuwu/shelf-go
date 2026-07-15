@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -130,8 +131,7 @@ func newEditEditor(info app.SecretInfo) *itemEditor {
 			value = ""
 			placeholder = "Leave blank to keep the current secret"
 		}
-		editor.fields = append(editor.fields, newEditorInput("field:"+field.ID, editorFieldLabel(field.ID), value, placeholder, string(field.Type), string(field.Sensitivity)))
-		editor.fields[len(editor.fields)-1].fieldID = field.ID
+		editor.fields = append(editor.fields, newItemEditorFields(field.ID, editorFieldLabel(field.ID), value, placeholder, string(field.Type), string(field.Sensitivity))...)
 	}
 	editor.fields = append(editor.fields, editorField{id: "save", label: "Save changes", kind: editorSave})
 	editor.focus(0)
@@ -157,6 +157,29 @@ func newEditorInput(id, label, value, placeholder, fieldType, sensitivity string
 		initial:     value,
 		fieldType:   fieldType,
 		sensitivity: sensitivity,
+	}
+}
+
+func newItemEditorFields(fieldID, label, value, placeholder, fieldType, sensitivity string) []editorField {
+	if _, validity := strings.CutPrefix(fieldID, "validity_"); !validity {
+		field := newEditorInput("field:"+fieldID, label, value, placeholder, fieldType, sensitivity)
+		field.fieldID = fieldID
+		return []editorField{field}
+	}
+	choice := 0
+	date := ""
+	switch value {
+	case "permanent":
+		choice = 1
+	case "", "unknown":
+		choice = 0
+	default:
+		choice, date = 2, value
+	}
+	dateInput := newEditorInput("validity-date:"+fieldID, "Expiry date", date, "YYYY-MM-DD", "string", sensitivity)
+	return []editorField{
+		{id: "validity:" + fieldID, label: label, kind: editorChoice, fieldID: fieldID, fieldType: "string", sensitivity: sensitivity, optionValues: []string{"unknown", "permanent", "date"}, optionLabels: []string{"Unknown", "Permanent", "Expires on date"}, option: choice},
+		dateInput,
 	}
 }
 
@@ -221,8 +244,7 @@ func (editor *itemEditor) rebuildCreateFields(selectedID string) {
 		if field.Sensitivity == "secret" {
 			placeholder = "Enter secret"
 		}
-		editor.fields = append(editor.fields, newEditorInput("field:"+field.ID, editorFieldLabel(field.ID), value, placeholder, field.Type, field.Sensitivity))
-		editor.fields[len(editor.fields)-1].fieldID = field.ID
+		editor.fields = append(editor.fields, newItemEditorFields(field.ID, field.Label, value, placeholder, field.Type, field.Sensitivity)...)
 	}
 	editor.fields = append(editor.fields, editorField{id: "save", label: "Create item", kind: editorSave})
 	editor.focus(editor.indexOf(selectedID))
@@ -245,6 +267,29 @@ func createDefaults(option app.SecretCreateOption, profile string) map[string]st
 	return defaults
 }
 
+func (editor *itemEditor) clearPresetDefaults(profile string) {
+	if profile == "" {
+		return
+	}
+	option, ok := editor.createOption()
+	if !ok {
+		return
+	}
+	for _, preset := range option.Presets {
+		if preset.ID != profile {
+			continue
+		}
+		for fieldID, defaultValue := range preset.Defaults {
+			for index := range editor.fields {
+				field := &editor.fields[index]
+				if field.id == "field:"+fieldID && field.kind == editorInput && field.input.Value() == defaultValue {
+					field.input.SetValue("")
+				}
+			}
+		}
+		return
+	}
+}
 func editorFieldLabel(id string) string {
 	if target, ok := strings.CutPrefix(id, "env_"); ok && target != "" {
 		return strings.ReplaceAll(target, "_", " ") + " environment variable"
@@ -309,10 +354,10 @@ func (editor *itemEditor) update(msg tea.Msg) (tea.Cmd, bool) {
 		if current.kind == editorSave {
 			return nil, true
 		}
-		editor.focus((editor.selected + 1) % len(editor.fields))
+		editor.focus(editor.nextVisible(1))
 		return nil, false
 	case "shift+tab", "up":
-		editor.focus((editor.selected - 1 + len(editor.fields)) % len(editor.fields))
+		editor.focus(editor.nextVisible(-1))
 		return nil, false
 	}
 	if current.kind == editorChoice {
@@ -344,6 +389,8 @@ func (editor *itemEditor) cycleChoice(delta int) {
 		editor.profile = ""
 		editor.rebuildCreateFields(field.id)
 	case "preset":
+		previous := editor.profile
+		editor.clearPresetDefaults(previous)
 		editor.profile = field.optionValues[field.option]
 		editor.rebuildCreateFields(field.id)
 	}
@@ -367,6 +414,52 @@ func (editor itemEditor) field(id string) (editorField, bool) {
 	return editorField{}, false
 }
 
+func (editor itemEditor) fieldValue(id string) (string, bool) {
+	for _, field := range editor.fields {
+		if field.fieldID != id {
+			continue
+		}
+		if field.kind == editorInput {
+			return field.input.Value(), true
+		}
+		if field.kind == editorChoice && strings.HasPrefix(field.id, "validity:") {
+			value := field.optionValues[field.option]
+			if value == "date" {
+				return editor.value("validity-date:" + id), true
+			}
+			return value, true
+		}
+	}
+	return "", false
+}
+
+func (editor itemEditor) validityMode(fieldID string) string {
+	for _, field := range editor.fields {
+		if field.id == "validity:"+fieldID && field.kind == editorChoice {
+			return field.optionValues[field.option]
+		}
+	}
+	return ""
+}
+
+func (editor itemEditor) isVisible(field editorField) bool {
+	if field.kind != editorInput {
+		return true
+	}
+	target, dateField := strings.CutPrefix(field.id, "validity-date:")
+	return !dateField || editor.validityMode(target) == "date"
+}
+
+func (editor itemEditor) nextVisible(delta int) int {
+	for steps, index := 0, editor.selected; steps < len(editor.fields); steps++ {
+		index = (index + delta + len(editor.fields)) % len(editor.fields)
+		if editor.isVisible(editor.fields[index]) {
+			return index
+		}
+	}
+	return editor.selected
+}
+
 func (editor *itemEditor) clearSecrets() {
 	for i := range editor.fields {
 		if editor.fields[i].sensitivity == "secret" {
@@ -379,6 +472,18 @@ func (editor *itemEditor) validate() error {
 	if strings.TrimSpace(editor.value("title")) == "" {
 		return fmt.Errorf("title is required")
 	}
+	for _, field := range editor.fields {
+		if !strings.HasPrefix(field.id, "validity:") || field.kind != editorChoice || field.optionValues[field.option] != "date" {
+			continue
+		}
+		date := strings.TrimSpace(editor.value("validity-date:" + field.fieldID))
+		if date == "" {
+			return fmt.Errorf("expiry date is required")
+		}
+		if _, err := time.Parse(time.DateOnly, date); err != nil {
+			return fmt.Errorf("expiry date must use YYYY-MM-DD")
+		}
+	}
 	return nil
 }
 
@@ -386,21 +491,32 @@ func (editor itemEditor) view(height int) string {
 	if len(editor.fields) == 0 {
 		return "Editor unavailable."
 	}
+	indices := make([]int, 0, len(editor.fields))
+	selected := 0
+	for index, field := range editor.fields {
+		if !editor.isVisible(field) {
+			continue
+		}
+		if index == editor.selected {
+			selected = len(indices)
+		}
+		indices = append(indices, index)
+	}
 	visible := max(4, height-5)
 	start := editor.scroll
-	if editor.selected < start {
-		start = editor.selected
+	if selected < start {
+		start = selected
 	}
-	if editor.selected >= start+visible {
-		start = editor.selected - visible + 1
+	if selected >= start+visible {
+		start = selected - visible + 1
 	}
-	start = min(max(0, start), max(0, len(editor.fields)-visible))
-	end := min(len(editor.fields), start+visible)
+	start = min(max(0, start), max(0, len(indices)-visible))
+	end := min(len(indices), start+visible)
 	var b strings.Builder
 	if start > 0 {
 		b.WriteString("↑ more fields\n")
 	}
-	for index := start; index < end; index++ {
+	for _, index := range indices[start:end] {
 		field := editor.fields[index]
 		cursor := " "
 		if index == editor.selected {
@@ -415,7 +531,7 @@ func (editor itemEditor) view(height int) string {
 			fmt.Fprintf(&b, "%s %s\n", cursor, field.label)
 		}
 	}
-	if end < len(editor.fields) {
+	if end < len(indices) {
 		b.WriteString("↓ more fields\n")
 	}
 	if editor.err != "" {

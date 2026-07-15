@@ -160,6 +160,41 @@ func TestCreateEditorSeparatesKindFromPreset(t *testing.T) {
 	if got := editor.value("field:env_credential"); got != "OPENAI_API_KEY" {
 		t.Fatalf("OpenAI preset env = %q", got)
 	}
+	editor.update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	if editor.profile != "" {
+		t.Fatalf("preset after deselection = %q", editor.profile)
+	}
+	for _, fieldID := range []string{"env_credential", "provider", "website"} {
+		if got := editor.value("field:" + fieldID); got != "" {
+			t.Fatalf("%s retained an OpenAI default after preset deselection: %q", fieldID, got)
+		}
+	}
+}
+
+func TestCreateEditorValidityUsesChoiceAndDatePrompt(t *testing.T) {
+	editor := newCreateEditor(app.DefaultSecretCreateOptions())
+	editor.update(tea.KeyPressMsg{Code: tea.KeyRight})
+	validityID := "validity:validity_credential"
+	if editor.indexOf(validityID) == 0 {
+		t.Fatalf("validity choice %q is missing: %#v", validityID, editor.fields)
+	}
+	editor.focus(editor.indexOf(validityID))
+	editor.update(tea.KeyPressMsg{Code: tea.KeyRight})
+	if choice := editor.fields[editor.selected].optionValues[editor.fields[editor.selected].option]; choice != "permanent" {
+		t.Fatalf("validity choice = %q, want permanent", choice)
+	}
+	editor.update(tea.KeyPressMsg{Code: tea.KeyRight})
+	if got := editor.value("validity-date:validity_credential"); got != "" {
+		t.Fatalf("expiry date input = %q, want empty prompt", got)
+	}
+	dateIndex := editor.indexOf("validity-date:validity_credential")
+	if dateIndex == 0 || !editor.isVisible(editor.fields[dateIndex]) || editor.fields[dateIndex].input.Placeholder != "YYYY-MM-DD" {
+		t.Fatalf("expiry date prompt = %#v", editor.fields)
+	}
+	setEditorValue(t, editor, "validity-date:validity_credential", "2027-12-31")
+	if got := editor.createRequest().Validity; got != "2027-12-31" {
+		t.Fatalf("create validity = %q", got)
+	}
 }
 
 func setEditorValue(t *testing.T, editor *itemEditor, id, value string) {

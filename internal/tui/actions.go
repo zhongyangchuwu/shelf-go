@@ -73,8 +73,8 @@ func (editor itemEditor) createRequest() app.CreateSecretRequest {
 	if field, ok := editor.field("website"); ok {
 		req.Website = field.input.Value()
 	}
-	if field, ok := editor.field("validity_" + primaryID); ok {
-		req.Validity = field.input.Value()
+	if validity, ok := editor.fieldValue("validity_" + primaryID); ok {
+		req.Validity = validity
 	}
 	if field, ok := editor.field("scopes"); ok {
 		req.Scopes = splitTokens(field.input.Value())
@@ -114,7 +114,10 @@ func (editor itemEditor) updateRequest(detail app.SecretInfo, selector string) (
 		if !ok {
 			continue
 		}
-		value := field.input.Value()
+		value, ok := editor.fieldValue(original.ID)
+		if !ok {
+			continue
+		}
 		if string(original.Sensitivity) == "secret" {
 			if value != "" {
 				req.FieldUpdates = append(req.FieldUpdates, app.FieldUpdate{Field: original.ID, In: strings.NewReader(value), ReadField: true})
