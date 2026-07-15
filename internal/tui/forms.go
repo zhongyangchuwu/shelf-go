@@ -29,7 +29,13 @@ type editorFieldKind uint8
 const (
 	editorChoice editorFieldKind = iota
 	editorInput
-	editorSave
+)
+
+type editorEditMode uint8
+
+const (
+	editNormal editorEditMode = iota
+	editInsert
 )
 
 type editorField struct {
@@ -45,9 +51,9 @@ type editorField struct {
 	optionLabels []string
 	option       int
 }
-
 type itemEditor struct {
 	mode     formKind
+	editMode editorEditMode
 	template string
 	profile  string
 	options  []app.SecretCreateOption
@@ -74,6 +80,10 @@ func (m Model) startEditForm() (tea.Model, tea.Cmd) {
 
 func (m Model) updateForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if key, ok := msg.(tea.KeyPressMsg); ok && key.String() == "esc" {
+		if m.form.editor != nil && m.form.editor.editMode == editInsert {
+			cmd, _ := m.form.editor.update(msg)
+			return m, cmd
+		}
 		m.form = formState{}
 		m.screen = screenWorkspace
 		return m, nil
@@ -133,7 +143,6 @@ func newEditEditor(info app.SecretInfo) *itemEditor {
 		}
 		editor.fields = append(editor.fields, newItemEditorFields(field.ID, editorFieldLabel(field.ID), value, placeholder, string(field.Type), string(field.Sensitivity))...)
 	}
-	editor.fields = append(editor.fields, editorField{id: "save", label: "Save changes", kind: editorSave})
 	editor.focus(0)
 	return editor
 }
@@ -246,7 +255,6 @@ func (editor *itemEditor) rebuildCreateFields(selectedID string) {
 		}
 		editor.fields = append(editor.fields, newItemEditorFields(field.ID, field.Label, value, placeholder, field.Type, field.Sensitivity)...)
 	}
-	editor.fields = append(editor.fields, editorField{id: "save", label: "Create item", kind: editorSave})
 	editor.focus(editor.indexOf(selectedID))
 }
 
@@ -329,11 +337,10 @@ func (editor *itemEditor) focus(index int) {
 		if editor.fields[i].kind != editorInput {
 			continue
 		}
-		if i == editor.selected {
-			editor.fields[i].input.Focus()
-		} else {
-			editor.fields[i].input.Blur()
-		}
+		editor.fields[i].input.Blur()
+	}
+	if editor.editMode == editInsert && editor.fields[editor.selected].kind == editorInput {
+		editor.fields[editor.selected].input.Focus()
 	}
 }
 
@@ -348,33 +355,49 @@ func (editor *itemEditor) update(msg tea.Msg) (tea.Cmd, bool) {
 	if len(editor.fields) == 0 {
 		return nil, false
 	}
+	if editor.editMode == editInsert {
+		if key.String() == "esc" {
+			editor.editMode = editNormal
+			for i := range editor.fields {
+				editor.fields[i].input.Blur()
+			}
+			return nil, false
+		}
+		current := &editor.fields[editor.selected]
+		if current.kind != editorInput {
+			return nil, false
+		}
+		updated, cmd := current.input.Update(msg)
+		current.input = updated
+		return cmd, false
+	}
 	current := &editor.fields[editor.selected]
 	switch key.String() {
-	case "tab", "down", "enter":
-		if current.kind == editorSave {
-			return nil, true
-		}
+	case "j", "down":
 		editor.focus(editor.nextVisible(1))
-		return nil, false
-	case "shift+tab", "up":
+	case "k", "up":
 		editor.focus(editor.nextVisible(-1))
-		return nil, false
 	}
 	if current.kind == editorChoice {
 		switch key.String() {
-		case "left":
+		case "h", "left":
 			editor.cycleChoice(-1)
-		case "right", "space":
+		case "l", "right":
 			editor.cycleChoice(1)
 		}
 		return nil, false
 	}
-	if current.kind != editorInput {
+	if current.kind == editorInput && (key.String() == "i" || key.String() == "a") {
+		editor.editMode = editInsert
+		if key.String() == "a" {
+			current.input.CursorEnd()
+		} else {
+			current.input.CursorStart()
+		}
+		editor.focus(editor.selected)
 		return nil, false
 	}
-	updated, cmd := current.input.Update(msg)
-	current.input = updated
-	return cmd, false
+	return nil, false
 }
 
 func (editor *itemEditor) cycleChoice(delta int) {
@@ -527,8 +550,6 @@ func (editor itemEditor) view(height int) string {
 			fmt.Fprintf(&b, "%s %s: %s\n", cursor, field.label, field.optionLabels[field.option])
 		case editorInput:
 			fmt.Fprintf(&b, "%s %s: %s\n", cursor, field.label, field.input.View())
-		case editorSave:
-			fmt.Fprintf(&b, "%s %s\n", cursor, field.label)
 		}
 	}
 	if end < len(indices) {
@@ -537,7 +558,11 @@ func (editor itemEditor) view(height int) string {
 	if editor.err != "" {
 		b.WriteString("\n" + editor.err + "\n")
 	}
-	b.WriteString("\nTab next  ↑/↓ move  ←/→ choose  ctrl+s save  esc cancel")
+	if editor.editMode == editInsert {
+		b.WriteString("\n-- INSERT --  esc to finish")
+	} else {
+		b.WriteString("\nj/k move  h/l choose  i/a edit  ctrl+s save  esc cancel")
+	}
 	return b.String()
 }
 

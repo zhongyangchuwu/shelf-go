@@ -197,6 +197,47 @@ func TestCreateEditorValidityUsesChoiceAndDatePrompt(t *testing.T) {
 	}
 }
 
+func TestCreateEditorModalEditFlow(t *testing.T) {
+	editor := newCreateEditor(app.DefaultSecretCreateOptions())
+	if editor.editMode != editNormal {
+		t.Fatalf("initial editMode = %v, want normal", editor.editMode)
+	}
+	titleIdx := editor.indexOf("title")
+	editor.focus(titleIdx)
+	// i enters insert mode
+	editor.update(tea.KeyPressMsg{Text: "i"})
+	if editor.editMode != editInsert {
+		t.Fatalf("editMode after i = %v, want insert", editor.editMode)
+	}
+	// esc returns to normal mode
+	editor.update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if editor.editMode != editNormal {
+		t.Fatalf("editMode after esc = %v, want normal", editor.editMode)
+	}
+	// a enters insert mode
+	editor.update(tea.KeyPressMsg{Text: "a"})
+	if editor.editMode != editInsert {
+		t.Fatalf("editMode after a = %v, want insert", editor.editMode)
+	}
+	// j/k don't navigate in insert mode
+	editor.update(tea.KeyPressMsg{Text: "j"})
+	if editor.selected != titleIdx {
+		t.Fatalf("j navigated in insert mode: selected=%d", editor.selected)
+	}
+	// h/l don't cycle choices in insert mode
+	editor.update(tea.KeyPressMsg{Text: "h"})
+	// Return to normal mode and verify j/k navigate
+	editor.update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	editor.update(tea.KeyPressMsg{Text: "j"})
+	if editor.selected == titleIdx {
+		t.Fatalf("j did not navigate in normal mode")
+	}
+	editor.update(tea.KeyPressMsg{Text: "k"})
+	if editor.selected != titleIdx {
+		t.Fatalf("k did not navigate back")
+	}
+}
+
 func setEditorValue(t *testing.T, editor *itemEditor, id, value string) {
 	t.Helper()
 	for index := range editor.fields {
