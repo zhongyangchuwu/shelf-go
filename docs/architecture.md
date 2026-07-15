@@ -36,7 +36,7 @@ config -> yaml
 
 ## Item vault
 
-`internal/vaultmodel` owns schema version 3: atomic item fields, template-owned field definitions, `env_<field>` environment mappings, `validity_<secret-field>` lifecycle metadata, validation, indexes, and shared item/field/env resolution.
+`internal/vaultmodel` owns schema version 4: atomic item fields, item descriptions, template-owned field definitions, `env_<field>` environment mappings, `validity_<secret-field>` lifecycle metadata, validation, indexes, and shared item/field/env resolution.
 
 `internal/vaultjson` owns persistence mechanics for the configured JSON file: strict decode, validated encode/save, atomic writes, and backup behavior. The JSON file is plaintext and must be protected externally.
 

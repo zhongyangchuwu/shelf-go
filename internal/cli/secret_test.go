@@ -192,9 +192,9 @@ func TestSecretUpdateMaintainsValueFreeOutput(t *testing.T) {
 	}
 	out, err := runShelf(t, "--vault", data, "secret", "update", "openai",
 		"--title", "OpenAI Personal",
+		"--description", "Personal OpenAI account",
 		"--add-label", "ai",
 		"--add-label", "personal",
-		"--add-alias", "openai-personal",
 		"--field", "provider",
 		"--value", "OpenAI personal account",
 	)
@@ -207,11 +207,11 @@ func TestSecretUpdateMaintainsValueFreeOutput(t *testing.T) {
 	if strings.Contains(out, "fake-openai-token") {
 		t.Fatalf("update leaked secret value: %q", out)
 	}
-	out, err = runShelf(t, "--vault", data, "secret", "info", "openai-personal")
+	out, err = runShelf(t, "--vault", data, "secret", "info", "OpenAI Personal")
 	if err != nil {
 		t.Fatalf("info: %v", err)
 	}
-	for _, want := range []string{"OpenAI Personal", "ai", "personal", "OpenAI personal account"} {
+	for _, want := range []string{"OpenAI Personal", "Personal OpenAI account", "ai", "personal", "OpenAI personal account"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("info missing %q:\n%s", want, out)
 		}
@@ -219,7 +219,7 @@ func TestSecretUpdateMaintainsValueFreeOutput(t *testing.T) {
 	if strings.Contains(out, "fake-openai-token") {
 		t.Fatalf("info leaked updated secret value: %q", out)
 	}
-	_, err = runShelf(t, "--vault", data, "secret", "update", "openai-personal", "--value", "attempted-secret")
+	_, err = runShelf(t, "--vault", data, "secret", "update", "OpenAI Personal", "--value", "attempted-secret")
 	if err == nil || !strings.Contains(err.Error(), "requires --field") {
 		t.Fatalf("missing field error = %v", err)
 	}

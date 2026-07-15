@@ -31,7 +31,7 @@ func validGenericSecret(id, title, env string) vaultmodel.Item {
 func validAPICredential() vaultmodel.Item {
 	return vaultmodel.Item{
 		ID: "item_api_001", Title: "OpenAI Personal API Key", Template: vaultmodel.TemplateAPICredential,
-		Labels: []string{"ai", "personal"}, Aliases: []string{"openai-key"},
+		Labels: []string{"ai", "personal"}, Description: "Personal development credential",
 		Fields: []vaultmodel.Field{
 			{ID: "credential", Value: raw(`"sk-example"`)},
 			{ID: vaultmodel.EnvFieldID("credential"), Value: raw(`"OPENAI_API_KEY"`)},
@@ -45,7 +45,7 @@ func validAPICredential() vaultmodel.Item {
 	}
 }
 
-func TestValidateV3BuiltIns(t *testing.T) {
+func TestValidateV4BuiltIns(t *testing.T) {
 	vault := vaultmodel.Vault{Version: vaultmodel.Version, Items: []vaultmodel.Item{
 		validGenericSecret("item_secret_001", "My Generic Secret", "MY_SECRET"),
 		validAPICredential(),
@@ -55,9 +55,9 @@ func TestValidateV3BuiltIns(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsV2Version(t *testing.T) {
-	vault := vaultmodel.Vault{Version: 2, Items: []vaultmodel.Item{validGenericSecret("item_secret_001", "Secret", "MY_SECRET")}}
-	if err := vaultmodel.Validate(vault); err == nil || err.Error() != "unsupported vault version: 2" {
+func TestValidateRejectsPriorVersion(t *testing.T) {
+	vault := vaultmodel.Vault{Version: 3, Items: []vaultmodel.Item{validGenericSecret("item_secret_001", "Secret", "MY_SECRET")}}
+	if err := vaultmodel.Validate(vault); err == nil || err.Error() != "unsupported vault version: 3" {
 		t.Fatalf("Validate error = %v", err)
 	}
 }

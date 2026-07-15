@@ -72,7 +72,7 @@ func TestRunDoesNotExecuteWhenResolutionFails(t *testing.T) {
 		t.Fatalf("write manifest: %v", err)
 	}
 	data := filepath.Join(dir, "vault.json")
-	if err := os.WriteFile(data, []byte(`{"version":3,"items":[]}`), 0o600); err != nil {
+	if err := os.WriteFile(data, []byte(`{"version":4,"items":[]}`), 0o600); err != nil {
 		t.Fatalf("write vault: %v", err)
 	}
 	out, err := runShelf(t, "--vault", data, "project", "run", "--", "sh", "-c", "touch "+marker)

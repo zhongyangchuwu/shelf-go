@@ -8,7 +8,6 @@ import (
 type Index struct {
 	itemsByID    map[string]Item
 	itemsByTitle map[string][]Item
-	itemsByAlias map[string][]Item
 	fieldsByEnv  map[string][]FieldRef
 }
 
@@ -30,17 +29,11 @@ func newIndexWithRegistry(v Vault, registry Registry) Index {
 	idx := Index{
 		itemsByID:    make(map[string]Item, len(v.Items)),
 		itemsByTitle: make(map[string][]Item, len(v.Items)),
-		itemsByAlias: make(map[string][]Item),
 		fieldsByEnv:  make(map[string][]FieldRef),
 	}
 	for _, item := range v.Items {
 		idx.itemsByID[item.ID] = item
 		idx.itemsByTitle[item.Title] = append(idx.itemsByTitle[item.Title], item)
-		for _, alias := range item.Aliases {
-			if alias != "" {
-				idx.itemsByAlias[alias] = append(idx.itemsByAlias[alias], item)
-			}
-		}
 		template, _ := registry.Template(item.Template)
 		templateFields := make(map[string]FieldTemplate, len(template.Fields))
 		for _, field := range template.Fields {
@@ -85,10 +78,6 @@ func (idx Index) ItemByID(id string) (Item, bool) {
 
 func (idx Index) ItemsByTitle(title string) []Item {
 	return cloneItems(idx.itemsByTitle[title])
-}
-
-func (idx Index) ItemsByAlias(alias string) []Item {
-	return cloneItems(idx.itemsByAlias[alias])
 }
 
 func (idx Index) FieldsByEnv(name string) []FieldRef {

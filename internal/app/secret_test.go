@@ -98,39 +98,32 @@ func TestCreateSecretStoresMetadataAtomically(t *testing.T) {
 	appSvc := testApp()
 
 	if _, err := appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{
-		Title:   "OpenAI personal",
-		Labels:  []string{"ai", "personal", "ai"},
-		Aliases: []string{"openai", "llm", "openai"},
-		Stdin:   true,
-		In:      strings.NewReader("fake-openai-token"),
+		Title:       "OpenAI personal",
+		Labels:      []string{"ai", "personal", "ai"},
+		Description: "Personal account",
+		Stdin:       true,
+		In:          strings.NewReader("fake-openai-token"),
 	}); err != nil {
 		t.Fatalf("CreateSecret: %v", err)
 	}
-	info, err := appSvc.SecretInfo(configPath, vaultPath, "openai")
+	info, err := appSvc.SecretInfo(configPath, vaultPath, "OpenAI personal")
 	if err != nil {
 		t.Fatalf("SecretInfo: %v", err)
 	}
 	if got, want := strings.Join(info.Labels, ","), "ai,personal"; got != want {
 		t.Fatalf("labels = %q, want %q", got, want)
 	}
-	if got, want := strings.Join(info.Aliases, ","), "openai,llm"; got != want {
-		t.Fatalf("aliases = %q, want %q", got, want)
+	if info.Description != "Personal account" {
+		t.Fatalf("description = %q", info.Description)
 	}
 
-	_, err = appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{
-		Title:   "GitHub work",
-		Aliases: []string{"openai"},
-	})
-	if err == nil || !strings.Contains(err.Error(), "selector already exists") {
-		t.Fatalf("conflicting alias error = %v", err)
-	}
-	_, err = appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{Title: "openai"})
-	if err == nil || !strings.Contains(err.Error(), "selector already exists") {
+	_, err = appSvc.CreateSecret(configPath, vaultPath, CreateSecretRequest{Title: "OpenAI personal"})
+	if err == nil || !strings.Contains(err.Error(), "already exists") {
 		t.Fatalf("conflicting title error = %v", err)
 	}
 	catalog, err := appSvc.SecretCatalog(configPath, vaultPath)
 	if err != nil {
-		t.Fatalf("SecretCatalog: %v", err)
+		t.Fatalf("catalog: %v", err)
 	}
 	if len(catalog) != 1 {
 		t.Fatalf("catalog count after rejected create = %d, want 1", len(catalog))
@@ -243,14 +236,18 @@ func TestCreateSecretAcceptsAPIMetadataFlags(t *testing.T) {
 	configPath := writeConfig(t, vaultPath)
 
 	_, err := testApp().CreateSecret(configPath, vaultPath, CreateSecretRequest{
-		Title:    "api-token",
-		Template: vaultmodel.TemplateAPICredential,
-		Provider: "Example",
-		Website:  "https://example.test",
-		Validity: "2026-12-31",
-		Scopes:   []string{"read", "write"},
-		Stdin:    true,
-		In:       strings.NewReader("fake-secret"),
+		Title:       "api-token",
+		Template:    vaultmodel.TemplateAPICredential,
+		Provider:    "Example",
+		Website:     "https://example.test",
+		Validity:    "2026-12-31",
+		Scopes:      []string{"read", "write"},
+		BaseURL:     "https://api.example.test",
+		BaseURLEnv:  "EXAMPLE_BASE_URL",
+		ClientID:    "client-123",
+		ClientIDEnv: "EXAMPLE_CLIENT_ID",
+		Stdin:       true,
+		In:          strings.NewReader("fake-secret"),
 	})
 	if err != nil {
 		t.Fatalf("CreateSecret with api metadata: %v", err)
@@ -259,7 +256,7 @@ func TestCreateSecretAcceptsAPIMetadataFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SecretInfo: %v", err)
 	}
-	want := map[string]string{"provider": "Example", "website": "https://example.test", vaultmodel.ValidityFieldID("credential"): "2026-12-31"}
+	want := map[string]string{"provider": "Example", "website": "https://example.test", "base_url": "https://api.example.test", vaultmodel.EnvFieldID("base_url"): "EXAMPLE_BASE_URL", "client_id": "client-123", vaultmodel.EnvFieldID("client_id"): "EXAMPLE_CLIENT_ID", vaultmodel.ValidityFieldID("credential"): "2026-12-31"}
 	for _, field := range info.Fields {
 		if want[field.ID] != "" && field.Value != want[field.ID] {
 			t.Fatalf("%s = %q, want %q", field.ID, field.Value, want[field.ID])
@@ -279,17 +276,14 @@ func TestUpdateSecretReadsFieldInput(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
-		Selector:  "test-update",
-		ReadField: true,
-		In:        strings.NewReader("updated-value"),
+		Selector:     "test-update",
+		FieldUpdates: []FieldUpdate{{In: strings.NewReader("updated-value"), ReadField: true}},
 	}); err != nil {
 		t.Fatalf("update primary from stdin: %v", err)
 	}
 	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
-		Selector:  "test-update",
-		Field:     vaultmodel.EnvFieldID("value"),
-		ReadField: true,
-		In:        strings.NewReader("APP_TOKEN_RENAMED"),
+		Selector:     "test-update",
+		FieldUpdates: []FieldUpdate{{Field: vaultmodel.EnvFieldID("value"), In: strings.NewReader("APP_TOKEN_RENAMED"), ReadField: true}},
 	}); err != nil {
 		t.Fatalf("update public field from stdin: %v", err)
 	}
@@ -323,40 +317,39 @@ func TestUpdateSecretMaintainsItemAndPublicFields(t *testing.T) {
 	}
 	title := "OpenAI Personal"
 	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
-		Selector:      "openai-personal",
-		Title:         title,
-		TitleSet:      true,
-		AddLabels:     []string{"ai", "personal", "ai"},
-		AddAliases:    []string{"openai", "my-openai"},
-		Field:         "provider",
-		Values:        []string{"OpenAI personal account"},
-		FieldValueSet: true,
+		Selector:       "openai-personal",
+		Title:          title,
+		TitleSet:       true,
+		Description:    "Personal account",
+		DescriptionSet: true,
+		AddLabels:      []string{"ai", "personal", "ai"},
+		FieldUpdates: []FieldUpdate{
+			{Field: "provider", Values: []string{"OpenAI personal account"}, FieldValueSet: true},
+			{Field: "base_url", Values: []string{"https://api.example.test"}, FieldValueSet: true},
+		},
 	}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
-		Selector:      title,
-		RemoveLabels:  []string{"personal"},
-		RemoveAliases: []string{"my-openai"},
-		Field:         "scopes",
-		Values:        []string{"responses", "embeddings"},
-		FieldValueSet: true,
+		Selector:     title,
+		RemoveLabels: []string{"personal"},
+		FieldUpdates: []FieldUpdate{{Field: "scopes", Values: []string{"responses", "embeddings"}, FieldValueSet: true}},
 	}); err != nil {
 		t.Fatalf("update scopes: %v", err)
 	}
-	info, err := testApp().SecretInfo(configPath, vaultPath, "openai")
+	info, err := testApp().SecretInfo(configPath, vaultPath, title)
 	if err != nil {
-		t.Fatalf("info by alias: %v", err)
+		t.Fatalf("info by title: %v", err)
 	}
-	if info.Title != title || !hasString(info.Labels, "ai") || hasString(info.Labels, "personal") || hasString(info.Aliases, "my-openai") {
+	if info.Title != title || info.Description != "Personal account" || !hasString(info.Labels, "ai") || hasString(info.Labels, "personal") {
 		t.Fatalf("updated item metadata = %#v", info)
 	}
 	publicValues := map[string]string{}
 	for _, field := range info.Fields {
 		publicValues[field.ID] = field.Value
 	}
-	if publicValues["provider"] != "OpenAI personal account" {
-		t.Fatalf("provider = %q", publicValues["provider"])
+	if publicValues["provider"] != "OpenAI personal account" || publicValues["base_url"] != "https://api.example.test" {
+		t.Fatalf("public values = %#v", publicValues)
 	}
 	var scopes []string
 	if err := json.Unmarshal([]byte(publicValues["scopes"]), &scopes); err != nil {
@@ -365,7 +358,7 @@ func TestUpdateSecretMaintainsItemAndPublicFields(t *testing.T) {
 	if strings.Join(scopes, ",") != "responses,embeddings" {
 		t.Fatalf("scopes = %#v", scopes)
 	}
-	value, err := testApp().GetSecretField(configPath, vaultPath, GetSecretFieldRequest{Selector: "openai"})
+	value, err := testApp().GetSecretField(configPath, vaultPath, GetSecretFieldRequest{Selector: title})
 	if err != nil {
 		t.Fatalf("secret value unavailable after update: %v", err)
 	}
@@ -386,7 +379,7 @@ func TestUpdateSecretClearAndFailureAreAtomicAndValueFree(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", Field: "website", ClearField: true}); err != nil {
+	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", FieldUpdates: []FieldUpdate{{Field: "website", ClearField: true}}}); err != nil {
 		t.Fatalf("clear website: %v", err)
 	}
 	info, err := testApp().SecretInfo(configPath, vaultPath, "api-token")
@@ -402,18 +395,21 @@ func TestUpdateSecretClearAndFailureAreAtomicAndValueFree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read vault before invalid update: %v", err)
 	}
-	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", Field: vaultmodel.ValidityFieldID("credential"), Values: []string{"not-a-date"}, FieldValueSet: true})
+	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", FieldUpdates: []FieldUpdate{
+		{Field: "credential", In: strings.NewReader("attempted-secret"), ReadField: true},
+		{Field: vaultmodel.ValidityFieldID("credential"), Values: []string{"not-a-date"}, FieldValueSet: true},
+	}})
 	if err == nil || !strings.Contains(err.Error(), "unknown, permanent, or YYYY-MM-DD") {
-		t.Fatalf("invalid validity update error = %v", err)
+		t.Fatalf("invalid batch update error = %v", err)
 	}
 	after, err := os.ReadFile(vaultPath)
 	if err != nil {
 		t.Fatalf("read vault after invalid update: %v", err)
 	}
 	if string(after) != string(before) {
-		t.Fatal("invalid update changed vault")
+		t.Fatal("invalid batch update changed vault")
 	}
-	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", Field: "credential", Values: []string{"attempted-secret"}, FieldValueSet: true})
+	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "api-token", FieldUpdates: []FieldUpdate{{Field: "credential", Values: []string{"attempted-secret"}, FieldValueSet: true}}})
 	if err == nil || !strings.Contains(err.Error(), "stdin input") {
 		t.Fatalf("secret field update error = %v", err)
 	}
@@ -422,7 +418,7 @@ func TestUpdateSecretClearAndFailureAreAtomicAndValueFree(t *testing.T) {
 	}
 }
 
-func TestUpdateSecretRejectsSelectorConflicts(t *testing.T) {
+func TestUpdateSecretRejectsTitleConflicts(t *testing.T) {
 	vaultPath := filepath.Join(t.TempDir(), "vault.json")
 	configPath := writeConfig(t, vaultPath)
 	for _, title := range []string{"first", "second"} {
@@ -430,12 +426,8 @@ func TestUpdateSecretRejectsSelectorConflicts(t *testing.T) {
 			t.Fatalf("create %s: %v", title, err)
 		}
 	}
-	err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "first", AddAliases: []string{"second"}})
-	if err == nil || !strings.Contains(err.Error(), "selector already exists") {
-		t.Fatalf("alias conflict error = %v", err)
-	}
 	title := "second"
-	err = testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "first", Title: title, TitleSet: true})
+	err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{Selector: "first", Title: title, TitleSet: true})
 	if err == nil || !strings.Contains(err.Error(), "selector already exists") {
 		t.Fatalf("title conflict error = %v", err)
 	}
@@ -554,9 +546,10 @@ func TestSecretCatalogIsValueFreeAndIncludesOrganization(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	if err := testApp().UpdateSecret(configPath, vaultPath, UpdateSecretRequest{
-		Selector:   "OpenAI personal",
-		AddLabels:  []string{"ai", "personal"},
-		AddAliases: []string{"openai"},
+		Selector:       "OpenAI personal",
+		Description:    "Primary AI account",
+		DescriptionSet: true,
+		AddLabels:      []string{"ai", "personal"},
 	}); err != nil {
 		t.Fatalf("organize: %v", err)
 	}
@@ -568,7 +561,7 @@ func TestSecretCatalogIsValueFreeAndIncludesOrganization(t *testing.T) {
 		t.Fatalf("catalog length = %d", len(catalog))
 	}
 	item := catalog[0]
-	if item.ID != "item_openai_personal" || item.Env != "OPENAI_API_KEY" || !item.ValueSet || !hasString(item.Labels, "ai") || !hasString(item.Aliases, "openai") {
+	if item.ID != "item_openai_personal" || item.Env != "OPENAI_API_KEY" || !item.ValueSet || !hasString(item.Labels, "ai") || item.Description != "Primary AI account" {
 		t.Fatalf("catalog item = %#v", item)
 	}
 	content, err := json.Marshal(catalog)

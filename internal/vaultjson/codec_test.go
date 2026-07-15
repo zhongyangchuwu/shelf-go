@@ -43,8 +43,8 @@ func TestJSONCodecRoundTripsVaultOrderAndMetadata(t *testing.T) {
 	if envName != "OPENAI_API_KEY" {
 		t.Fatalf("env_credential value = %q, want OPENAI_API_KEY", envName)
 	}
-	if decoded.Items[0].Aliases[0] != "app:token" {
-		t.Fatalf("items[0].aliases[0] = %q, want app:token", decoded.Items[0].Aliases[0])
+	if decoded.Items[0].Description != "CLI deployment token" {
+		t.Fatalf("items[0].description = %q", decoded.Items[0].Description)
 	}
 
 	// Metadata on second item
@@ -52,8 +52,8 @@ func TestJSONCodecRoundTripsVaultOrderAndMetadata(t *testing.T) {
 	if len(item1.Labels) != 2 || item1.Labels[0] != "ai" || item1.Labels[1] != "personal" {
 		t.Fatalf("items[1].labels = %v, want [ai personal]", item1.Labels)
 	}
-	if item1.Notes != "rotated quarterly" {
-		t.Fatalf("items[1].notes = %q, want rotated quarterly", item1.Notes)
+	if item1.Description != "rotated quarterly" {
+		t.Fatalf("items[1].description = %q, want rotated quarterly", item1.Description)
 	}
 	if item1.CreatedAt != "2026-01-15T00:00:00Z" {
 		t.Fatalf("items[1].created_at = %q, want 2026-01-15T00:00:00Z", item1.CreatedAt)
@@ -69,19 +69,21 @@ func TestJSONCodecRejectsInvalidInput(t *testing.T) {
 		content string
 		wantErr string
 	}{
-		{name: "unknown top level field", content: `{"version":3,"items":[],"extra":true}`, wantErr: "unknown field"},
-		{name: "unknown nested item field", content: `{"version":3,"items":[{"id":"item","title":"Title","template":"generic_secret","fields":[{"id":"value","value":"fake"}],"extra":true}]}`, wantErr: "unknown field"},
-		{name: "trailing json", content: `{"version":3,"items":[]} {}`, wantErr: "trailing"},
-		{name: "V2 version", content: `{"version":2,"items":[]}`, wantErr: "unsupported vault version"},
-		{name: "invalid model data", content: `{"version":3,"items":[{"id":"","title":"Title","template":"generic_secret","fields":[]}]}`, wantErr: "id is empty"},
+		{name: "unknown top level field", content: `{"version":4,"items":[],"extra":true}`, wantErr: "unknown field"},
+		{name: "unknown nested item field", content: `{"version":4,"items":[{"id":"item","title":"Title","template":"generic_secret","fields":[{"id":"value","value":"fake"}],"extra":true}]}`, wantErr: "unknown field"},
+		{name: "trailing json", content: `{"version":4,"items":[]} {}`, wantErr: "trailing"},
+		{name: "prior version", content: `{"version":3,"items":[]}`, wantErr: "unsupported vault version"},
+		{name: "invalid model data", content: `{"version":4,"items":[{"id":"","title":"Title","template":"generic_secret","fields":[]}]}`, wantErr: "id is empty"},
 		{name: "unsupported version zero", content: `{"version":0,"items":[]}`, wantErr: "unsupported vault version"},
 		{name: "unsupported version negative", content: `{"version":-1,"items":[]}`, wantErr: "unsupported vault version"},
 		{name: "unsupported version future", content: `{"version":42,"items":[]}`, wantErr: "unsupported vault version"},
-		{name: "invalid model empty title", content: `{"version":3,"items":[{"id":"x","title":"","template":"generic_secret","fields":[{"id":"value","value":"s"}]}]}`, wantErr: "title is empty"},
-		{name: "invalid model unknown template", content: `{"version":3,"items":[{"id":"x","title":"X","template":"bogus_template","fields":[]}]}`, wantErr: "template unknown"},
-		{name: "invalid model missing required field", content: `{"version":3,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[]}]}`, wantErr: "missing required field"},
-		{name: "stale V2 field metadata", content: `{"version":3,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","value":"s"}]}]}`, wantErr: "unknown field"},
-		{name: "invalid model bad field value type", content: `{"version":3,"items":[{"id":"x","title":"X","template":"api_credential","fields":[{"id":"credential","value":"x"},{"id":"validity_credential","value":"unknown"},{"id":"scopes","value":"not_an_array"}]}]}`, wantErr: "value must be string array"},
+		{name: "invalid model empty title", content: `{"version":4,"items":[{"id":"x","title":"","template":"generic_secret","fields":[{"id":"value","value":"s"}]}]}`, wantErr: "title is empty"},
+		{name: "invalid model unknown template", content: `{"version":4,"items":[{"id":"x","title":"X","template":"bogus_template","fields":[]}]}`, wantErr: "template unknown"},
+		{name: "invalid model missing required field", content: `{"version":4,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[]}]}`, wantErr: "missing required field"},
+		{name: "stale V3 field metadata", content: `{"version":4,"items":[{"id":"x","title":"X","template":"generic_secret","fields":[{"id":"value","label":"Value","value":"s"}]}]}`, wantErr: "unknown field"},
+		{name: "removed item aliases", content: `{"version":4,"items":[{"id":"x","title":"X","template":"generic_secret","aliases":["legacy"],"fields":[{"id":"value","value":"s"}]}]}`, wantErr: "unknown field"},
+		{name: "removed item notes", content: `{"version":4,"items":[{"id":"x","title":"X","template":"generic_secret","notes":"legacy","fields":[{"id":"value","value":"s"}]}]}`, wantErr: "unknown field"},
+		{name: "invalid model bad field value type", content: `{"version":4,"items":[{"id":"x","title":"X","template":"api_credential","fields":[{"id":"credential","value":"x"},{"id":"validity_credential","value":"unknown"},{"id":"scopes","value":"not_an_array"}]}]}`, wantErr: "value must be string array"},
 	}
 	codec := JSONCodec{}
 	for _, tt := range tests {
@@ -187,7 +189,7 @@ func TestRepositorySaveRejectsInvalidVaultWithoutReplacingTarget(t *testing.T) {
 func validVault() vaultmodel.Vault {
 	return vaultmodel.Vault{Version: vaultmodel.CurrentVersion, Items: []vaultmodel.Item{
 		{
-			ID: "item_app", Title: "Local app token", Template: vaultmodel.TemplateGenericSecret, Aliases: []string{"app:token"},
+			ID: "item_app", Title: "Local app token", Template: vaultmodel.TemplateGenericSecret, Description: "CLI deployment token",
 			Fields: []vaultmodel.Field{
 				{ID: "value", Value: []byte(`"fake-app-token"`)},
 				{ID: vaultmodel.EnvFieldID("value"), Value: []byte(`"APP_TOKEN"`)},
@@ -195,7 +197,7 @@ func validVault() vaultmodel.Vault {
 		},
 		{
 			ID: "item_openai", Title: "OpenAI personal API key", Template: vaultmodel.TemplateAPICredential,
-			Labels: []string{"ai", "personal"}, Notes: "rotated quarterly", CreatedAt: "2026-01-15T00:00:00Z", UpdatedAt: "2026-06-20T00:00:00Z",
+			Labels: []string{"ai", "personal"}, Description: "rotated quarterly", CreatedAt: "2026-01-15T00:00:00Z", UpdatedAt: "2026-06-20T00:00:00Z",
 			Fields: []vaultmodel.Field{
 				{ID: "credential", Value: []byte(`"fake-openai-key"`)},
 				{ID: vaultmodel.EnvFieldID("credential"), Value: []byte(`"OPENAI_API_KEY"`)},

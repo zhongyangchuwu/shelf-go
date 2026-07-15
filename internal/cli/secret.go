@@ -63,6 +63,7 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	cmd.Flags().StringVar(&req.ID, "id", "", "Stable item id")
 	cmd.Flags().StringVar(&req.Env, "env", "", "Environment variable name for the primary secret field")
 	cmd.Flags().BoolVar(&req.Stdin, "stdin", false, "Read primary secret field value from stdin")
+	cmd.Flags().StringVar(&req.Description, "description", "", "Human-readable item description")
 	cmd.Flags().StringVar(&req.Provider, "provider", "", "Provider/source public field")
 	cmd.Flags().StringVar(&req.Website, "website", "", "Website public field")
 	cmd.Flags().StringVar(&req.Validity, "validity", "", "Credential validity: unknown, permanent, or YYYY-MM-DD")
@@ -71,6 +72,7 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	_ = cmd.RegisterFlagCompletionFunc("profile", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("id", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("description", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("provider", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("website", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("validity", cobra.NoFileCompletions)
@@ -79,7 +81,12 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 }
 
 func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
-	var req app.UpdateSecretRequest
+	var (
+		req        app.UpdateSecretRequest
+		field      string
+		values     []string
+		clearField bool
+	)
 	cmd := &cobra.Command{
 		Use:   "update <selector>",
 		Short: "Update a secret item",
@@ -87,15 +94,18 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req.Selector = args[0]
 			req.TitleSet = cmd.Flags().Changed("title")
-			req.FieldValueSet = cmd.Flags().Changed("value")
-			metadataChanged := req.TitleSet || cmd.Flags().Changed("add-label") || cmd.Flags().Changed("remove-label") || cmd.Flags().Changed("add-alias") || cmd.Flags().Changed("remove-alias")
-			req.ReadField = !req.FieldValueSet && !req.ClearField && (cmd.Flags().Changed("field") || !metadataChanged)
-			if req.ReadField {
-				input, err := updateFieldInput(cmd, req.Field)
+			req.DescriptionSet = cmd.Flags().Changed("description")
+			fieldValueSet := cmd.Flags().Changed("value")
+			metadataChanged := req.TitleSet || req.DescriptionSet || cmd.Flags().Changed("add-label") || cmd.Flags().Changed("remove-label")
+			readField := !fieldValueSet && !clearField && (cmd.Flags().Changed("field") || !metadataChanged)
+			if readField {
+				input, err := updateFieldInput(cmd, field)
 				if err != nil {
 					return err
 				}
-				req.In = input
+				req.FieldUpdates = []app.FieldUpdate{{Field: field, In: input, ReadField: true}}
+			} else if fieldValueSet || clearField {
+				req.FieldUpdates = []app.FieldUpdate{{Field: field, Values: values, FieldValueSet: fieldValueSet, ClearField: clearField}}
 			}
 			configPath, vaultPath := runtimePaths(cmd)
 			if err := appSvc.UpdateSecret(configPath, vaultPath, req); err != nil {
@@ -106,17 +116,15 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&req.Title, "title", "", "New item title")
+	cmd.Flags().StringVar(&req.Description, "description", "", "Human-readable item description")
 	cmd.Flags().StringArrayVar(&req.AddLabels, "add-label", nil, "Label to add; repeat for multiple labels")
 	cmd.Flags().StringArrayVar(&req.RemoveLabels, "remove-label", nil, "Label to remove; repeat for multiple labels")
-	cmd.Flags().StringArrayVar(&req.AddAliases, "add-alias", nil, "Alias to add; repeat for multiple aliases")
-	cmd.Flags().StringArrayVar(&req.RemoveAliases, "remove-alias", nil, "Alias to remove; repeat for multiple aliases")
-	cmd.Flags().StringVar(&req.Field, "field", "", "Field id; defaults to the primary secret field when reading stdin")
-	cmd.Flags().StringArrayVar(&req.Values, "value", nil, "Public field value; repeat for a string-list field")
-	cmd.Flags().BoolVar(&req.ClearField, "clear-field", false, "Clear the selected public field")
+	cmd.Flags().StringVar(&field, "field", "", "Field id; defaults to the primary secret field when reading stdin")
+	cmd.Flags().StringArrayVar(&values, "value", nil, "Public field value; repeat for a string-list field")
+	cmd.Flags().BoolVar(&clearField, "clear-field", false, "Clear the selected public field")
+	_ = cmd.RegisterFlagCompletionFunc("description", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("add-label", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("remove-label", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("add-alias", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("remove-alias", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("value", cobra.NoFileCompletions)
 	return cmd

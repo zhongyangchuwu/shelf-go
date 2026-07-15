@@ -52,7 +52,7 @@ func (r Resolver) ResolveItem(selector string) (int, Item, error) {
 	match := -1
 	ambiguous := false
 	for i, item := range r.vault.Items {
-		if item.ID != selector && item.Title != selector && !hasString(item.Aliases, selector) {
+		if item.ID != selector && item.Title != selector {
 			continue
 		}
 		if match >= 0 {
@@ -174,7 +174,7 @@ func (r Resolver) ambiguousItemError(selector string) error {
 	var b strings.Builder
 	fmt.Fprintf(&b, "selector matched multiple items: %s", selector)
 	for _, item := range r.vault.Items {
-		if item.ID == selector || item.Title == selector || hasString(item.Aliases, selector) {
+		if item.ID == selector || item.Title == selector {
 			fmt.Fprintf(&b, "\n- %s %s", item.ID, item.Title)
 		}
 	}

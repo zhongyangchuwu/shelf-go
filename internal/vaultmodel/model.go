@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the current item-vault schema version.
-const Version = 3
+const Version = 4
 
 // CurrentVersion names the schema version written by Shelf.
 const CurrentVersion = Version
@@ -104,15 +104,14 @@ type Vault struct {
 
 // Item represents a single service, integration, or account inside a vault.
 type Item struct {
-	ID        string   `json:"id"`
-	Title     string   `json:"title"`
-	Template  string   `json:"template"`
-	Fields    []Field  `json:"fields"`
-	Labels    []string `json:"labels,omitempty"`
-	Aliases   []string `json:"aliases,omitempty"`
-	Notes     string   `json:"notes,omitempty"`
-	CreatedAt string   `json:"created_at,omitempty"`
-	UpdatedAt string   `json:"updated_at,omitempty"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Template    string   `json:"template"`
+	Fields      []Field  `json:"fields"`
+	Labels      []string `json:"labels,omitempty"`
+	Description string   `json:"description,omitempty"`
+	CreatedAt   string   `json:"created_at,omitempty"`
+	UpdatedAt   string   `json:"updated_at,omitempty"`
 }
 
 // Field is an atomic item value. Its type, label, sensitivity, and requiredness

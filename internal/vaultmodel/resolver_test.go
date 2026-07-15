@@ -14,9 +14,9 @@ func TestResolverResolvesItemFieldAndEnvName(t *testing.T) {
 		t.Fatalf("new resolver: %v", err)
 	}
 
-	_, resolved, err := resolver.ResolveItem("openai-key")
+	_, resolved, err := resolver.ResolveItem(item.Title)
 	if err != nil {
-		t.Fatalf("resolve alias: %v", err)
+		t.Fatalf("resolve title: %v", err)
 	}
 	if resolved.ID != item.ID {
 		t.Fatalf("resolved id = %q, want %q", resolved.ID, item.ID)
@@ -68,10 +68,8 @@ func TestResolverTreatsMissingOptionalEnvMappingAsUnmapped(t *testing.T) {
 }
 
 func TestResolverAmbiguityErrorsAreValueFree(t *testing.T) {
-	first := validGenericSecret("first", "First", "DUPLICATE_ENV")
-	first.Aliases = []string{"shared"}
-	second := validGenericSecret("second", "Second", "DUPLICATE_ENV")
-	second.Aliases = []string{"shared"}
+	first := validGenericSecret("first", "shared", "DUPLICATE_ENV")
+	second := validGenericSecret("second", "shared", "DUPLICATE_ENV")
 	resolver, err := vaultmodel.NewResolver(vaultmodel.Vault{Version: vaultmodel.Version, Items: []vaultmodel.Item{first, second}})
 	if err != nil {
 		t.Fatalf("new resolver: %v", err)

@@ -20,35 +20,43 @@ import (
 var itemIDPattern = regexp.MustCompile(`[^a-z0-9_]+`)
 
 type CreateSecretRequest struct {
-	Title    string
-	ID       string
-	Template string
-	Profile  string
-	Env      string
-	Stdin    bool
-	Labels   []string
-	Aliases  []string
-	In       io.Reader
-	Provider string
-	Website  string
-	Validity string
-	Scopes   []string
+	Title       string
+	ID          string
+	Template    string
+	Profile     string
+	Env         string
+	Stdin       bool
+	Labels      []string
+	Description string
+	In          io.Reader
+	Provider    string
+	Website     string
+	Validity    string
+	Scopes      []string
+	BaseURL     string
+	BaseURLEnv  string
+	ClientID    string
+	ClientIDEnv string
 }
 
-type UpdateSecretRequest struct {
-	Selector      string
-	Title         string
-	TitleSet      bool
-	AddLabels     []string
-	RemoveLabels  []string
-	AddAliases    []string
-	RemoveAliases []string
+type FieldUpdate struct {
 	Field         string
 	Values        []string
 	FieldValueSet bool
 	ClearField    bool
 	In            io.Reader
 	ReadField     bool
+}
+
+type UpdateSecretRequest struct {
+	Selector       string
+	Title          string
+	TitleSet       bool
+	Description    string
+	DescriptionSet bool
+	AddLabels      []string
+	RemoveLabels   []string
+	FieldUpdates   []FieldUpdate
 }
 
 type GetSecretFieldRequest struct {
@@ -81,7 +89,7 @@ type SecretCatalogItem struct {
 	Template          string   `json:"template"`
 	Env               string   `json:"env,omitempty"`
 	Labels            []string `json:"labels,omitempty"`
-	Aliases           []string `json:"aliases,omitempty"`
+	Description       string   `json:"description,omitempty"`
 	ValueSet          bool     `json:"value_set"`
 	ProjectableFields int      `json:"projectable_fields"`
 	SetFields         int      `json:"set_fields"`
@@ -97,13 +105,82 @@ type SecretFieldInfo struct {
 }
 
 type SecretInfo struct {
-	ID         string            `json:"id"`
-	Title      string            `json:"title"`
-	Template   string            `json:"template"`
-	Labels     []string          `json:"labels,omitempty"`
-	Aliases    []string          `json:"aliases,omitempty"`
-	PrimaryEnv string            `json:"-"`
-	Fields     []SecretFieldInfo `json:"fields"`
+	ID          string            `json:"id"`
+	Title       string            `json:"title"`
+	Template    string            `json:"template"`
+	Labels      []string          `json:"labels,omitempty"`
+	Description string            `json:"description,omitempty"`
+	PrimaryEnv  string            `json:"-"`
+	Fields      []SecretFieldInfo `json:"fields"`
+}
+
+// SecretCreateField describes a value-free field that the TUI can collect.
+type SecretCreateField struct {
+	ID          string
+	Label       string
+	Type        string
+	Sensitivity string
+	Required    bool
+}
+
+// SecretCreatePreset supplies safe public defaults for one create option.
+type SecretCreatePreset struct {
+	ID       string
+	Label    string
+	Defaults map[string]string
+}
+
+// SecretCreateOption describes one TUI-visible item kind and its presets.
+type SecretCreateOption struct {
+	ID       string
+	Label    string
+	Fields   []SecretCreateField
+	Defaults map[string]string
+	Presets  []SecretCreatePreset
+}
+
+// SecretCreateOptions returns the built-in item kinds exposed by the TUI.
+func (a *App) SecretCreateOptions() []SecretCreateOption {
+	return DefaultSecretCreateOptions()
+}
+
+// DefaultSecretCreateOptions provides the value-free built-in create schema.
+func DefaultSecretCreateOptions() []SecretCreateOption {
+	registry := vaultmodel.NewDefaultRegistry()
+	profiles := vaultmodel.BuiltInProfiles()
+	options := make([]SecretCreateOption, 0, 2)
+	for _, id := range []string{vaultmodel.TemplateGenericSecret, vaultmodel.TemplateAPICredential} {
+		template, ok := registry.Template(id)
+		if !ok {
+			continue
+		}
+		label := template.Name
+		if template.ID == vaultmodel.TemplateGenericSecret {
+			label = "Single secret"
+		}
+		option := SecretCreateOption{ID: template.ID, Label: label, Fields: make([]SecretCreateField, 0, len(template.Fields)), Defaults: map[string]string{}}
+		for _, field := range template.Fields {
+			option.Fields = append(option.Fields, SecretCreateField{ID: field.ID, Label: field.Label, Type: string(field.Type), Sensitivity: string(field.Sensitivity), Required: field.Required})
+			if _, validity := vaultmodel.IsValidityFieldID(field.ID); validity {
+				option.Defaults[field.ID] = "unknown"
+			}
+		}
+		for _, profile := range profiles {
+			if profile.Template != template.ID {
+				continue
+			}
+			preset := SecretCreatePreset{ID: profile.ID, Label: profile.Name, Defaults: make(map[string]string, len(profile.Defaults))}
+			for fieldID, raw := range profile.Defaults {
+				var value string
+				if json.Unmarshal(raw, &value) == nil {
+					preset.Defaults[fieldID] = value
+				}
+			}
+			option.Presets = append(option.Presets, preset)
+		}
+		options = append(options, option)
+	}
+	return options
 }
 
 func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecretRequest) (string, error) {
@@ -114,12 +191,8 @@ func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecre
 	if err != nil {
 		return "", err
 	}
-	aliases, err := normalizedTokens(req.Aliases, "alias")
-	if err != nil {
-		return "", err
-	}
 	req.Labels = labels
-	req.Aliases = aliases
+	req.Description = strings.TrimSpace(req.Description)
 	vault, repo, err := a.loadVaultForWrite(configPathFlag, vaultPathFlag)
 	if err != nil {
 		return "", err
@@ -137,17 +210,6 @@ func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecre
 			return "", fmt.Errorf("item title already exists: %s", item.Title)
 		}
 	}
-	if err := ensureSelectorAvailable(vault.Items, -1, item.Title); err != nil {
-		return "", err
-	}
-	for _, alias := range item.Aliases {
-		if alias == item.ID || alias == item.Title {
-			return "", fmt.Errorf("alias conflicts with item identity: %s", alias)
-		}
-		if err := ensureSelectorAvailable(vault.Items, -1, alias); err != nil {
-			return "", err
-		}
-	}
 	vault.Items = append(vault.Items, item)
 	if err := repo.Save(vault); err != nil {
 		return "", err
@@ -156,7 +218,7 @@ func (a *App) CreateSecret(configPathFlag, vaultPathFlag string, req CreateSecre
 }
 
 func (a *App) UpdateSecret(configPathFlag, vaultPathFlag string, req UpdateSecretRequest) error {
-	if err := validateSecretFieldUpdate(req); err != nil {
+	if err := validateSecretUpdate(req); err != nil {
 		return err
 	}
 	if !hasSecretUpdate(req) {
@@ -167,14 +229,6 @@ func (a *App) UpdateSecret(configPathFlag, vaultPathFlag string, req UpdateSecre
 		return err
 	}
 	removeLabels, err := normalizedTokens(req.RemoveLabels, "label")
-	if err != nil {
-		return err
-	}
-	addAliases, err := normalizedTokens(req.AddAliases, "alias")
-	if err != nil {
-		return err
-	}
-	removeAliases, err := normalizedTokens(req.RemoveAliases, "alias")
 	if err != nil {
 		return err
 	}
@@ -198,45 +252,53 @@ func (a *App) UpdateSecret(configPathFlag, vaultPathFlag string, req UpdateSecre
 		}
 		item.Title = title
 	}
-	item.Labels = removeTokens(addTokens(item.Labels, addLabels), removeLabels)
-	item.Aliases = removeTokens(addTokens(item.Aliases, addAliases), removeAliases)
-	for _, alias := range item.Aliases {
-		if alias == item.ID || alias == item.Title {
-			return fmt.Errorf("alias conflicts with item identity: %s", alias)
-		}
-		if err := ensureSelectorAvailable(vault.Items, itemIndex, alias); err != nil {
-			return err
-		}
+	if req.DescriptionSet {
+		item.Description = strings.TrimSpace(req.Description)
 	}
-	if req.FieldValueSet || req.ReadField || req.ClearField {
-		fieldIndex, field, err := resolver.DefaultField(item, req.Field)
+	item.Labels = removeTokens(addTokens(item.Labels, addLabels), removeLabels)
+	if err := applyFieldUpdates(resolver, &item, req.FieldUpdates); err != nil {
+		return err
+	}
+	vault.Items[itemIndex] = item
+	return repo.Save(vault)
+}
+
+func applyFieldUpdates(resolver vaultmodel.Resolver, item *vaultmodel.Item, updates []FieldUpdate) error {
+	seen := make(map[string]struct{}, len(updates))
+	for _, update := range updates {
+		fieldIndex, field, err := resolver.DefaultField(*item, update.Field)
 		if err != nil {
 			return err
 		}
-		if req.ClearField {
+		if _, exists := seen[field.ID]; exists {
+			return fmt.Errorf("secret update contains duplicate field: %s", field.ID)
+		}
+		seen[field.ID] = struct{}{}
+		if update.ClearField {
 			if field.Sensitivity != vaultmodel.SensitivityPublic {
 				return fmt.Errorf("only public fields can be cleared: %s", field.ID)
 			}
 			item.Fields[fieldIndex].Value = nil
-		} else if req.ReadField {
-			value, err := readFieldValue(req.In, field.Type)
-			if err != nil {
-				return err
-			}
-			item.Fields[fieldIndex].Value = value
-		} else {
-			if field.Sensitivity != vaultmodel.SensitivityPublic {
-				return fmt.Errorf("secret field requires stdin input: %s", field.ID)
-			}
-			value, err := publicFieldValue(field.Type, req.Values)
-			if err != nil {
-				return err
-			}
-			item.Fields[fieldIndex].Value = value
+			continue
 		}
+		if update.ReadField {
+			value, err := readFieldValue(update.In, field.Type)
+			if err != nil {
+				return err
+			}
+			item.Fields[fieldIndex].Value = value
+			continue
+		}
+		if field.Sensitivity != vaultmodel.SensitivityPublic {
+			return fmt.Errorf("secret field requires stdin input: %s", field.ID)
+		}
+		value, err := publicFieldValue(field.Type, update.Values)
+		if err != nil {
+			return err
+		}
+		item.Fields[fieldIndex].Value = value
 	}
-	vault.Items[itemIndex] = item
-	return repo.Save(vault)
+	return nil
 }
 
 func (a *App) GetSecretField(configPathFlag, vaultPathFlag string, req GetSecretFieldRequest) (string, error) {
@@ -343,7 +405,7 @@ func (a *App) SecretCatalog(configPathFlag, vaultPathFlag string) ([]SecretCatal
 		}
 		items = append(items, SecretCatalogItem{
 			ID: item.ID, Title: item.Title, Template: item.Template, Env: env,
-			Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...), ValueSet: len(field.Value) > 0,
+			Labels: append([]string(nil), item.Labels...), Description: item.Description, ValueSet: len(field.Value) > 0,
 			ProjectableFields: projectableFields, SetFields: setFields, EnvMappings: envMappings,
 		})
 	}
@@ -393,7 +455,7 @@ func (a *App) SecretInfo(configPathFlag, vaultPathFlag, selector string) (Secret
 	if err != nil {
 		return SecretInfo{}, err
 	}
-	info := SecretInfo{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Aliases: append([]string(nil), item.Aliases...), PrimaryEnv: primaryEnv}
+	info := SecretInfo{ID: item.ID, Title: item.Title, Template: item.Template, Labels: append([]string(nil), item.Labels...), Description: item.Description, PrimaryEnv: primaryEnv}
 	for _, storedField := range item.Fields {
 		_, field, err := resolver.Field(item, storedField.ID)
 		if err != nil {
@@ -477,7 +539,7 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 	if !ok {
 		return vaultmodel.Item{}, fmt.Errorf("template not found: %s", templateID)
 	}
-	item := vaultmodel.Item{ID: req.ID, Title: req.Title, Template: tmpl.ID, Labels: append([]string(nil), req.Labels...), Aliases: append([]string(nil), req.Aliases...)}
+	item := vaultmodel.Item{ID: req.ID, Title: req.Title, Template: tmpl.ID, Labels: append([]string(nil), req.Labels...), Description: req.Description}
 	if item.ID == "" {
 		item.ID = itemIDFromTitle(req.Title)
 	}
@@ -512,6 +574,23 @@ func buildSecretItem(req CreateSecretRequest, registry vaultmodel.Registry) (vau
 	if req.Website != "" {
 		if err := setFieldValueIfPresent(&item, "website", rawString(req.Website)); err != nil {
 			return vaultmodel.Item{}, fmt.Errorf("--website is not supported by template %s: %w", tmpl.ID, err)
+		}
+	}
+	for _, update := range []struct {
+		field string
+		value string
+		label string
+	}{
+		{field: "base_url", value: req.BaseURL, label: "base URL"},
+		{field: vaultmodel.EnvFieldID("base_url"), value: req.BaseURLEnv, label: "base URL environment variable"},
+		{field: "client_id", value: req.ClientID, label: "client ID"},
+		{field: vaultmodel.EnvFieldID("client_id"), value: req.ClientIDEnv, label: "client ID environment variable"},
+	} {
+		if update.value == "" {
+			continue
+		}
+		if err := setFieldValueIfPresent(&item, update.field, rawString(update.value)); err != nil {
+			return vaultmodel.Item{}, fmt.Errorf("%s is not supported by template %s: %w", update.label, tmpl.ID, err)
 		}
 	}
 	if req.Validity != "" {
@@ -553,27 +632,42 @@ func rawString(value string) json.RawMessage {
 }
 
 func hasSecretUpdate(req UpdateSecretRequest) bool {
-	return req.TitleSet || len(req.AddLabels) > 0 || len(req.RemoveLabels) > 0 || len(req.AddAliases) > 0 || len(req.RemoveAliases) > 0 || req.FieldValueSet || req.ClearField || req.ReadField
+	return req.TitleSet || req.DescriptionSet || len(req.AddLabels) > 0 || len(req.RemoveLabels) > 0 || len(req.FieldUpdates) > 0
 }
 
-func validateSecretFieldUpdate(req UpdateSecretRequest) error {
-	if req.FieldValueSet && req.ReadField {
-		return fmt.Errorf("secret update cannot use --value with stdin input")
+func validateSecretUpdate(req UpdateSecretRequest) error {
+	for index, update := range req.FieldUpdates {
+		if err := validateFieldUpdate(update); err != nil {
+			return fmt.Errorf("secret update field %d: %w", index+1, err)
+		}
+		if update.Field == "" && len(req.FieldUpdates) > 1 {
+			return fmt.Errorf("secret update field %d requires a field id", index+1)
+		}
 	}
-	if req.FieldValueSet && req.ClearField {
-		return fmt.Errorf("secret update cannot use --value with --clear-field")
+	return nil
+}
+
+func validateFieldUpdate(update FieldUpdate) error {
+	if update.FieldValueSet && update.ReadField {
+		return fmt.Errorf("cannot use --value with stdin input")
 	}
-	if req.ReadField && req.ClearField {
-		return fmt.Errorf("secret update cannot read stdin with --clear-field")
+	if update.FieldValueSet && update.ClearField {
+		return fmt.Errorf("cannot use --value with --clear-field")
 	}
-	if req.FieldValueSet || req.ClearField {
-		if req.Field == "" {
-			return fmt.Errorf("secret update requires --field")
+	if update.ReadField && update.ClearField {
+		return fmt.Errorf("cannot read stdin with --clear-field")
+	}
+	if update.ReadField && update.In == nil {
+		return fmt.Errorf("stdin input is required")
+	}
+	if update.FieldValueSet || update.ClearField {
+		if update.Field == "" {
+			return fmt.Errorf("requires --field")
 		}
 		return nil
 	}
-	if !req.ReadField && (req.Field != "" || len(req.Values) > 0) {
-		return fmt.Errorf("secret update field requires --value, --clear-field, or stdin input")
+	if !update.ReadField && (update.Field != "" || len(update.Values) > 0) {
+		return fmt.Errorf("requires --value, --clear-field, or stdin input")
 	}
 	return nil
 }
@@ -640,7 +734,7 @@ func ensureSelectorAvailable(items []vaultmodel.Item, itemIndex int, selector st
 		if i == itemIndex {
 			continue
 		}
-		if item.ID == selector || item.Title == selector || hasString(item.Aliases, selector) {
+		if item.ID == selector || item.Title == selector {
 			return fmt.Errorf("item selector already exists: %s", selector)
 		}
 	}
@@ -832,15 +926,7 @@ func itemHasLabels(item vaultmodel.Item, labels []string) bool {
 }
 
 func matchesItemQuery(item vaultmodel.Item, query string) bool {
-	if strings.Contains(item.ID, query) || strings.Contains(item.Title, query) || strings.Contains(item.Template, query) {
-		return true
-	}
-	for _, alias := range item.Aliases {
-		if strings.Contains(alias, query) {
-			return true
-		}
-	}
-	return false
+	return strings.Contains(item.ID, query) || strings.Contains(item.Title, query) || strings.Contains(item.Template, query) || strings.Contains(item.Description, query)
 }
 
 func hasString(values []string, want string) bool {
