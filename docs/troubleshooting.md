@@ -35,7 +35,7 @@ shelf secret list --long
 shelf secret info <selector>
 ```
 
-Selectors can be item ID, title, or alias.
+Selectors can be item ID or title.
 
 ## `env export --label` exports fewer fields than expected
 
