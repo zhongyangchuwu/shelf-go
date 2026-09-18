@@ -1,10 +1,12 @@
 # Shelf Go
 
+> **Project status: maintenance / research artifact.** Shelf Go is no longer under active feature development. `v0.2.0` is the final experimental implementation milestone. The repository is retained as a reference implementation for local-first credential modeling, value-free metadata, explicit project bindings, and agent-safe secret workflows. New feature work should require a concrete gap that is not better handled by an established secret store or the surrounding Personal AI OS.
+
 Shelf Go is a local, CLI-first secret manager for one developer. It stores item-based secrets in a local JSON vault and leaves encryption/sync to your dotfile tooling, such as chezmoi.
 
 The current product is CLI-first: scriptable secret and project workflows remain authoritative, while optional wide-screen workspaces support interactive secret and project-binding management.
 
-**Current local milestone:** `v0.2.0`. This marks the shipped personal-workflow feature set; it is not a public tag or release.
+**Final experimental milestone:** `v0.2.0`. This marks the shipped personal-workflow feature set; it is not a public tag or release. There is no active feature roadmap.
 
 ## Setup
 
@@ -155,7 +157,7 @@ Audit lifecycle validity without materializing values:
 shelf secret audit --within 30
 ```
 
-Tracked fields report `expired`, `due`, `unknown`, `invalid`, `permanent`, or `healthy` status. The command exits `3` for expired credentials, `2` for warnings, and `0` when all tracked fields are healthy or permanent. Use `--format json` for value-free script output.
+Human-readable output reports `expired`, `due`, `unknown`, `invalid`, `permanent`, or `healthy`. JSON uses the stable machine status `expiring` where human output says `due`. The command exits `3` for expired credentials, `2` for warnings, and `0` when all tracked fields are healthy or permanent. Use `--format json` for value-free script output.
 
 ## Health check
 
@@ -167,6 +169,7 @@ shelf doctor
 
 ## Current non-goals
 
+- Active expansion into a general-purpose secret platform. Shelf remains a completed experiment unless a concrete integration gap justifies a small change.
 - Built-in age encryption. Use chezmoi or another external tool for encrypted sync.
 - Vault compatibility or automatic migration. See the [manual migration guide](docs/v3-migration.md), including the V3-to-V4 description cutover.
 - Web manager. Both secret and project binding TUI workspaces are available; browser and hosted interfaces remain deferred.
