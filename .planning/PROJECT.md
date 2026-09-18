@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Shelf Go is a personal, local, CLI-first secret manager. It stores item-based secrets in a local JSON vault and relies on external tooling such as chezmoi for encryption/sync.
+Shelf Go is a completed personal experiment in local, CLI-first secret management. It stores item-based secrets in a local JSON vault and relies on external tooling such as chezmoi for encryption/sync. The repository is now maintained as a research artifact/reference implementation rather than an actively expanding product.
 
 ## Current State
 
@@ -13,18 +13,17 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - [x] Local workstation config now points at `/home/han/.local/share/shelf/vault.json`, copied from the previous item sidecar after backup.
 - [x] Human-facing secret list/create output is routed through `internal/cliui`.
 - [x] `secret copy` provides clipboard-only interactive retrieval while `secret get` remains scriptable stdout output.
-- [x] `secret update` maintains item title, labels, aliases, and public fields atomically while keeping secret writes stdin-only.
+- [x] `secret update` maintains item title, labels, descriptions, and public fields atomically while keeping secret writes stdin-only.
 - [x] `shelf tui` provides a wide-screen secret workspace with safe catalog/filter/detail views, masked forms, clipboard copy, and app-backed mutations.
 - [x] `shelf project tui` manages current-worktree bindings with safe resolution diagnostics, picker/form workflows, and app-owned manifest persistence.
 - [x] `shelf secret audit` supplies value-free credential expiry signals in CLI, secret TUI, project TUI, and project status without changing export/run enforcement.
 
-### Planned
+### Maintenance
 
-- [x] Scriptable item lifecycle is complete.
-- [x] Wide-screen secret workspace TUI is complete.
-- [x] Project binding TUI is complete.
-- [x] Credential health audit is complete.
-- [x] Personal workflow UX roadmap is complete; a future milestone requires explicit planning.
+- [x] Scriptable item lifecycle, wide-screen secret/project TUI workspaces, and credential health audit are complete.
+- [x] Schema V4 is the active contract: item aliases are removed, `description` is public metadata, and selectors accept ID or title only.
+- [x] `v0.2.0` is the final experimental milestone. There is no active successor feature roadmap.
+- [x] Future changes require a concrete bug, security issue, documentation correction, or proven integration gap.
 
 ### Out of Scope
 
@@ -32,7 +31,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 - v1 compatibility and automatic migration.
 - Web manager.
 - Team sharing, hosted sync, browser autofill, or daemon unlock flows.
-- Public repository/release packaging until a future v1.0.0 milestone.
+- Public repository/release packaging and a successor feature milestone.
 
 ## Constraints
 
@@ -62,7 +61,7 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Use item vault JSON as canonical file | It is easy to inspect, back up, and encrypt externally. | Default vault path is `~/.local/share/shelf/vault.json`. |
 | Drop v1 compatibility | Personal-use project; compatibility burden slows local iteration. | Removed v1 vault, manager, import/migrate/export, project selectors. |
 | Keep CLI authoritative before adding TUI | Scriptability and one canonical workflow path must survive interactive UX work. | Existing CLI remains the authority; optional TUI phases start only after scriptable lifecycle parity. |
-| Defer public release work | Repository stays private/local until a future v1.0.0 milestone. | Removed v0.2.0 tag/release preparation from active scope. |
+| Close active feature development after v0.2.0 | Established secret stores and the surrounding Personal AI OS should own new storage, sync, notification, and agent-delivery needs unless Shelf exposes a concrete unique gap. | Shelf is maintained as a research artifact/reference implementation with no active successor milestone. |
 | Copy through an explicit command | Interactive secret retrieval should not break stdout-based scripting. | `secret copy` writes only to the clipboard and returns value-free confirmation. |
 | Use a shared model resolver | Secret and project workflows must agree on item, field, and env-name semantics. | `vaultmodel.Resolver` is the only active owner of those rules. |
 | Treat `.env` as a projection, not the primary model | A developer should maintain values and context once, then select fields for a project or command. | The vault is item-first; project bindings and exports are value-free runtime projections. |
@@ -70,6 +69,6 @@ Shelf Go is a personal, local, CLI-first secret manager. It stores item-based se
 | Use lifecycle validity as an advisory health signal | Local workflows need timely maintenance signals without hidden runtime enforcement or remote dependencies. | V3 tracks `validity_<secret-field>` values and adds value-free audit status; export/run remain unchanged. |
 | Keep vault backups at the configured restrictive mode | A `.bak` file contains the prior plaintext vault and is equally sensitive. | Atomic backup writes now repair the requested mode even when the backup already exists. |
 | Use a fixed Catppuccin Mocha frame for TUI workspaces | The shared dark palette and visible two-panel frame make catalog/detail context legible without a new theme configuration surface. | Phase 52 applies rounded persistent panels, blue active borders, and text focus markers to secret and project workspaces. |
-| Use V3 prefix conventions for field relationships | Item fields must remain atomic while templates define durable structure. | V3 stores only item field IDs and values; `env_<field>` and `validity_<secret-field>` replace per-field roles and target metadata. |
+| Keep prefix conventions for field relationships | Item fields must remain atomic while templates define durable structure. | The V4 schema retains `env_<field>` and `validity_<secret-field>` conventions while replacing aliases/legacy notes with public descriptions. |
 
-*Last updated: 2026-07-13 after Item-First Environment Projection V3*
+*Last updated: 2026-09-18 after the V4/current-state and maintenance review*
