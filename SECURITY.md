@@ -56,13 +56,13 @@ Project manifests live at `<git-root>/.shelf.json`. They may be committed after 
 These operations intentionally handle plaintext values:
 
 - `shelf secret get` prints a value.
-- `shelf secret export` prints values in shell/env/JSON form.
+- `shelf env export` prints explicitly mapped values in shell/JSON form.
 - `shelf project export` prints resolved project values.
 - `shelf project run` puts values in a child process environment.
 - `shelf secret create --stdin` and `shelf secret update` read plaintext values from stdin; interactive `secret update` prompts without echoing input.
 
 Generated `.env` and `.env.local` files are plaintext artifacts. Add them to `.gitignore`, do not commit them unless encrypted by an external tool, and delete them when no longer needed.
 
-## Non-goals
+## Maintenance scope
 
-Shelf does not currently provide built-in encryption, team sharing, hosted sync, browser autofill, a Web manager, or a long-running unlock daemon. It does provide optional wide-screen secret and project-binding TUI workspaces; they reuse app workflows and never reveal secret values.
+Shelf is in maintenance mode. Built-in encryption, team sharing, hosted sync, browser autofill, a Web manager, long-running unlock daemon, provider adapters, and automatic rotation are not planned. The optional wide-screen secret and project-binding TUI workspaces remain part of the final experimental implementation; they reuse app workflows and never reveal secret values.
