@@ -2,25 +2,26 @@
 
 ## Current Position
 
-- Version: v0.2.0 local milestone
-- Phase: Item-First Environment Projection V3
-- Status: complete
-- Active Artifact: `.planning/phases/053-item-first-environment-projection/VERIFICATION.md`
-- Next Action: Continue using the active V3 vault; if an external encrypted source is authoritative, apply the same manual migration there before its next sync.
+- Version: v0.2.0 final experimental milestone
+- Schema: V4
+- Status: maintenance / research artifact
+- Active Artifact: none
+- Active Feature Roadmap: none
+- Next Action: use established secret infrastructure for new personal workflows; change Shelf only for a concrete bug, security issue, documentation correction, or proven integration gap.
 
 ## Blockers
 
 - None.
 
-## Recent Evidence
+## Historical and Current Evidence
 - The default CLI version is `v0.2.0`; `shelf --version` reported the local milestone without creating a public tag or release.
 
-- Phase 53 completed the V3 breaking schema cutover: vault fields persist only `id` and `value`; templates own field shape; schema version is `3`.
+- Phase 53 completed the historical V3 breaking schema cutover: vault fields persisted only `id` and `value` while templates owned field shape. V4 later replaced item aliases/legacy notes with public `description`; V4 is the active schema.
 - `env_<field>` maps eligible secret and public `string`, `concealed`, or `url` fields for `shelf env export`; `secret export` is removed with no alias.
 - `validity_<secret-field>` provides field-level lifecycle audit states: unknown, permanent, invalid, expired, expiring, and healthy. Untracked fields are omitted.
 - Project bindings accept the same eligible public and secret field types; manifests stay value-free.
 - Secret and project TUI workspaces remain optional, keyboard-first, and value-free. Secret detail groups structural env/validity metadata under its target field.
-- User-facing docs describe the V3 command contract and `docs/v3-migration.md` provides a value-free manual migration checklist.
+- `docs/v3-migration.md` remains a historical manual migration record. Current maintained docs describe the V4 command contract.
 - Phase 53 verification passed: focused V3 package tests, `bash scripts/test.sh`, `go build ./cmd/shelf`, a temporary-vault CLI projection/audit/project-export smoke, and a 120×32 pseudo-terminal secret TUI smoke with secret redaction and alternate-screen restoration.
 - The active local plaintext vault was manually migrated from V2 to V3: 16 generic-secret items changed `value_env` to `env_value`, with atomic fields only. Exact V2 backup: `/home/han/.local/share/shelf/backups/pre-v3-migration-20260714-024329/vault.json` (`0600`). Active `doctor`, `secret list --long`, audit, info, and both label projection groups passed; one group intentionally projected no mapped fields.
 - The local V3 vault was semantically consolidated: 16 legacy `item:field` titles became 15 item titles without `:`; the one two-field group uses one custom template with two concealed secret fields. All 16 secret reads and both label projections matched the pre-consolidation V3 vault. No `.shelf.json` manifests exist under `/home/han/project`; selector mapping and exact V3 backup: `/home/han/.local/share/shelf/backups/pre-semantic-item-migration-20260714-025446/` (`0600`).
@@ -41,4 +42,4 @@
 
 ## Updated
 
-- 2026-07-13
+- 2026-09-18
