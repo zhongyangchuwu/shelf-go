@@ -1,12 +1,12 @@
-# Roadmap: Shelf Go v0.2.0
+# Roadmap: Shelf Go v0.2.0 (Closed)
 
 ## Overview
 
 v0.2.0 is the local item-vault CLI milestone. The product intentionally drops built-in age/v1 compatibility and uses a plaintext JSON item vault that can be encrypted externally with chezmoi or similar tooling.
 
-This milestone is for local development and personal use. Public repository/release work is deferred until a future v1.0.0 milestone.
+This milestone was for local development and personal use. The roadmap is now closed: Shelf is retained as a maintenance-mode research artifact rather than being advanced toward a new feature milestone.
 
-**Current version:** `v0.2.0` is the local milestone label and the default CLI version. It does not create a public tag, release, or packaging workflow.
+**Final experimental version:** `v0.2.0` is the local milestone label and the default CLI version. It does not create a public tag, release, or packaging workflow.
 
 ## Completed v0.2.0 Work
 
@@ -36,7 +36,7 @@ This milestone is for local development and personal use. Public repository/rele
 
 **Execution order:** Phase 47 is the CLI/API foundation. Phase 48 delivers the complete personal secret workspace on wide terminals. Phase 49 adds project bindings to the established workspace. Phase 50 surfaces operational health in both CLI and TUI.
 
-**No release work:** no public repository preparation, GoReleaser packaging, GitHub Release, or tag workflow for v0.2.0.
+**No active release work:** no public repository preparation, GoReleaser packaging, GitHub Release, tag workflow, or successor feature milestone is planned.
 
 ## Completed Cutover
 
@@ -110,13 +110,11 @@ This milestone is for local development and personal use. Public repository/rele
 - Allowed project binding/export/run for eligible public and secret fields, and grouped structural metadata in value-free TUI detail.
 - Added V3 model, codec, app, CLI, project, TUI, full-suite, temporary-vault, and pseudo-terminal verification; published a manual migration guide.
 
-## Deferred Beyond the Personal Workflow UX Plan
+## Maintenance Decision
 
-1. Web manager for item vaults.
-2. Optional built-in encryption if external encryption becomes insufficient.
-3. Optional migration automation with explicit review/rollback UX.
-4. Team/hosted sync workflows.
-5. Public repository/release packaging for v1.0.0.
+The previously deferred platform features are now explicitly **not planned**: Web management, built-in encryption, hosted/team sync, accounts, daemon scheduling, provider adapters, automatic credential rotation, and public release packaging. Established secret stores should own secret storage, encryption, sync, expiry notification, and runtime delivery. Shelf remains useful as a reference for value-free metadata, explicit project bindings, lifecycle modeling, and capability-oriented agent access.
+
+Post-Phase-53 V4 work replaced item aliases and legacy notes with public `description`, and item lookup now accepts ID or title only. V4 is the active schema.
 
 ---
-*Last updated: 2026-07-13 after Item-First Environment Projection V3*
+*Last updated: 2026-09-18 after the V4/current-state and maintenance review*

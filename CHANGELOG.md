@@ -4,6 +4,12 @@ All notable user-facing changes will be recorded here.
 
 ## Unreleased
 
+### Project status
+
+- Marked Shelf Go `v0.2.0` as the final experimental implementation milestone and moved the repository to maintenance/research-artifact status.
+- Closed the active feature roadmap. New storage, sync, reminder, provider, and agent-delivery capabilities should default to established secret infrastructure and the surrounding Personal AI OS unless a concrete Shelf-specific gap is proven.
+- Reconciled maintained documentation with schema V4: item aliases are removed, `description` is public metadata, and selectors accept item ID or title only.
+
 ### Breaking changes
 
 - Removed built-in age encryption and the v1 encrypted vault stack. Shelf now uses a local plaintext JSON item vault; use chezmoi or another external tool for encrypted sync.
@@ -12,18 +18,18 @@ All notable user-facing changes will be recorded here.
 - Removed project configure TUI; project bindings are managed through CLI commands.
 - Replaced the old `group:key` secret CLI with item/field workflows.
 - Removed v0.2.0 release packaging/tag automation from active local-development scope; public release work is deferred to a future v1.0.0 milestone.
-- Removed the redundant `env` export format; `secret export` and `project export` now support `shell` and `json` only.
+- Replaced the old secret export surface with `shelf env export`; `project export` remains available for project bindings.
 - Removed `secret set`; `secret update` is now the single item mutation command and reads field values from stdin by default.
 
 ### Added
 
 - Added `shelf setup` for config and item-vault JSON initialization.
 - Added item-vault `shelf doctor` checks for config, permissions, loadability, and completion state.
-- Added template-based secret item commands: `secret create`, `update`, `get`, `list --long`, `info`, `rm --yes`, and label-scoped `secret export --label`.
+- Added template-based secret item commands: `secret create`, `update`, `get`, `list --long`, `info`, `rm --yes`, and label-scoped `env export --label`.
 - Added concrete project item/field bindings for `project status`, `project add`, `project list`, `project rm`, `project export`, and `project run`.
 - Added shared Lip Gloss-backed human output rendering for secret create/list output.
 - Added `shelf secret copy` for clipboard-only interactive secret retrieval with value-free confirmation.
-- Added `shelf secret update` for atomic item title, label, alias, public field, and stdin field-value changes without editing vault JSON.
+- Added `shelf secret update` for atomic item title, label, public metadata, and stdin field-value changes without editing vault JSON.
 
 ### Fixed
 
