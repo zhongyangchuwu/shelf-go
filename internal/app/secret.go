@@ -88,6 +88,7 @@ type SecretCatalogItem struct {
 	Title             string   `json:"title"`
 	Template          string   `json:"template"`
 	Env               string   `json:"env,omitempty"`
+	EnvNames          []string `json:"env_names,omitempty"`
 	Labels            []string `json:"labels,omitempty"`
 	Description       string   `json:"description,omitempty"`
 	ValueSet          bool     `json:"value_set"`
@@ -385,6 +386,7 @@ func (a *App) SecretCatalog(configPathFlag, vaultPathFlag string) ([]SecretCatal
 			return nil, fmt.Errorf("catalog %s: %w", item.Title, err)
 		}
 		projectableFields, setFields, envMappings := 0, 0, 0
+		var envNames []string
 		for _, storedField := range item.Fields {
 			if !resolver.IsProjectableField(item, storedField.ID) {
 				continue
@@ -397,14 +399,18 @@ func (a *App) SecretCatalog(configPathFlag, vaultPathFlag string) ([]SecretCatal
 			if len(projected.Value) > 0 {
 				setFields++
 			}
-			if _, mapped, err := resolver.EnvName(item, storedField.ID); err != nil {
+			if name, mapped, err := resolver.EnvName(item, storedField.ID); err != nil {
 				return nil, fmt.Errorf("catalog %s env name: %w", item.Title, err)
 			} else if mapped {
 				envMappings++
+				if !hasString(envNames, name) {
+					envNames = append(envNames, name)
+				}
 			}
 		}
+		sort.Strings(envNames)
 		items = append(items, SecretCatalogItem{
-			ID: item.ID, Title: item.Title, Template: item.Template, Env: env,
+			ID: item.ID, Title: item.Title, Template: item.Template, Env: env, EnvNames: envNames,
 			Labels: append([]string(nil), item.Labels...), Description: item.Description, ValueSet: len(field.Value) > 0,
 			ProjectableFields: projectableFields, SetFields: setFields, EnvMappings: envMappings,
 		})

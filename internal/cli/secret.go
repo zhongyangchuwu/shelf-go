@@ -26,6 +26,7 @@ func newSecretCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.Comm
 		},
 	}
 	cmd.AddCommand(newSecretCreateCmd(appSvc))
+	cmd.AddCommand(newSecretSetCmd(appSvc))
 	cmd.AddCommand(newSecretUpdateCmd(appSvc))
 	cmd.AddCommand(newSecretGetCmd(appSvc))
 	cmd.AddCommand(newSecretCopyCmd(appSvc, clipboardWriter))

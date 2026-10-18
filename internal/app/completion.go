@@ -16,6 +16,8 @@ const (
 	CompleteSecretFields
 	CompleteSecretTemplates
 	CompleteSecretProfiles
+	CompleteSecretSetEnvNames
+	CompleteSecretSetTargets
 )
 
 type SecretCompletionRequest struct {
@@ -109,7 +111,12 @@ func (a *App) SecretCompletions(configPath, vaultPath string, req SecretCompleti
 				candidates = append(candidates, item.Labels...)
 			}
 		}
-	case CompleteSecretEnvNames:
+	case CompleteSecretSetTargets:
+		if _, err := newEnvironmentSecret(req.Env); err != nil {
+			return nil, err
+		}
+		return secretSetTargets(vault, req.Env)
+	case CompleteSecretEnvNames, CompleteSecretSetEnvNames:
 		resolver := vaultmodel.NewResolverFromValidatedVault(vault)
 		counts := make(map[string]int)
 		for _, item := range vault.Items {
@@ -129,7 +136,7 @@ func (a *App) SecretCompletions(configPath, vaultPath string, req SecretCompleti
 		}
 		unique := candidates[:0]
 		for _, name := range candidates {
-			if counts[name] == 1 {
+			if counts[name] == 1 || req.Target == CompleteSecretSetEnvNames {
 				unique = append(unique, name)
 			}
 		}
