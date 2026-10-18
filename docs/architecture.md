@@ -62,6 +62,8 @@ Active command groups:
 
 `shelf tui` and `shelf project tui` require an interactive terminal at least 100 columns × 24 rows. They use app workflows and the clipboard boundary for explicit copy/paste, mask secret input, and never provide a secret-reveal view. Asynchronous paste results stay attached to the input that requested them; changing focus cannot paste a secret into another field.
 
+The secret editor retains drafts only in memory across validation and write failures. Save attempts are single-flight and tied to their originating editor; success or explicit discard drops editor-held input references. Dirty cancel/quit actions require confirmation. Catalog metadata includes every eligible mapped environment name for value-free search without adding a persistence path.
+
 ## Explicitly deferred
 
 - Built-in encryption.

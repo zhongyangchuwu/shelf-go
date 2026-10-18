@@ -34,7 +34,16 @@ Enable [shell completion](docs/reference.md#shelf-completion) to complete secret
 
 ## Store and inspect secrets
 
-Secret values enter through stdin, not argv:
+Secret values enter through stdin, not argv.
+
+Set a value by environment variable name, using hidden terminal input or a pipe:
+
+```bash
+shelf secret set MY_API_TOKEN
+printf %s "$MY_API_TOKEN" | shelf secret set MY_API_TOKEN
+```
+
+A unique mapping updates only that field and preserves its item metadata. An unmapped name creates a single-secret item. Ambiguous names require an explicit selection; see [`secret set`](docs/reference.md#shelf-secret-set) for scripting with `--target`.
 
 `secret create` prints a small summary with title, id, template, and env name. `secret list --long` prints a titled, aligned table without secret values.
 ```bash
@@ -100,6 +109,8 @@ shelf tui
 ```
 
 Use `a` to create, `e` to edit the selected item, `c` or `Ctrl+C` to copy a selected/default field, and `d` to remove an item after confirmation. Use `q` to quit the workspace. Create and Edit open a scrollable modal form: `j`/`k` or arrow keys move between fields, `h`/`l` or left/right cycle choices, `i` enters insert mode for text fields (`a` enters at end), `esc` returns to normal mode, and `ctrl+s` saves. In insert mode, use `Ctrl+V` or your terminal's paste shortcut; search inputs also accept both. Secret inputs are masked and never prefilled; the form has no dedicated save button. `/` searches safe catalog metadata; `f` filters by template and labels. The catalog is title-first and uses a colored symbol for missing, attention, healthy, or unavailable state; Detail shows the reason, fields, and environment mappings. `get`, `env export`, and project run remain CLI-first.
+
+Search also matches primary and secondary environment names case-insensitively. Failed saves retain the masked draft in memory for `Ctrl+S` retry. Cancelling or quitting with unsaved changes requires confirmation; drafts are never written to disk and cannot be recovered after the process exits.
 
 For API credentials, choose lifecycle validity with left/right: `Unknown`, `Permanent`, or `Expires on date`; the date choice exposes a required `YYYY-MM-DD` prompt. Switching an API preset back to `No preset` clears values that still match that preset’s defaults, while values changed away from those defaults remain.
 

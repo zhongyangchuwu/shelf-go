@@ -37,7 +37,31 @@ shelf tui
 
 The catalog, search, filters, detail, help, and confirmation screens are value-free. `a`, `e`, `c`, and `d` create, update, copy, and delete through the existing app and clipboard workflows. Create and Edit are single scrollable forms; the create form distinguishes item kind from optional provider presets, and secrets are masked without a reveal action. `secret get`, exports, and project execution remain CLI commands.
 
-In the catalog workspace, `c` or `Ctrl+C` copies the selected field (or the primary secret when no field is selected); `q` quits. In form insert mode and search, `Ctrl+V` reads the system clipboard, and terminal paste shortcuts such as Windows Terminal's `Ctrl+Shift+V` also work. A typed `q` is text in these inputs. `Ctrl+C` still quits outside the catalog workspace. Clipboard failures preserve the active input and never display clipboard contents.
+In the catalog workspace, `c` or `Ctrl+C` copies the selected field (or the primary secret when no field is selected); `q` quits. In form insert mode and search, `Ctrl+V` reads the system clipboard, and terminal paste shortcuts such as Windows Terminal's `Ctrl+Shift+V` also work. A typed `q` is text in these inputs. Clipboard failures preserve the active input and never display clipboard contents. Search matches all primary and secondary environment names case-insensitively, in addition to the other public catalog metadata.
+
+The secret editor keeps drafts only in memory. Validation or save failures retain every input, including masked secrets, so `Ctrl+S` can retry after the problem is corrected. Saving blocks further editing until the result arrives; resizing the terminal preserves the editor. Successful saves and explicit discards clear editor-held inputs, but do not promise secure erasure of Go string memory.
+
+In insert mode, `Esc` only returns to normal mode. In normal mode, `Esc` requests cancellation and `q` or `Ctrl+C` requests quitting. If the form has unsaved changes, `y` explicitly discards them; `n` or `Esc` keeps editing, and `Enter` does nothing. Unchanged or reverted forms exit without confirmation. Closing or forcibly terminating the process still loses an unsaved draft.
+
+## `shelf secret set`
+
+Sets a value by environment variable name without choosing a template or item title first.
+
+```bash
+shelf secret set <ENV> [--target ITEM.FIELD]
+```
+
+With interactive stdin, Shelf prompts without echoing the value. Otherwise it reads stdin directly; no `--stdin` flag is needed. Values are never accepted through argv or a `--value` flag. Success prints only a value-free confirmation.
+
+- One existing mapping: updates only that mapped field, preserving the item's ID, title, template, labels, description, and other fields.
+- No existing mapping: creates a generic single-secret item titled `<ENV>`, with the normal derived item ID and environment mapping. ID/title collisions fail without adopting or overwriting an unrelated item; use `secret create` with an explicit distinct title/ID in that case.
+- Multiple mappings: interactive use offers a numbered target picker before reading the value; a blank choice cancels. Noninteractive use requires `--target ITEM.FIELD`, using an exact stable item ID and an eligible field mapped to that ENV. Titles are not accepted as targets.
+
+```bash
+printf %s "$OPENAI_API_KEY" | shelf secret set OPENAI_API_KEY --target item_openai.credential
+```
+
+Existing field types and sensitivity are retained: setting a public mapped field does not make it secret. The workflow rechecks the target after reading input and refuses stale mappings or schema changes. Invalid input and failed saves leave the vault unchanged and do not print collected values.
 
 ## `shelf secret create`
 
@@ -222,6 +246,8 @@ shelf project run [--dry-run] -- <command> [args...]
 ## `shelf completion`
 
 Generates shell completion for supported shells. Dynamic candidates include unambiguous secret IDs/titles, mapped `--env` names, `--field` names for the selected item, labels, and compatible template/profile IDs and aliases. Project field completion excludes metadata fields that cannot be bound. Completion reads one vault snapshot, never prints secret values, and does not create missing config or vault files.
+
+`secret set` also completes ambiguous environment names because they can be selected explicitly; its `--target` candidates are limited to concrete fields mapped to the chosen ENV.
 
 ```bash
 shelf completion [bash|zsh|fish|powershell]

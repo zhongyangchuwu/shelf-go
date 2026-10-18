@@ -42,6 +42,7 @@ Shelf is CLI-first. The TUI is an optional interactive front-end over existing w
 shelf setup
 shelf doctor
 shelf tui
+shelf secret set <ENV> [--target ITEM.FIELD]
 shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--validity VALUE] [--stdin]
 shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
 shelf secret get <selector> [--field FIELD]
