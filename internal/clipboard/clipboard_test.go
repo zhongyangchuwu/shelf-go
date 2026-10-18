@@ -1,8 +1,10 @@
 package clipboard
 
 import (
+	"bytes"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -155,5 +157,34 @@ func TestWindowsClipboardCommandReturnsFallbackError(t *testing.T) {
 	)
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want %v", err, want)
+	}
+}
+
+func TestWindowsClipboardCopyWritesUTF16LEWithoutBOM(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		text string
+		want []byte
+	}{
+		{name: "ASCII", text: "Shelf", want: []byte{'S', 0, 'h', 0, 'e', 0, 'l', 0, 'f', 0}},
+		{name: "Chinese and supplementary rune", text: "用户 🔑", want: []byte{0x28, 0x75, 0x37, 0x62, 0x20, 0x00, 0x3d, 0xd8, 0x11, 0xdd}},
+		{name: "combining mark and trailing newline", text: "e\u0301\r\n", want: []byte{0x65, 0x00, 0x01, 0x03, 0x0d, 0x00, 0x0a, 0x00}},
+		{name: "empty"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			capture := filepath.Join(t.TempDir(), "clipboard.bin")
+			t.Setenv("SHELF_TEST_CLIPBOARD_CAPTURE", capture)
+			installClipboardReader(t, "clip.exe", "/bin/cat > \"$SHELF_TEST_CLIPBOARD_CAPTURE\"\n")
+			if err := copyWithWindowsClipboard(test.text); err != nil {
+				t.Fatalf("copy to Windows clipboard: %v", err)
+			}
+			got, err := os.ReadFile(capture)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, test.want) {
+				t.Fatalf("Windows clipboard bytes = %x, want %x", got, test.want)
+			}
+		})
 	}
 }

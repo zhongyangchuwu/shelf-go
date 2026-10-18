@@ -85,8 +85,8 @@ func TestCopyAndErrorViewsNeverRenderSecretValues(t *testing.T) {
 	m, service, clipboard := readyModel(t)
 	updated, cmd := m.copySelectedField()
 	m = updated.(Model)
-	result := cmd().(actionDoneMsg)
-	if result.err != nil || result.status != "Copied secret to clipboard." || result.refresh {
+	result := cmd().(copyDoneMsg)
+	if result.err != nil || result.status != "Copied secret to clipboard." {
 		t.Fatalf("copy result = %#v", result)
 	}
 	if clipboard.copied != fakeSecret {

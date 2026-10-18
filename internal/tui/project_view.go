@@ -194,8 +194,9 @@ func (m ProjectModel) renderProjectHelp() string {
 		"d              remove selected binding after confirmation\n" +
 		"i              initialize an empty manifest when missing\n" +
 		"/              filter the candidate picker\n" +
+		"ctrl+v         paste into the active text input\n" +
 		"r              reload\n" +
 		"esc            cancel\n" +
-		"q / ctrl+c     quit\n\n" +
+		"q / ctrl+c     quit (q is text while editing/searching)\n\n" +
 		"? / esc return\n"
 }

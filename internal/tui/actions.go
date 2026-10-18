@@ -157,12 +157,12 @@ func (m Model) copySelectedField() (tea.Model, tea.Cmd) {
 	return m, func() tea.Msg {
 		value, err := m.service.GetSecretField(m.options.ConfigPath, m.options.VaultPath, app.GetSecretFieldRequest{Selector: m.currentID(), Field: field})
 		if err != nil {
-			return actionDoneMsg{err: err}
+			return copyDoneMsg{err: err}
 		}
 		if err := m.clipboardWriter.CopyText(value); err != nil {
-			return actionDoneMsg{err: err}
+			return copyDoneMsg{err: err}
 		}
-		return actionDoneMsg{status: "Copied " + displayField(field) + " to clipboard."}
+		return copyDoneMsg{status: "Copied " + displayField(field) + " to clipboard."}
 	}
 }
 

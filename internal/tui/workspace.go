@@ -61,9 +61,15 @@ type actionDoneMsg struct {
 	err     error
 }
 
+type copyDoneMsg struct {
+	status string
+	err    error
+}
+
 type Model struct {
 	service         Service
 	clipboardWriter clipboard.Writer
+	clipboardReader clipboard.Reader
 	options         Options
 
 	screen screen
@@ -105,6 +111,7 @@ func NewModel(service Service, clipboardWriter clipboard.Writer, options Options
 	return Model{
 		service:         service,
 		clipboardWriter: clipboardWriter,
+		clipboardReader: clipboard.NewReader(),
 		options:         options,
 		screen:          screenLoading,
 		pane:            paneCatalog,
@@ -123,6 +130,8 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case workspacePasteMsg:
+		return m.finishClipboardPaste(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		if m.tooSmall() {
@@ -168,6 +177,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.syncDetailViewport()
 		}
 		return m, nil
+	case copyDoneMsg:
+		if msg.err != nil {
+			m.status = "Could not copy to system clipboard."
+		} else {
+			m.status = msg.status
+		}
+		return m, nil
 	case actionDoneMsg:
 		if msg.err != nil {
 			m.screen = screenError
@@ -199,8 +215,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
-	if key == "ctrl+c" || key == "q" {
+	if key == "ctrl+c" {
+		if m.screen == screenWorkspace {
+			return m.copySelectedField()
+		}
 		return m, tea.Quit
+	}
+	if key == "q" && m.screen != screenSearch && !(m.screen == screenForm && m.form.editor != nil && m.form.editor.editMode == editInsert) {
+		return m, tea.Quit
+	}
+	if key == "ctrl+v" && (m.screen == screenSearch || m.activeEditorInput() != nil) {
+		return m, m.readClipboard()
 	}
 	if m.screen == screenResize {
 		if key == "r" {
@@ -325,7 +350,7 @@ func (m Model) renderWorkspace() string {
 	left := m.styles.renderPanel("Catalog", m.renderCatalog(panelContentWidth(leftWidth)), m.catalogPanelActive(), leftWidth, panelHeight)
 	right := m.styles.renderPanel(m.rightPanelTitle(), m.renderRight(panelContentWidth(rightWidth)), m.rightPanelActive(), rightWidth, panelHeight)
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right)
-	footer := m.styles.renderFooter("Tab pane  a add  e edit  c copy  d delete  / search  f filters  r reload  ? help  q quit", m.width)
+	footer := m.styles.renderFooter("Tab pane  a add  e edit  c/Ctrl+C copy  d delete  / search  f filters  r reload  ? help  q quit", m.width)
 	if m.status != "" {
 		footer = m.styles.renderStatus(m.status, m.width) + "\n" + footer
 	}
@@ -419,11 +444,12 @@ func (m Model) renderHelp() string {
 		"f              filter template and labels\n" +
 		"a              create item\n" +
 		"e              edit selected item\n" +
-		"c              copy selected/default field\n" +
+		"c / ctrl+c     copy selected/default field in workspace\n" +
+		"ctrl+v         paste into the active text input\n" +
 		"d              delete selected item after confirmation\n" +
 		"r              reload\n" +
 		"esc            cancel\n" +
-		"q / ctrl+c     quit\n\n" +
+		"q              quit (text while editing/searching)\n\n" +
 		"? / esc return\n"
 }
 

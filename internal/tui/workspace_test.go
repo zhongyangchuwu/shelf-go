@@ -18,11 +18,12 @@ type fakeService struct {
 	info    map[string]app.SecretInfo
 	health  app.CredentialAuditReport
 
-	created []app.CreateSecretRequest
-	updated []app.UpdateSecretRequest
-	removed []string
-	value   string
-	err     error
+	created   []app.CreateSecretRequest
+	updated   []app.UpdateSecretRequest
+	removed   []string
+	retrieved []app.GetSecretFieldRequest
+	value     string
+	err       error
 }
 
 func (s *fakeService) SecretCatalog(_, _ string) ([]app.SecretCatalogItem, error) {
@@ -56,7 +57,8 @@ func (s *fakeService) UpdateSecret(_, _ string, req app.UpdateSecretRequest) err
 	return s.err
 }
 
-func (s *fakeService) GetSecretField(_, _ string, _ app.GetSecretFieldRequest) (string, error) {
+func (s *fakeService) GetSecretField(_, _ string, req app.GetSecretFieldRequest) (string, error) {
+	s.retrieved = append(s.retrieved, req)
 	return s.value, s.err
 }
 

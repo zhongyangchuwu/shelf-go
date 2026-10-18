@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
+	"github.com/zhongyangchuwu/shelf-go/internal/clipboard"
 )
 
 type projectScreen uint8
@@ -39,8 +40,9 @@ type projectActionDoneMsg struct {
 }
 
 type ProjectModel struct {
-	service ProjectService
-	options Options
+	service         ProjectService
+	options         Options
+	clipboardReader clipboard.Reader
 
 	screen projectScreen
 	width  int
@@ -64,11 +66,12 @@ func NewProjectModel(service ProjectService, options Options) ProjectModel {
 	query.Prompt = "/ "
 	query.Placeholder = "Filter item, field, or env name"
 	return ProjectModel{
-		service:        service,
-		options:        options,
-		screen:         projectLoading,
-		styles:         newWorkspaceStyles(),
-		candidateQuery: query,
+		service:         service,
+		options:         options,
+		clipboardReader: clipboard.NewReader(),
+		screen:          projectLoading,
+		styles:          newWorkspaceStyles(),
+		candidateQuery:  query,
 	}
 }
 
@@ -78,6 +81,8 @@ func (m ProjectModel) Init() tea.Cmd {
 
 func (m ProjectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case projectPasteMsg:
+		return m.finishProjectClipboardPaste(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		if m.projectTooSmall() {
@@ -134,8 +139,11 @@ func (m ProjectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m ProjectModel) handleProjectKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
-	if key == "ctrl+c" || key == "q" {
+	if key == "ctrl+c" || (key == "q" && m.screen != projectPickerSearch && m.projectTextInput() == nil) {
 		return m, tea.Quit
+	}
+	if key == "ctrl+v" && (m.screen == projectPickerSearch || m.projectTextInput() != nil) {
+		return m, m.readProjectClipboard()
 	}
 	if m.screen == projectResize {
 		if key == "r" {

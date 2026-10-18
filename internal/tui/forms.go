@@ -345,18 +345,15 @@ func (editor *itemEditor) focus(index int) {
 }
 
 func (editor *itemEditor) update(msg tea.Msg) (tea.Cmd, bool) {
-	key, ok := msg.(tea.KeyPressMsg)
-	if !ok {
-		return nil, false
-	}
-	if key.String() == "ctrl+s" {
+	key, isKey := msg.(tea.KeyPressMsg)
+	if isKey && key.String() == "ctrl+s" {
 		return nil, true
 	}
 	if len(editor.fields) == 0 {
 		return nil, false
 	}
 	if editor.editMode == editInsert {
-		if key.String() == "esc" {
+		if isKey && key.String() == "esc" {
 			editor.editMode = editNormal
 			for i := range editor.fields {
 				editor.fields[i].input.Blur()
@@ -370,6 +367,9 @@ func (editor *itemEditor) update(msg tea.Msg) (tea.Cmd, bool) {
 		updated, cmd := current.input.Update(msg)
 		current.input = updated
 		return cmd, false
+	}
+	if !isKey {
+		return nil, false
 	}
 	current := &editor.fields[editor.selected]
 	switch key.String() {
@@ -559,7 +559,7 @@ func (editor itemEditor) view(height int) string {
 		b.WriteString("\n" + editor.err + "\n")
 	}
 	if editor.editMode == editInsert {
-		b.WriteString("\n-- INSERT --  esc to finish")
+		b.WriteString("\n-- INSERT --  ctrl+v paste  esc to finish")
 	} else {
 		b.WriteString("\nj/k move  h/l choose  i/a edit  ctrl+s save  esc cancel")
 	}
