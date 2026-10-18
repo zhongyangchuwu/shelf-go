@@ -87,4 +87,4 @@ Exit `3` means at least one tracked field is expired. Exit `2` means a tracked f
 
 ## Completion not installed
 
-Install completions for your shell and make sure `FPATH`/`fpath` contains the directory that holds `_shelf`.
+Follow the [shell completion instructions](reference.md#shelf-completion), then open a new shell. For zsh, add the directory containing `_shelf` to `fpath` before running `compinit`; after upgrading Shelf, regenerate `_shelf`. For Bash, load `source <(shelf completion bash)` from `~/.bashrc`.

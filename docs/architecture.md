@@ -10,7 +10,7 @@ cmd/shelf/                    process entry point
 internal/cli/                 Cobra command tree, flags, completions, output routing, and no-echo terminal field prompts
 internal/cliui/               Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
 internal/tui/                 Bubble Tea secret and project-binding workspaces; app/clipboard-backed only
-internal/clipboard/           System clipboard adapter; uses `clip.exe`, then `wl-copy`, under WSL and github.com/atotto/clipboard elsewhere
+internal/clipboard/           System clipboard adapter; WSL Windows bridges with Wayland fallbacks, native clipboard elsewhere
 internal/app/                 application workflows for secret, credential health, project, setup, doctor, and run
 
 internal/vaultmodel/          item/field/template model, validation, template-role lookups, and shared item/field/env resolver
@@ -60,7 +60,7 @@ Active command groups:
 
 ## Interactive workspaces
 
-`shelf tui` and `shelf project tui` require an interactive terminal at least 100 columns × 24 rows. They use app workflows (plus clipboard for explicit copy), mask secret input, and never provide a secret-reveal view.
+`shelf tui` and `shelf project tui` require an interactive terminal at least 100 columns × 24 rows. They use app workflows and the clipboard boundary for explicit copy/paste, mask secret input, and never provide a secret-reveal view. Asynchronous paste results stay attached to the input that requested them; changing focus cannot paste a secret into another field.
 
 ## Explicitly deferred
 

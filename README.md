@@ -30,6 +30,8 @@ shelf --vault ~/.local/share/shelf/vault.json secret list
 
 The vault JSON contains secret values. Do not commit it unless an external tool such as chezmoi encrypts it first.
 
+Enable [shell completion](docs/reference.md#shelf-completion) to complete secret IDs and titles, environment and field names, labels, and compatible templates or profiles without exposing values.
+
 ## Store and inspect secrets
 
 Secret values enter through stdin, not argv:
@@ -97,7 +99,7 @@ On a 100×24-or-larger interactive terminal, open the optional full-screen catal
 shelf tui
 ```
 
-Use `a` to create, `e` to edit the selected item, `c` to copy a selected/default field, and `d` to remove an item after confirmation. Create and Edit open a scrollable modal form: `j`/`k` or arrow keys move between fields, `h`/`l` or left/right cycle choices, `i` enters insert mode for text fields (`a` enters at end), `esc` returns to normal mode, and `ctrl+s` saves. Secret inputs are masked and never prefilled; the form has no dedicated save button. `/` searches safe catalog metadata; `f` filters by template and labels. The catalog is title-first and uses a colored symbol for missing, attention, healthy, or unavailable state; Detail shows the reason, fields, and environment mappings. `get`, `env export`, and project run remain CLI-first.
+Use `a` to create, `e` to edit the selected item, `c` or `Ctrl+C` to copy a selected/default field, and `d` to remove an item after confirmation. Use `q` to quit the workspace. Create and Edit open a scrollable modal form: `j`/`k` or arrow keys move between fields, `h`/`l` or left/right cycle choices, `i` enters insert mode for text fields (`a` enters at end), `esc` returns to normal mode, and `ctrl+s` saves. In insert mode, use `Ctrl+V` or your terminal's paste shortcut; search inputs also accept both. Secret inputs are masked and never prefilled; the form has no dedicated save button. `/` searches safe catalog metadata; `f` filters by template and labels. The catalog is title-first and uses a colored symbol for missing, attention, healthy, or unavailable state; Detail shows the reason, fields, and environment mappings. `get`, `env export`, and project run remain CLI-first.
 
 For API credentials, choose lifecycle validity with left/right: `Unknown`, `Permanent`, or `Expires on date`; the date choice exposes a required `YYYY-MM-DD` prompt. Switching an API preset back to `No preset` clears values that still match that preset’s defaults, while values changed away from those defaults remain.
 

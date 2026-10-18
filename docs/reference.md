@@ -37,7 +37,7 @@ shelf tui
 
 The catalog, search, filters, detail, help, and confirmation screens are value-free. `a`, `e`, `c`, and `d` create, update, copy, and delete through the existing app and clipboard workflows. Create and Edit are single scrollable forms; the create form distinguishes item kind from optional provider presets, and secrets are masked without a reveal action. `secret get`, exports, and project execution remain CLI commands.
 
-
+In the catalog workspace, `c` or `Ctrl+C` copies the selected field (or the primary secret when no field is selected); `q` quits. In form insert mode and search, `Ctrl+V` reads the system clipboard, and terminal paste shortcuts such as Windows Terminal's `Ctrl+Shift+V` also work. A typed `q` is text in these inputs. `Ctrl+C` still quits outside the catalog workspace. Clipboard failures preserve the active input and never display clipboard contents.
 
 ## `shelf secret create`
 
@@ -84,7 +84,7 @@ shelf secret copy <selector> [--field FIELD]
 shelf secret copy --env ENV [--field FIELD]
 ```
 
-Clipboard initialization or write failures return an error and do not fall back to printing the value. On WSL, Shelf first uses the Windows clipboard bridge (`clip.exe`) and falls back to `wl-copy` when the bridge fails. On Linux outside WSL, the clipboard backend requires `xclip` or `xsel`.
+Clipboard initialization or write failures return an error and do not fall back to printing the value. On WSL, Shelf writes Unicode text through `clip.exe`, falling back to `wl-copy`; TUI clipboard reads use Windows PowerShell, falling back to `wl-paste`. The Windows executables can be found at their standard `/mnt/c/Windows/System32` paths even when absent from `PATH`. On Linux outside WSL, the native clipboard backend requires `xclip` or `xsel`.
 
 ## `shelf secret list`
 
@@ -221,7 +221,7 @@ shelf project run [--dry-run] -- <command> [args...]
 
 ## `shelf completion`
 
-Generates shell completion for supported shells.
+Generates shell completion for supported shells. Dynamic candidates include unambiguous secret IDs/titles, mapped `--env` names, `--field` names for the selected item, labels, and compatible template/profile IDs and aliases. Project field completion excludes metadata fields that cannot be bound. Completion reads one vault snapshot, never prints secret values, and does not create missing config or vault files.
 
 ```bash
 shelf completion [bash|zsh|fish|powershell]
@@ -234,4 +234,18 @@ mkdir -p ~/.zfunc
 shelf completion zsh > ~/.zfunc/_shelf
 ```
 
-Ensure `~/.zfunc` is present in `fpath`; `shelf doctor` reports completion install status.
+Add this to `~/.zshrc`, placing the `fpath` assignment before any existing `compinit` call:
+
+```zsh
+fpath=(~/.zfunc $fpath)
+autoload -Uz compinit
+compinit
+```
+
+For Bash, add this to `~/.bashrc`:
+
+```bash
+source <(shelf completion bash)
+```
+
+Open a new shell after installing completion. After upgrading Shelf, regenerate the zsh completion file and restart the shell. `shelf doctor` reports completion install status.
