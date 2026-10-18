@@ -10,7 +10,7 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/vaultmodel"
 )
 
-func TestCreateActionBuildsAPIRequestAndDropsSecretDraft(t *testing.T) {
+func TestCreateActionRetainsDraftUntilSuccess(t *testing.T) {
 	m, service, _ := readyModel(t)
 	editor := newCreateEditor(app.DefaultSecretCreateOptions())
 	editor.template = vaultmodel.TemplateAPICredential
@@ -26,12 +26,12 @@ func TestCreateActionBuildsAPIRequestAndDropsSecretDraft(t *testing.T) {
 
 	updated, cmd := m.submitForm()
 	m = updated.(Model)
-	if editor.value("field:credential") != "" {
-		t.Fatal("create form retained the secret draft after submission")
+	if editor.value("field:credential") != fakeSecret || !m.form.saving {
+		t.Fatal("create form lost the secret draft before write success")
 	}
 	message := cmd()
-	result, ok := message.(actionDoneMsg)
-	if !ok || result.err != nil || !result.refresh {
+	result, ok := message.(formSavedMsg)
+	if !ok || result.err != nil {
 		t.Fatalf("create result = %#v", message)
 	}
 	if len(service.created) != 1 {
@@ -43,6 +43,10 @@ func TestCreateActionBuildsAPIRequestAndDropsSecretDraft(t *testing.T) {
 	}
 	if got := m.render(); strings.Contains(got, fakeSecret) {
 		t.Fatalf("create view exposed secret: %q", got)
+	}
+	m = updateModel(t, m, result)
+	if m.form.editor != nil || len(editor.fields) != 0 || len(editor.baseline) != 0 || m.screen != screenLoading {
+		t.Fatal("successful create retained editor inputs or did not reload")
 	}
 }
 
@@ -58,11 +62,12 @@ func TestUnifiedEditActionBuildsAtomicFieldUpdates(t *testing.T) {
 
 	updated, cmd := m.submitForm()
 	m = updated.(Model)
-	if m.form.editor.value("field:credential") != "" {
-		t.Fatal("edit form retained the secret draft after submission")
+	editor := m.form.editor
+	if editor.value("field:credential") != fakeSecret || !m.form.saving {
+		t.Fatal("edit form lost the secret draft before write success")
 	}
-	result := cmd().(actionDoneMsg)
-	if result.err != nil || !result.refresh {
+	result := cmd().(formSavedMsg)
+	if result.err != nil {
 		t.Fatalf("update result = %#v", result)
 	}
 	if len(service.updated) != 1 {
@@ -78,6 +83,10 @@ func TestUnifiedEditActionBuildsAtomicFieldUpdates(t *testing.T) {
 	}
 	if !updates["credential"] || !updates["provider"] {
 		t.Fatalf("field updates = %#v", request.FieldUpdates)
+	}
+	m = updateModel(t, m, result)
+	if m.form.editor != nil || len(editor.fields) != 0 || len(editor.baseline) != 0 || m.screen != screenLoading {
+		t.Fatal("successful edit retained editor inputs or did not reload")
 	}
 }
 

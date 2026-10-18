@@ -156,7 +156,7 @@ func TestModelLabelFilterUsesANDSemantics(t *testing.T) {
 func TestModelResizeAndPaneSelection(t *testing.T) {
 	m, _, _ := readyModel(t)
 	m = updateModel(t, m, tea.WindowSizeMsg{Width: 80, Height: 23})
-	if m.screen != screenResize || !strings.Contains(m.render(), "100 columns") {
+	if m.screen != screenWorkspace || !strings.Contains(m.render(), "100 columns") {
 		t.Fatalf("small terminal state = %v, view = %q", m.screen, m.render())
 	}
 	m = updateModel(t, m, tea.WindowSizeMsg{Width: 120, Height: 32})

@@ -13,6 +13,7 @@ type workspacePasteMsg struct {
 	err     error
 	screen  screen
 	input   *textinput.Model
+	epoch   uint64
 }
 
 type projectPasteMsg struct {
@@ -24,7 +25,7 @@ type projectPasteMsg struct {
 }
 
 func (m Model) activeEditorInput() *textinput.Model {
-	if m.screen != screenForm || m.form.editor == nil {
+	if m.screen != screenForm || m.form.editor == nil || m.form.saving || m.tooSmall() {
 		return nil
 	}
 	editor := m.form.editor
@@ -40,7 +41,7 @@ func (m Model) activeEditorInput() *textinput.Model {
 
 func (m Model) readClipboard() tea.Cmd {
 	reader := m.clipboardReader
-	result := workspacePasteMsg{screen: m.screen, input: m.activeEditorInput()}
+	result := workspacePasteMsg{screen: m.screen, input: m.activeEditorInput(), epoch: m.pasteEpoch}
 	return func() tea.Msg {
 		result.content, result.err = reader.ReadText()
 		return result
@@ -48,7 +49,7 @@ func (m Model) readClipboard() tea.Cmd {
 }
 
 func (m Model) finishClipboardPaste(msg workspacePasteMsg) (tea.Model, tea.Cmd) {
-	if m.screen != msg.screen || (m.screen != screenSearch && (msg.input == nil || m.activeEditorInput() != msg.input)) {
+	if m.tooSmall() || msg.epoch != m.pasteEpoch || m.screen != msg.screen || (m.screen != screenSearch && (msg.input == nil || m.activeEditorInput() != msg.input)) {
 		return m, nil
 	}
 	if msg.err != nil {

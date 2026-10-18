@@ -7,7 +7,17 @@ import (
 	"github.com/zhongyangchuwu/shelf-go/internal/app"
 )
 
+type formSavedMsg struct {
+	editor *itemEditor
+	saveID uint64
+	status string
+	err    error
+}
+
 func (m Model) submitForm() (tea.Model, tea.Cmd) {
+	if m.form.saving || m.screen == screenConfirmDiscard {
+		return m, nil
+	}
 	if m.form.editor == nil {
 		m.screen = screenError
 		return m, nil
@@ -17,33 +27,56 @@ func (m Model) submitForm() (tea.Model, tea.Cmd) {
 		editor.err = err.Error()
 		return m, nil
 	}
+	if m.form.kind == formEdit && !editor.dirty() {
+		m.status = "No changes."
+		return m.discardForm(false)
+	}
+	editor.err = ""
+	m.form.saveID++
+	result := formSavedMsg{editor: editor, saveID: m.form.saveID}
+	service, options := m.service, m.options
 	switch m.form.kind {
 	case formCreate:
 		req := editor.createRequest()
-		editor.clearSecrets()
-		m.screen = screenLoading
+		m.form.saving = true
 		return m, func() tea.Msg {
-			_, err := m.service.CreateSecret(m.options.ConfigPath, m.options.VaultPath, req)
-			return actionDoneMsg{status: "Created secret item.", refresh: true, err: err}
+			_, result.err = service.CreateSecret(options.ConfigPath, options.VaultPath, req)
+			result.status = "Created secret item."
+			return result
 		}
 	case formEdit:
-		req, changed := editor.updateRequest(m.detail, m.currentID())
-		editor.clearSecrets()
+		req, changed := editor.updateRequest(m.form.detail, m.form.selector)
 		if !changed {
-			m.form = formState{}
-			m.screen = screenWorkspace
 			m.status = "No changes."
-			return m, nil
+			return m.discardForm(false)
 		}
-		m.screen = screenLoading
+		m.form.saving = true
 		return m, func() tea.Msg {
-			err := m.service.UpdateSecret(m.options.ConfigPath, m.options.VaultPath, req)
-			return actionDoneMsg{status: "Updated secret item.", refresh: true, err: err}
+			result.err = service.UpdateSecret(options.ConfigPath, options.VaultPath, req)
+			result.status = "Updated secret item."
+			return result
 		}
 	default:
 		m.screen = screenError
 		return m, nil
 	}
+}
+
+func (m Model) finishFormSave(msg formSavedMsg) (tea.Model, tea.Cmd) {
+	if !m.form.saving || m.form.editor != msg.editor || m.form.saveID != msg.saveID {
+		return m, nil
+	}
+	m.form.saving = false
+	if msg.err != nil {
+		m.form.editor.err = "Could not save. Draft kept in memory; Ctrl+S retries. No secret value was displayed."
+		m.screen = screenForm
+		return m, nil
+	}
+	m.form.editor.clearInputs()
+	m.form = formState{}
+	m.status = msg.status
+	m.screen = screenLoading
+	return m, m.reloadCatalog()
 }
 
 func (editor itemEditor) createRequest() app.CreateSecretRequest {

@@ -93,6 +93,7 @@ func TestWorkspaceQIsTextWhileEditingOrSearching(t *testing.T) {
 	}
 	m = updateModel(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = updateModel(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	m = updateModel(t, m, tea.KeyPressMsg{Text: "y"})
 	m = updateModel(t, m, tea.KeyPressMsg{Text: "/"})
 	m = updateModel(t, m, tea.KeyPressMsg{Text: "q"})
 	if m.screen != screenSearch || m.query.Value() != "q" {
@@ -203,7 +204,7 @@ func TestWorkspaceCopyResultPreservesNewerDraftAndSearch(t *testing.T) {
 }
 
 func TestWorkspaceCtrlCQuitsOutsideWorkspace(t *testing.T) {
-	for _, state := range []screen{screenSearch, screenForm, screenFilters, screenConfirmDelete, screenHelp, screenError, screenLoading, screenResize} {
+	for _, state := range []screen{screenSearch, screenForm, screenFilters, screenConfirmDelete, screenHelp, screenError, screenLoading} {
 		m, service, _ := readyModel(t)
 		m.screen = state
 		_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
@@ -241,6 +242,33 @@ func TestWorkspaceClipboardPasteRespectsInputLimitAndEmptyClipboard(t *testing.T
 			}
 			if m.form.editor.value("field:credential") != want {
 				t.Fatal("clipboard paste changed the input's character-limit or empty-paste behavior")
+			}
+		})
+	}
+}
+
+func TestWorkspacePendingPasteSurvivesTypingInSameInput(t *testing.T) {
+	for _, search := range []bool{false, true} {
+		t.Run(fmt.Sprintf("search=%t", search), func(t *testing.T) {
+			m, _, _ := editingSecretModel(t)
+			if search {
+				m = updateModel(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
+				m = updateModel(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
+				m = updateModel(t, m, tea.KeyPressMsg{Text: "/"})
+			}
+			m.clipboardReader = &fakeClipboardReader{text: "clipboard fragment"}
+			updated, paste := m.Update(tea.KeyPressMsg{Code: 'v', Mod: tea.ModCtrl})
+			m = updateModel(t, updated.(Model), tea.KeyPressMsg{Text: "x"})
+			m = updateModel(t, m, paste())
+			value := m.query.Value()
+			if !search {
+				value = m.form.editor.value("field:credential")
+				if strings.Contains(m.render(), "clipboard fragment") {
+					t.Fatal("secret input paste was revealed")
+				}
+			}
+			if value != "xclipboard fragment" {
+				t.Fatal("typing in the same active input cancelled a pending clipboard paste")
 			}
 		})
 	}

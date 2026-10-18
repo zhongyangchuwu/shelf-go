@@ -27,8 +27,8 @@ const (
 	screenFilters
 	screenForm
 	screenConfirmDelete
+	screenConfirmDiscard
 	screenError
-	screenResize
 	screenHelp
 )
 
@@ -94,9 +94,10 @@ type Model struct {
 	filterCursor   int
 	filterChoices  []filterChoice
 
-	status string
-	form   formState
-	styles workspaceStyles
+	status     string
+	form       formState
+	pasteEpoch uint64
+	styles     workspaceStyles
 }
 
 type filterChoice struct {
@@ -107,7 +108,7 @@ type filterChoice struct {
 func NewModel(service Service, clipboardWriter clipboard.Writer, options Options) Model {
 	query := textinput.New()
 	query.Prompt = "/ "
-	query.Placeholder = "Search title, id, description, template, or label"
+	query.Placeholder = "Search title, id, description, template, label, or env name"
 	return Model{
 		service:         service,
 		clipboardWriter: clipboardWriter,
@@ -132,13 +133,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case workspacePasteMsg:
 		return m.finishClipboardPaste(msg)
+	case formSavedMsg:
+		return m.finishFormSave(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		if m.tooSmall() {
-			m.screen = screenResize
-		} else if m.screen == screenResize {
-			m.screen = screenWorkspace
-		}
+		m.pasteEpoch++
 		m.configureDetailViewport()
 		m.syncDetailViewport()
 		return m, nil
@@ -154,19 +153,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncDetailViewport()
 		return m, nil
 	case catalogLoadedMsg:
+		if m.form.editor != nil {
+			return m, nil
+		}
+		m.pasteEpoch++
 		if msg.err != nil {
 			m.screen = screenError
 			return m, nil
 		}
 		m.items = msg.items
 		m.applyFilters()
-		m.screen = m.screenAfterLoad()
+		m.screen = screenWorkspace
 		if len(m.filtered) == 0 {
 			m.detail = app.SecretInfo{}
 			return m, nil
 		}
 		return m, m.loadDetail(m.filtered[m.selected].ID)
 	case detailLoadedMsg:
+		if m.form.editor != nil {
+			return m, nil
+		}
 		if msg.err != nil {
 			m.screen = screenError
 			return m, nil
@@ -185,6 +191,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case actionDoneMsg:
+		if m.form.editor != nil {
+			return m, nil
+		}
+		m.pasteEpoch++
 		if msg.err != nil {
 			m.screen = screenError
 			return m, nil
@@ -215,23 +225,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
+	if key == "esc" || key == "ctrl+s" || key == "ctrl+c" || (key == "enter" && m.screen == screenSearch) {
+		m.pasteEpoch++
+	}
+	if m.form.saving {
+		return m, nil
+	}
+	if m.screen == screenConfirmDiscard {
+		if m.tooSmall() {
+			return m, nil
+		}
+		return m.handleDiscardConfirm(key)
+	}
 	if key == "ctrl+c" {
+		if m.screen == screenForm {
+			return m.requestDiscard(true)
+		}
 		if m.screen == screenWorkspace {
 			return m.copySelectedField()
 		}
 		return m, tea.Quit
 	}
 	if key == "q" && m.screen != screenSearch && !(m.screen == screenForm && m.form.editor != nil && m.form.editor.editMode == editInsert) {
+		if m.screen == screenForm {
+			return m.requestDiscard(true)
+		}
 		return m, tea.Quit
+	}
+	if m.tooSmall() {
+		return m, nil
 	}
 	if key == "ctrl+v" && (m.screen == screenSearch || m.activeEditorInput() != nil) {
 		return m, m.readClipboard()
-	}
-	if m.screen == screenResize {
-		if key == "r" {
-			return m, m.reloadCatalog()
-		}
-		return m, nil
 	}
 	if m.screen == screenError {
 		if key == "r" {
@@ -350,7 +375,16 @@ func (m Model) renderWorkspace() string {
 	left := m.styles.renderPanel("Catalog", m.renderCatalog(panelContentWidth(leftWidth)), m.catalogPanelActive(), leftWidth, panelHeight)
 	right := m.styles.renderPanel(m.rightPanelTitle(), m.renderRight(panelContentWidth(rightWidth)), m.rightPanelActive(), rightWidth, panelHeight)
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right)
-	footer := m.styles.renderFooter("Tab pane  a add  e edit  c/Ctrl+C copy  d delete  / search  f filters  r reload  ? help  q quit", m.width)
+	hint := "Tab pane  a add  e edit  c/Ctrl+C copy  d delete  / search  f filters  r reload  ? help  q quit"
+	if m.screen == screenForm {
+		hint = "Ctrl+S save/retry  Esc leave insert / cancel  q/Ctrl+C quit (unsaved changes require confirmation)"
+		if m.form.saving {
+			hint = "Saving… Please wait. Your draft is retained in memory."
+		}
+	} else if m.screen == screenConfirmDiscard {
+		hint = "y discard  n/Esc keep editing  Enter does not discard"
+	}
+	footer := m.styles.renderFooter(hint, m.width)
 	if m.status != "" {
 		footer = m.styles.renderStatus(m.status, m.width) + "\n" + footer
 	}
@@ -396,6 +430,8 @@ func (m Model) renderRight(width int) string {
 		return m.renderFilters(width)
 	case screenForm:
 		return m.renderForm(width)
+	case screenConfirmDiscard:
+		return m.renderDiscardConfirm()
 	case screenConfirmDelete:
 		return m.renderDeleteConfirm(width)
 	}
@@ -408,7 +444,7 @@ func (m Model) catalogPanelActive() bool {
 
 func (m Model) rightPanelActive() bool {
 	switch m.screen {
-	case screenFilters, screenForm, screenConfirmDelete:
+	case screenFilters, screenForm, screenConfirmDelete, screenConfirmDiscard:
 		return true
 	default:
 		return m.pane == paneDetail
@@ -421,6 +457,8 @@ func (m Model) rightPanelTitle() string {
 		return "Filters"
 	case screenConfirmDelete:
 		return "Remove item"
+	case screenConfirmDiscard:
+		return "Unsaved changes"
 	case screenForm:
 		switch m.form.kind {
 		case formCreate:
@@ -440,7 +478,7 @@ func (m Model) renderHelp() string {
 	return "Shelf TUI help\n\n" +
 		"Tab / h / l  switch catalog and detail\n" +
 		"j / k          move selection\n" +
-		"/              search safe catalog metadata\n" +
+		"/              search metadata and all mapped env names (never values)\n" +
 		"f              filter template and labels\n" +
 		"a              create item\n" +
 		"e              edit selected item\n" +
@@ -448,8 +486,9 @@ func (m Model) renderHelp() string {
 		"ctrl+v         paste into the active text input\n" +
 		"d              delete selected item after confirmation\n" +
 		"r              reload\n" +
-		"esc            cancel\n" +
-		"q              quit (text while editing/searching)\n\n" +
+		"ctrl+s         save/retry the current secret draft\n" +
+		"esc            leave insert mode, then cancel (confirm unsaved changes)\n" +
+		"q              quit (text while editing/searching; confirm unsaved changes)\n\n" +
 		"? / esc return\n"
 }
 
@@ -479,13 +518,6 @@ func (m Model) renderDeleteConfirm(_ int) string {
 
 func (m Model) tooSmall() bool {
 	return m.width > 0 && m.height > 0 && (m.width < minWidth || m.height < minHeight)
-}
-
-func (m Model) screenAfterLoad() screen {
-	if m.tooSmall() {
-		return screenResize
-	}
-	return screenWorkspace
 }
 
 func (m *Model) applyFilters() {
@@ -672,9 +704,16 @@ func matchesCatalogQuery(item app.SecretCatalogItem, query string) bool {
 	if query == "" {
 		return true
 	}
-	for _, value := range append([]string{item.ID, item.Title, item.Template, item.Description}, item.Labels...) {
+	for _, value := range [...]string{item.ID, item.Title, item.Template, item.Description} {
 		if strings.Contains(strings.ToLower(value), query) {
 			return true
+		}
+	}
+	for _, values := range [][]string{item.Labels, item.EnvNames} {
+		for _, value := range values {
+			if strings.Contains(strings.ToLower(value), query) {
+				return true
+			}
 		}
 	}
 	return false
@@ -716,7 +755,7 @@ func truncate(value string, width int) string {
 }
 
 func renderResize(width, height int) string {
-	return fmt.Sprintf("Shelf TUI needs a terminal at least %d columns × %d rows.\nCurrent size: %d × %d\n\nResize the terminal, then press r.  q quit\n", minWidth, minHeight, width, height)
+	return fmt.Sprintf("Shelf TUI needs a terminal at least %d columns × %d rows.\nCurrent size: %d × %d\n\nResize the terminal to continue.\n", minWidth, minHeight, width, height)
 }
 
 func cloneLabels(labels map[string]bool) map[string]bool {

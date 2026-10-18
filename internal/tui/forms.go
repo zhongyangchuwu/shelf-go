@@ -20,8 +20,18 @@ const (
 )
 
 type formState struct {
-	kind   formKind
-	editor *itemEditor
+	kind        formKind
+	editor      *itemEditor
+	detail      app.SecretInfo
+	selector    string
+	saving      bool
+	saveID      uint64
+	discardQuit bool
+}
+
+type editorBaselineField struct {
+	id    string
+	value string
 }
 
 type editorFieldKind uint8
@@ -43,7 +53,6 @@ type editorField struct {
 	label        string
 	kind         editorFieldKind
 	input        textinput.Model
-	initial      string
 	fieldID      string
 	fieldType    string
 	sensitivity  string
@@ -61,6 +70,7 @@ type itemEditor struct {
 	selected int
 	scroll   int
 	err      string
+	baseline []editorBaselineField
 }
 
 func (m Model) startCreateForm() (tea.Model, tea.Cmd) {
@@ -73,20 +83,21 @@ func (m Model) startEditForm() (tea.Model, tea.Cmd) {
 	if m.currentID() == "" {
 		return m, nil
 	}
-	m.form = formState{kind: formEdit, editor: newEditEditor(m.detail)}
+	m.form = formState{kind: formEdit, editor: newEditEditor(m.detail), detail: m.detail, selector: m.currentID()}
 	m.screen = screenForm
 	return m, nil
 }
 
 func (m Model) updateForm(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.form.saving || m.tooSmall() {
+		return m, nil
+	}
 	if key, ok := msg.(tea.KeyPressMsg); ok && key.String() == "esc" {
 		if m.form.editor != nil && m.form.editor.editMode == editInsert {
 			cmd, _ := m.form.editor.update(msg)
 			return m, cmd
 		}
-		m.form = formState{}
-		m.screen = screenWorkspace
-		return m, nil
+		return m.requestDiscard(false)
 	}
 	if m.form.editor == nil {
 		m.screen = screenError
@@ -104,6 +115,9 @@ func (m Model) renderForm(_ int) string {
 		return "Editor unavailable."
 	}
 	height := workspacePanelHeight(m.height, m.status != "") - 4
+	if m.form.saving {
+		return m.form.editor.view(height) + "\n\nSaving… Draft retained until the write succeeds."
+	}
 	return m.form.editor.view(height)
 }
 
@@ -124,6 +138,7 @@ func newCreateEditor(options []app.SecretCreateOption) *itemEditor {
 	}
 	editor.template = options[0].ID
 	editor.rebuildCreateFields("")
+	editor.captureBaseline()
 	return editor
 }
 
@@ -144,6 +159,7 @@ func newEditEditor(info app.SecretInfo) *itemEditor {
 		editor.fields = append(editor.fields, newItemEditorFields(field.ID, editorFieldLabel(field.ID), value, placeholder, string(field.Type), string(field.Sensitivity))...)
 	}
 	editor.focus(0)
+	editor.captureBaseline()
 	return editor
 }
 
@@ -163,7 +179,6 @@ func newEditorInput(id, label, value, placeholder, fieldType, sensitivity string
 		label:       label,
 		kind:        editorInput,
 		input:       input,
-		initial:     value,
 		fieldType:   fieldType,
 		sensitivity: sensitivity,
 	}
@@ -483,12 +498,84 @@ func (editor itemEditor) nextVisible(delta int) int {
 	return editor.selected
 }
 
-func (editor *itemEditor) clearSecrets() {
-	for i := range editor.fields {
-		if editor.fields[i].sensitivity == "secret" {
-			editor.fields[i].input.SetValue("")
+func (editor *itemEditor) captureBaseline() {
+	editor.baseline = make([]editorBaselineField, 0, len(editor.fields))
+	for _, field := range editor.fields {
+		if editor.isVisible(field) {
+			editor.baseline = append(editor.baseline, editorBaselineField{id: field.id, value: field.currentValue()})
 		}
 	}
+}
+
+func (field editorField) currentValue() string {
+	if field.kind == editorChoice {
+		return field.optionValues[field.option]
+	}
+	return field.input.Value()
+}
+
+func (editor itemEditor) dirty() bool {
+	index := 0
+	for _, field := range editor.fields {
+		if !editor.isVisible(field) {
+			continue
+		}
+		if index >= len(editor.baseline) || editor.baseline[index].id != field.id || editor.baseline[index].value != field.currentValue() {
+			return true
+		}
+		index++
+	}
+	return index != len(editor.baseline)
+}
+
+// Drop all editor-held references, including inputs retained by late paste results.
+// Go strings cannot be securely erased; no draft is persisted to disk.
+func (editor *itemEditor) clearInputs() {
+	for i := range editor.fields {
+		editor.fields[i] = editorField{}
+	}
+	*editor = itemEditor{}
+}
+
+func (m Model) requestDiscard(quit bool) (tea.Model, tea.Cmd) {
+	if m.form.saving {
+		return m, nil
+	}
+	if m.form.editor != nil && m.form.editor.dirty() {
+		m.form.discardQuit = quit
+		m.screen = screenConfirmDiscard
+		return m, nil
+	}
+	return m.discardForm(quit)
+}
+
+func (m Model) discardForm(quit bool) (tea.Model, tea.Cmd) {
+	if m.form.editor != nil {
+		m.form.editor.clearInputs()
+	}
+	m.form = formState{}
+	m.screen = screenWorkspace
+	if quit {
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m Model) handleDiscardConfirm(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "y":
+		return m.discardForm(m.form.discardQuit)
+	case "n", "esc":
+		m.screen = screenForm
+	}
+	return m, nil
+}
+
+func (m Model) renderDiscardConfirm() string {
+	if m.form.discardQuit {
+		return "Discard unsaved changes and quit Shelf?\n\nDrafts are kept only in memory.\n\ny discard and quit   n / esc keep editing"
+	}
+	return "Discard unsaved changes and return to the workspace?\n\nDrafts are kept only in memory.\n\ny discard   n / esc keep editing"
 }
 
 func (editor *itemEditor) validate() error {
@@ -561,7 +648,7 @@ func (editor itemEditor) view(height int) string {
 	if editor.editMode == editInsert {
 		b.WriteString("\n-- INSERT --  ctrl+v paste  esc to finish")
 	} else {
-		b.WriteString("\nj/k move  h/l choose  i/a edit  ctrl+s save  esc cancel")
+		b.WriteString("\nj/k move  h/l choose  i/a edit  ctrl+s save/retry  esc cancel  q / ctrl+c quit\nUnsaved changes require y to discard.")
 	}
 	return b.String()
 }
