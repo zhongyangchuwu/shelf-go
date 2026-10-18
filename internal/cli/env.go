@@ -39,7 +39,12 @@ func newEnvExportCmd(appSvc *app.App) *cobra.Command {
 	}
 	cmd.Flags().StringArrayVar(&labels, "label", nil, "Label to export; repeat for AND matching")
 	cmd.Flags().StringVar(&format, "format", "shell", "Output format: shell or json")
-	_ = cmd.RegisterFlagCompletionFunc("label", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("label", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		if len(args) > 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return completeSecretLabels(appSvc, cmd, args, toComplete)
+	})
 	_ = cmd.RegisterFlagCompletionFunc("format", cobra.FixedCompletions([]string{"shell", "json"}, cobra.ShellCompDirectiveNoFileComp))
 	return cmd
 }

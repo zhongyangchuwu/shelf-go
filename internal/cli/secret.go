@@ -68,8 +68,12 @@ func newSecretCreateCmd(appSvc *app.App) *cobra.Command {
 	cmd.Flags().StringVar(&req.Website, "website", "", "Website public field")
 	cmd.Flags().StringVar(&req.Validity, "validity", "", "Credential validity: unknown, permanent, or YYYY-MM-DD")
 	cmd.Flags().StringArrayVar(&req.Scopes, "scope", nil, "Scope public field; repeat for multiple scopes")
-	_ = cmd.RegisterFlagCompletionFunc("template", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("profile", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("template", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretTemplates(appSvc, cmd, args, toComplete)
+	})
+	_ = cmd.RegisterFlagCompletionFunc("profile", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretProfiles(appSvc, cmd, args, toComplete)
+	})
 	_ = cmd.RegisterFlagCompletionFunc("id", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
 	_ = cmd.RegisterFlagCompletionFunc("description", cobra.NoFileCompletions)
@@ -91,6 +95,9 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 		Use:   "update <selector>",
 		Short: "Update a secret item",
 		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSelectors(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req.Selector = args[0]
 			req.TitleSet = cmd.Flags().Changed("title")
@@ -123,9 +130,18 @@ func newSecretUpdateCmd(appSvc *app.App) *cobra.Command {
 	cmd.Flags().StringArrayVar(&values, "value", nil, "Public field value; repeat for a string-list field")
 	cmd.Flags().BoolVar(&clearField, "clear-field", false, "Clear the selected public field")
 	_ = cmd.RegisterFlagCompletionFunc("description", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("add-label", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("remove-label", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("add-label", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretLabels(appSvc, cmd, args, toComplete)
+	})
+	_ = cmd.RegisterFlagCompletionFunc("remove-label", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		if len(args) != 1 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return completeSecretMetadata(appSvc, cmd, toComplete, app.SecretCompletionRequest{Target: app.CompleteSecretLabels, Selector: args[0]})
+	})
+	_ = cmd.RegisterFlagCompletionFunc("field", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretFields(appSvc, cmd, args, toComplete, secretFieldCompletionOptions{})
+	})
 	_ = cmd.RegisterFlagCompletionFunc("value", cobra.NoFileCompletions)
 	return cmd
 }
@@ -154,6 +170,9 @@ func newSecretGetCmd(appSvc *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get [selector]",
 		Short: "Print a secret item field value",
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSelectors(appSvc, cmd, args, toComplete)
+		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if envName != "" {
 				return cobra.MaximumNArgs(1)(cmd, args)
@@ -176,8 +195,12 @@ func newSecretGetCmd(appSvc *app.App) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&field, "field", "", "Field id; defaults to the template primary secret field")
 	cmd.Flags().StringVar(&envName, "env", "", "Find the secret field by env-name field value")
-	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("field", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretFields(appSvc, cmd, args, toComplete, secretFieldCompletionOptions{useEnvSelector: true})
+	})
+	_ = cmd.RegisterFlagCompletionFunc("env", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretEnvNames(appSvc, cmd, args, toComplete)
+	})
 	return cmd
 }
 
@@ -186,6 +209,9 @@ func newSecretCopyCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.
 	cmd := &cobra.Command{
 		Use:   "copy [selector]",
 		Short: "Copy a secret item field to the clipboard",
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSelectors(appSvc, cmd, args, toComplete)
+		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if envName != "" {
 				return cobra.MaximumNArgs(1)(cmd, args)
@@ -211,8 +237,12 @@ func newSecretCopyCmd(appSvc *app.App, clipboardWriter clipboard.Writer) *cobra.
 	}
 	cmd.Flags().StringVar(&field, "field", "", "Field id; defaults to the template primary secret field")
 	cmd.Flags().StringVar(&envName, "env", "", "Find the secret field by env-name field value")
-	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("field", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretFields(appSvc, cmd, args, toComplete, secretFieldCompletionOptions{useEnvSelector: true})
+	})
+	_ = cmd.RegisterFlagCompletionFunc("env", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretEnvNames(appSvc, cmd, args, toComplete)
+	})
 	return cmd
 }
 
@@ -222,6 +252,9 @@ func newSecretListCmd(appSvc *app.App) *cobra.Command {
 		Use:   "list [query]",
 		Short: "List secret items without secret values",
 		Args:  cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretListQueries(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			query := ""
 			if len(args) > 0 {
@@ -245,6 +278,9 @@ func newSecretInfoCmd(appSvc *app.App) *cobra.Command {
 		Use:   "info <selector>",
 		Short: "Print secret item metadata without secret values",
 		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSelectors(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configPath, vaultPath := runtimePaths(cmd)
 			info, err := appSvc.SecretInfo(configPath, vaultPath, args[0])
@@ -268,6 +304,9 @@ func newSecretRmCmd(appSvc *app.App) *cobra.Command {
 		Use:   "rm <selector>",
 		Short: "Remove a secret item",
 		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return completeSecretSelectors(appSvc, cmd, args, toComplete)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
 				return fmt.Errorf("secret rm requires --yes")

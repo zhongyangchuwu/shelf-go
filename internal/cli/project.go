@@ -115,7 +115,9 @@ func newProjectAddCmd(appSvc *app.App) *cobra.Command {
 	cmd.Flags().StringVar(&field, "field", "", "Field ID to bind")
 	cmd.Flags().BoolVar(&optional, "optional", false, "Mark entry as optional")
 	_ = cmd.RegisterFlagCompletionFunc("env", cobra.NoFileCompletions)
-	_ = cmd.RegisterFlagCompletionFunc("field", cobra.NoFileCompletions)
+	_ = cmd.RegisterFlagCompletionFunc("field", func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return completeSecretFields(appSvc, cmd, args, toComplete, secretFieldCompletionOptions{projectableOnly: true, splitSelector: true})
+	})
 	return cmd
 }
 
