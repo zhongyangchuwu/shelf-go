@@ -20,6 +20,10 @@ vendors:
     in: github.com/atotto/clipboard
   term:
     in: golang.org/x/term
+  platform:
+    in:
+      - golang.org/x/sys/unix
+      - golang.org/x/sys/windows
   bubbletea:
     in:
       - charm.land/bubbletea/v2
@@ -65,6 +69,7 @@ deps:
     canUse:
       - cobra
       - term
+      - platform
   tui:
     mayDependOn:
       - app

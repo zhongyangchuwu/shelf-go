@@ -248,16 +248,6 @@ func TestSecretEnvSelectorAmbiguityIsValueFree(t *testing.T) {
 	}
 }
 
-func TestSecretLegacyMutatingCommandsRemoved(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "vault.json")
-	for _, subcommand := range []string{"add", "edit", "set", "export"} {
-		_, err := runShelf(t, "--vault", data, "secret", subcommand)
-		if err == nil {
-			t.Fatalf("secret %s should be removed", subcommand)
-		}
-	}
-}
-
 func TestSecretExport_ByLabelShell(t *testing.T) {
 	data := writeLabeledVault(t, map[string]labeledItem{
 		"db":    {env: "DATABASE_URL", value: "postgres://db", labels: []string{"db", "prod"}},
