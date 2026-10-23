@@ -7,7 +7,7 @@ Shelf Go is a local item-vault CLI with optional wide-screen secret and project-
 ```text
 cmd/shelf/                    process entry point
 
-internal/cli/                 Cobra command tree, flags, completions, output routing, and no-echo terminal field prompts
+internal/cli/                 Cobra commands, completions, terminal prompts, and explicit external-editor process/temp-file adapters
 internal/cliui/               Lip Gloss-backed human output helpers for titles, summaries, empty states, and tables
 internal/tui/                 Bubble Tea secret and project-binding workspaces; app/clipboard-backed only
 internal/clipboard/           System clipboard adapter; WSL Windows bridges with Wayland fallbacks, native clipboard elsewhere
@@ -24,7 +24,7 @@ Dependency direction is enforced by `.go-arch-lint.yml`:
 
 ```text
 cmd/shelf -> cli
-cli -> app, cliui, clipboard, tui, Cobra, x/term
+cli -> app, cliui, clipboard, tui, Cobra, x/term, x/sys
 cliui -> lipgloss
 tui -> app, clipboard, Bubble Tea, Bubbles, Huh, Lip Gloss
 clipboard -> github.com/atotto/clipboard
@@ -63,6 +63,10 @@ Active command groups:
 `shelf tui` and `shelf project tui` require an interactive terminal at least 100 columns × 24 rows. They use app workflows and the clipboard boundary for explicit copy/paste, mask secret input, and never provide a secret-reveal view. Asynchronous paste results stay attached to the input that requested them; changing focus cannot paste a secret into another field.
 
 The secret editor retains drafts only in memory across validation and write failures. Save attempts are single-flight and tied to their originating editor; success or explicit discard drops editor-held input references. Dirty cancel/quit actions require confirmation. Catalog metadata includes every eligible mapped environment name for value-free search without adding a persistence path.
+
+## External item editor
+
+`secret edit` is an explicit CLI-only plaintext workflow. CLI owns editor selection, private temporary files and child-process I/O; app owns the typed JSON document, immutable identity/schema checks, optimistic conflict detection and canonical repository save. It uses the existing vault format and atomic repository, not a second persistence path. The TUI's no-reveal policy is unchanged. See the [command reference](reference.md#shelf-secret-edit) for document semantics and the limits of temporary-file cleanup.
 
 ## Explicitly deferred
 

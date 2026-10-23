@@ -34,7 +34,7 @@ Shelf is CLI-first. The TUI is an optional interactive front-end over existing w
 - Default vault path: `~/.local/share/shelf/vault.json`.
 - `SHELF_CONFIG` overrides config path.
 - `SHELF_VAULT` overrides vault path.
-- `EDITOR` is reserved for future interactive flows.
+- `secret edit` uses the first nonblank `VISUAL`, then `EDITOR`, then `vi`; configured arguments are parsed without shell evaluation.
 
 ## Current Commands
 
@@ -44,6 +44,8 @@ shelf doctor
 shelf tui
 shelf secret set <ENV> [--target ITEM.FIELD]
 shelf secret create <title> [--template TEMPLATE] [--profile PROFILE] [--id ID] [--env NAME] [--validity VALUE] [--stdin]
+shelf secret edit <selector>
+shelf secret edit --env ENV [--target ITEM.FIELD]
 shelf secret update <selector> [--title TITLE] [--add-label LABEL] [--remove-label LABEL] [--add-alias ALIAS] [--remove-alias ALIAS] [--field FIELD] [--value VALUE ... | --clear-field]
 shelf secret get <selector> [--field FIELD]
 shelf secret get --env ENV [--field FIELD]
@@ -82,12 +84,12 @@ shelf completion <shell>
 | Config | Config and vault path resolution | `internal/config` |
 | Util | Atomic write and env/shell/JSON binding formatting | `internal/util` |
 
-Dependency direction: `cli -> app/cliui/clipboard/tui`, using Cobra and `golang.org/x/term` for command and terminal input adapters; `tui -> app/clipboard`; `cliui -> lipgloss`; `clipboard -> github.com/atotto/clipboard`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
+Dependency direction: `cli -> app/cliui/clipboard/tui`, using Cobra, `golang.org/x/term`, and `golang.org/x/sys` for command, terminal and editor-process adapters; `tui -> app/clipboard`; `cliui -> lipgloss`; `clipboard -> github.com/atotto/clipboard`; `app -> project/vaultmodel/vaultjson/config/util`; `project -> vaultmodel/util`; `vaultjson -> vaultmodel/util`.
 ## Data Rules
 
-- Secret values enter through stdin only for writes.
+- Secret values enter through stdin only for writes, except explicit `secret edit`, which reads changes from a private temporary plaintext editor document. Values must never enter argv.
 - `secret audit`, status views, and health indicators use public `validity_<secret-field>` metadata only and must never render secret values.
-- `secret get`, `env export`, `project export`, and `project run` intentionally materialize values. `secret copy` and TUI copy materialize a value only to the system clipboard and must not print it; TUI must never reveal a secret value.
+- `secret get`, `env export`, `project export`, and `project run` intentionally materialize values. `secret edit` explicitly materializes one item to a private editor file and must not echo document values itself; configured editors may display or retain them. `secret copy` and TUI copy materialize a value only to the system clipboard and must not print it; TUI must never reveal a secret value.
 - `.shelf.json` stores concrete `item`, `field`, `env`, optional `required`, and optional `title` only.
 - Label-scoped env export projects every explicitly mapped eligible field; `env_<field>` mappings may target public or secret `string`, `concealed`, and `url` fields.
 

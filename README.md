@@ -36,7 +36,7 @@ Enable [shell completion](docs/reference.md#shelf-completion) to complete secret
 
 ## Store and inspect secrets
 
-Secret values enter through stdin, not argv.
+For `set`, `create`, and `update`, secret values enter through stdin, not argv. The explicit external-editor workflow below is a plaintext-file exception; values still never enter argv.
 
 Set a value by environment variable name, using hidden terminal input or a pipe:
 
@@ -93,6 +93,16 @@ shelf secret update "OpenAI personal" --field website --clear-field
 `--value` is limited to public fields. If it is omitted for a selected field, Shelf reads stdin; on an interactive terminal it prompts without echoing input. Secret values never enter argv.
 
 `description` is public metadata shown by `secret info` and the TUI. Use it for context only; never put a secret value in it.
+
+Edit one whole item in a trusted system editor:
+
+```bash
+export VISUAL='vim'
+shelf secret edit openai
+shelf secret edit --env OPENAI_API_KEY
+```
+
+This opens the item's real values in a private temporary JSON file, not the whole vault. Shelf uses `VISUAL`, then `EDITOR`, then `vi`; GUI editors need their wait option. ID/template are readonly, omitted fields keep their values, and `clear_fields` explicitly clears public fields. Validation failures can reopen the same draft, and concurrent item/schema changes abort rather than overwrite. See the [external editor reference](docs/reference.md#shelf-secret-edit) for retry controls and cleanup limits. Editor plugins, backups, histories, or synchronization may retain plaintext outside Shelf's control; the TUI remains masked.
 
 Load all explicitly mapped fields in a label group into the current shell without storing values in shell config:
 

@@ -79,6 +79,34 @@ Useful public-field flags for `api_credential` are `--provider`, `--website`, `-
 
 `--template` accepts a vault template ID or alias; built-in aliases are `generic` and `api`.
 
+## `shelf secret edit`
+
+Explicitly opens one existing item's **plaintext values** in an external editor. Use a trusted editor and account for its plugins, backups, swap files, histories, and synchronization. This is a CLI-only exception to stdin-based writes; it does not add a reveal action to the TUI.
+
+```bash
+shelf secret edit <selector>
+shelf secret edit --env ENV [--target ITEM.FIELD]
+```
+
+Selector and `--env` modes are mutually exclusive. Ambiguous environment mappings use the same numbered picker as `secret set`; noninteractive use requires an exact mapped item-ID.field target. The selected field chooses its owning item; the editor opens that whole item. Missing or invalid selections do not create drafts. Selector, env-name and target completion remain value-free.
+
+The first nonblank `VISUAL`, then `EDITOR`, then `vi` chooses the executable and arguments. Single/double quotes and backslash escaping are supported without shell evaluation, variable expansion, substitution, or redirection. The absolute draft filename is appended as one argument. Configure a GUI editor to wait for editing to finish; a launcher that returns immediately cannot communicate when saving is complete.
+
+Shelf creates `item.json` under the OS temporary directory, closes its writer, then starts the editor with the command's terminal I/O. On Unix/WSL the draft directory and file are restricted to `0o700` and `0o600`. On native Windows, use a user-private `TEMP`/`TMP` directory: Unix permission bits do not configure Windows ACLs. Shelf never opens `vault.json` directly in the editor. On WSL, prefer a Linux-side editor and a Linux temporary directory; custom temporary locations should not be in a project or synchronized folder.
+
+The editable JSON has these properties:
+
+- `id` and `template` are readonly context. Timestamps, field types and sensitivity cannot be changed through the document.
+- `title` and `description` are strings; `labels` is a string array. Omitted properties preserve their exact original values. Changed organization follows the existing normalization rules; `""` clears description and `[]` clears labels.
+- `fields` maps canonical schema field IDs to actual typed JSON values, including secrets. Set fields are prefilled; unset fields are omitted. Omitted entries preserve values, and schema-defined optional fields may be added. For JSON fields, literal `null` is a value, not a deletion instruction.
+- `clear_fields` is an explicit array of public field IDs to clear. To clear `website`, remove its entry from `fields` and add `"website"` to `clear_fields`. A field cannot be both set and cleared. Secret fields cannot be cleared this way.
+
+Unknown properties/fields, duplicate object keys, trailing JSON, invalid types and invalid mappings are rejected without echoing the document. Unchanged values, JSON formatting or key-order changes do not rewrite storage. Shelf reloads the pinned vault path before saving, rejects changes to the selected item or owning schema, and preserves unrelated concurrent changes. This is optimistic pre-save checking, not a global writer lock.
+
+After a validation failure, an interactive terminal offers `e`/`edit` to reopen the same draft or `d`/`discard` to leave storage unchanged. Save failures additionally offer `r`/`retry` to save that draft without reopening. Blank input or EOF cancels with an error; noninteractive failures return immediately. Editor launch/nonzero-exit failures and conflicts abort without saving, and conflicts never automatically rebase or force an overwrite.
+
+Normal returns remove Shelf's private draft directory, including files the editor created inside it. Unix termination manages the attached editor process group; native Windows uses a Job Object. If termination cannot be confirmed within bounded waits, Shelf reports and retains the private draft directory instead of deleting a potentially active file. Cleanup failures also report the directory for manual recovery/removal. Forced termination, crashes, detached processes, existing GUI editor services, and editor files/history outside the directory cannot be guaranteed away. Cleanup removes files; it does not promise secure erasure. Shelf's own status and diagnostics do not echo document values, but the explicitly launched editor can display them.
+
 ## `shelf secret update`
 
 Updates an item's title, description, labels, or a selected field without editing vault JSON. Without metadata flags or `--field`, it updates the template primary secret field.
